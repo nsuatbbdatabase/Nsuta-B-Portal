@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Report Card</title>
+  <link rel="stylesheet" href="report.css" />
+</head>
+<body>
+  <div class="report-container">
+    <!-- 🔽 Student Selector -->
+    <div class="student-selector">
+      <label for="studentSelect">Select Student:</label>
+      <select id="studentSelect" onchange="loadReportForStudent()">
+        <option value="">-- Select --</option>
+      </select>
+    </div>
+
+    <!-- 🏫 Header with Logo and Student Photo -->
+    <div class="report-header">
+      <div class="header-left">
+        <img src="Badge.png" alt="School Logo" class="school-logo" />
+      </div>
+      <div class="header-center">
+        <h1>Nkawkaw Nsuta M/A 'B' Basic School</h1>
+        <p class="motto">"Knowledge is Power"</p>
+        <h2>End of Term Report</h2>
+      </div>
+      <div class="header-right">
+        <img id="studentPhoto" src="" alt="Student Photo" class="student-photo" />
+      </div>
+    </div>
+
+    <!-- 👤 Student Info -->
+    <section class="student-info">
+      <p><strong>Name:</strong> <span id="studentName">—</span></p>
+      <p><strong>Class:</strong> <span id="studentClass">—</span></p>
+      <p><strong>Term:</strong> <span id="term">—</span></p>
+      <p><strong>Academic Year:</strong> <span id="year">—</span></p>
+      <p><strong>Position:</strong> <span id="position">—</span></p>
+    </section>
+
+    <!-- 📊 Score Table -->
+    <section class="score-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Class Score</th>
+            <th>Exam Score</th>
+            <th>Total</th>
+            <th>Grade Point</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody id="scoreBody">
+          <!-- Dynamic rows -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3"><strong>Total Score</strong></td>
+            <td id="totalScore">0</td>
+            <td colspan="2"></td>
+          </tr>
+          <tr>
+            <td colspan="3"><strong>Average</strong></td>
+            <td id="averageScore">0</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+
+    <!-- 📝 Remarks -->
+    <section class="remarks">
+      <!-- 📅 Attendance -->
+      <div class="attendance">
+        <p><strong>Total Attendance:</strong> <span id="totalAttendance">—</span></p>
+        <p><strong>Out of:</strong> <span id="actualAttendance">—</span></p>
+      </div>
+
+      <!-- 🎭 Interest & Conduct -->
+      <div class="interest-conduct">
+        <p><strong>Interest/Talent:</strong> <span id="studentInterest">—</span></p>
+        <p><strong>Conduct:</strong> <span id="studentConduct">—</span></p>
+      </div>
+
+      <!-- 💬 Teacher's Remark -->
+      <p><strong>Teacher's Remark:</strong> <span id="teacherRemark">—</span></p>
+
+      <!-- ✍️ Headteacher Approval -->
+      <p><strong>Headteacher's Approval:</strong></p>
+      <div class="signature-line">__________________________</div>
+    </section>
+
+    <!-- 🖨️ Print Button -->
+    <footer class="report-footer">
+      <button onclick="window.print()">Print Report</button>
+    </footer>
+  </div>
+
+  <!-- Supabase + Logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="report.js"></script>
+</body>
+</html>

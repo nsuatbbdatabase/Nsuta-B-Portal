@@ -1,0 +1,142 @@
+/* 🌍 Base Reset */
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* 📦 Login Container */
+.login-container {
+  width: 100%;
+  max-width: 420px;
+  background-color: #ffffffee;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.1);
+  text-align: center;
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+/* 🏫 School Header */
+.school-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.school-logo {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+
+.school-text h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #004080;
+}
+
+.motto {
+  font-style: italic;
+  color: #666;
+  margin-top: 0.3rem;
+}
+
+/* 🔐 Form Elements */
+.login-box label {
+  display: block;
+  margin: 1rem 0 0.3rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.login-box select,
+.login-box input {
+  width: 100%;
+  padding: 0.8rem;
+  margin-bottom: 0.8rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.login-box button {
+  width: 100%;
+  padding: 0.8rem;
+  background-color: #004080;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.login-box button:hover {
+  background-color: #0059b3;
+}
+
+/* 🌟 Motivation Slider */
+.motivation {
+  margin-top: 2rem;
+  height: 60px;
+  overflow: hidden;
+  position: relative;
+}
+
+.motivation h3 {
+  margin-bottom: 0.5rem;
+  color: #004080;
+}
+
+#motivationMessage {
+  position: relative;
+  animation: slideMotivation 12s linear infinite;
+}
+
+#motivationMessage div {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-style: italic;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+/* ✨ Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideMotivation {
+  0%   { top: 0; }
+  25%  { top: -60px; }
+  50%  { top: -120px; }
+  75%  { top: -180px; }
+  100% { top: 0; }
+}
+
+/* 📱 Responsive */
+@media screen and (max-width: 768px) {
+  .login-container {
+    padding: 1.5rem;
+    max-width: 90%;
+  }
+
+  .school-header {
+    flex-direction: column;
+  }
+
+  #motivationMessage div {
+    font-size: 0.85rem;
+  }
+}

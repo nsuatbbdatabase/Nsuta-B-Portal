@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>School Login</title>
+  <link rel="stylesheet" href="login.css" />
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-box">
+      <!-- 🏫 School Branding -->
+      <div class="school-header">
+        <img src="school-logo.png" alt="School Logo" class="school-logo" />
+        <div class="school-text">
+          <h1>Nkawkaw Nsuta M/A 'B' Basic School Portal</h1>
+          <p class="motto">"Knowledge is Power"</p>
+        </div>
+      </div>
+
+      <!-- 🎯 Role Selection -->
+      <label for="roleSelect">I am a:</label>
+      <select id="roleSelect">
+        <option value="">-- Select Role --</option>
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+        <option value="admin">Admin</option>
+      </select>
+
+      <!-- 🔐 Credentials -->
+      <input type="text" id="username" placeholder="Username / Staff ID / Email" />
+      <input type="password" id="pin" placeholder="PIN" />
+      <button onclick="login()">Login</button>
+
+      <!-- 🌟 Motivation Slider -->
+      <div class="motivation">
+        <div id="motivationMessage">
+          <div>"Education is the passport to the future."</div>
+          <div>"Teachers plant seeds of knowledge that grow forever."</div>
+          <div>"Learning never exhausts the mind—it only ignites it."</div>
+          <div>"Success begins with self-belief and effort."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase + Logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="login.js"></script>
+</body>
+</html>
