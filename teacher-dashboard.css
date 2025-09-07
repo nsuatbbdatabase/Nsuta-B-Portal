@@ -1,3 +1,105 @@
+/* Responsive Design for Mobile and Tablet */
+@media (max-width: 900px) {
+  .dashboard-container {
+    padding: 0.5rem;
+  }
+  .dashboard-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+  }
+  .tab-btn {
+    flex: 1 1 120px;
+    min-width: 120px;
+    font-size: 1rem;
+    padding: 0.5rem 0.5rem;
+  }
+  .tab-section {
+    padding: 0.5rem 0.2rem;
+  }
+  h2, h3 {
+    font-size: 1.2rem;
+  }
+  .school-header h1 {
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-tabs {
+    flex-direction: column;
+    gap: 0.2rem;
+    align-items: stretch;
+  }
+  .tab-btn {
+    width: 100%;
+    min-width: unset;
+    font-size: 0.95rem;
+    padding: 0.6rem 0.2rem;
+  }
+  .tab-section {
+    padding: 0.2rem 0.1rem;
+  }
+  h2, h3 {
+    font-size: 1rem;
+  }
+  .school-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .school-header h1 {
+    font-size: 1rem;
+    margin-top: 0.5rem;
+  }
+  .passport-photo, #studentPhoto {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+/* Make tables scrollable on small screens */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+@media (max-width: 900px) {
+  table, thead, tbody, th, td, tr {
+    display: block;
+  }
+  thead tr {
+    display: none;
+  }
+  tr {
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ccc;
+  }
+  td {
+    position: relative;
+    padding-left: 50%;
+    min-height: 2.2em;
+    border: none;
+    border-bottom: 1px solid #eee;
+    font-size: 0.98em;
+    background: #fff;
+  }
+  td:before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48%;
+    padding-left: 0.5em;
+    white-space: nowrap;
+    font-weight: bold;
+    color: #004080;
+    content: attr(data-label);
+  }
+}
+
+/* Hide table headers on mobile, add data-labels in JS if needed */
 /* Advanced Responsive Enhancements */
 @media (max-width: 900px) {
   .dashboard-container {

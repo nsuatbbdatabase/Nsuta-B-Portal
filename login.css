@@ -1,3 +1,47 @@
+/* Responsive Design for Mobile and Tablet */
+@media (max-width: 900px) {
+  .login-container {
+    padding: 1rem;
+    max-width: 98vw;
+  }
+  h2, h3 {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .login-container {
+    padding: 0.5rem;
+    max-width: 98vw;
+    border-radius: 6px;
+  }
+  h2, h3 {
+    font-size: 1rem;
+  }
+  .school-header {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .school-logo {
+    width: 40px;
+    height: 40px;
+  }
+  .school-text h1 {
+    font-size: 1.1rem;
+  }
+  .motto {
+    font-size: 0.9rem;
+  }
+  .login-box input, .login-box button {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.7rem;
+  }
+}
+
+/* Make login container scrollable on small screens if needed */
+.login-container {
+  overflow-x: auto;
+}
 /* Advanced Responsive Enhancements */
 @media (max-width: 600px) {
   .login-container {
