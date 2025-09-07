@@ -1,3 +1,108 @@
+/* --- Professional Responsive Dashboard --- */
+/* Tabs: horizontally scrollable on mobile, clear highlight, touch-friendly */
+.dashboard-tabs {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  scrollbar-width: none;
+}
+.dashboard-tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  flex: 0 0 auto;
+  min-width: 120px;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  background: #e6f0ff;
+  color: #004080;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  outline: none;
+  margin-bottom: -1px;
+}
+.tab-btn.active, .tab-btn:focus {
+  background: #004080;
+  color: #fff;
+  font-weight: bold;
+  z-index: 2;
+}
+@media (max-width: 700px) {
+  .tab-btn {
+    min-width: 100px;
+    font-size: 0.98rem;
+    padding: 0.7rem 0.7rem;
+  }
+}
+
+/* Section transitions */
+.tab-section {
+  display: none;
+  animation: fadeInTab 0.3s;
+}
+.tab-section.open {
+  display: block;
+}
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Tables: horizontal scroll on mobile, no block stacking */
+.dashboard-container table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  display: block;
+  max-width: 100%;
+}
+.dashboard-container thead, .dashboard-container tbody, .dashboard-container tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+.dashboard-container th, .dashboard-container td {
+  padding: 0.7rem 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+  background: #fff;
+}
+.dashboard-container th {
+  background: #f0f6ff;
+  color: #004080;
+}
+@media (max-width: 700px) {
+  .dashboard-container th, .dashboard-container td {
+    font-size: 0.95rem;
+    padding: 0.5rem 0.3rem;
+  }
+}
+
+/* Touch-friendly buttons */
+button, .tab-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* General improvements */
+.dashboard-container {
+  padding: 1.2rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  background: #fff;
+}
+@media (max-width: 700px) {
+  .dashboard-container {
+    padding: 0.5rem;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
 /* Responsive Design for Mobile and Tablet */
 @media (max-width: 900px) {
   .dashboard-container {
