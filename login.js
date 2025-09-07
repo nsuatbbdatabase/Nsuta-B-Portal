@@ -62,6 +62,7 @@ async function login() {
       break;
     case 'admin':
       localStorage.setItem('adminId', data.id);
+      sessionStorage.setItem('adminId', data.id); // Ensure sessionStorage is set for router.js
       window.location.href = 'admin.html';
       break;
   }
