@@ -51,7 +51,14 @@
       <button onclick="openModal('studentModal')">Add Student</button>
       <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
       <button onclick="importCSV()">Import CSV</button>
-      <div style="margin: 1rem 0;">
+      <div style="margin: 1rem 0; display: flex; gap: 1rem; align-items: center;">
+        <label for="classFilter">Class:</label>
+        <select id="classFilter">
+          <option value="">-- All Classes --</option>
+          <option value="JHS 1">JHS 1</option>
+          <option value="JHS 2">JHS 2</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
         <label for="studentSelect">Select Student:</label>
         <select id="studentSelect" onchange="showSelectedStudent()">
           <option value="">-- Select Student --</option>
@@ -323,6 +330,7 @@
           <button type="submit">Save</button>
           <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="admin.js"></script>
 <script src="dashboard.js"></script>
 <script src="router.js"></script>
 <script>
