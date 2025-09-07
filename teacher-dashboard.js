@@ -170,6 +170,9 @@ async function loadTeacherDashboard(staffId) {
   populateDropdown('subjectSelect', teacher.subjects || []);
   populateDropdown('assignClass', teacher.classes || []);
   populateDropdown('assignSubject', teacher.subjects || []);
+  // Populate Exam section dropdowns
+  populateDropdown('classSelectExam', teacher.classes || []);
+  populateDropdown('subjectSelectExam', teacher.subjects || []);
   await loadAssignments();
   await loadStudentSubmissions();
   await loadStudentMessages(); // Load messages after dashboard loads
@@ -189,10 +192,16 @@ function populateDropdown(id, items) {
   });
 }
 
-// 📋 Load students by selected class
-async function loadStudents() {
-  const selectedClass = document.getElementById('classSelect').value;
-  const selectedSubject = document.getElementById('subjectSelect').value;
+// 📋 Load students by selected class (handles both SBA and Exam sections)
+async function loadStudents(section = 'sba') {
+  let selectedClass, selectedSubject;
+  if (section === 'exam') {
+    selectedClass = document.getElementById('classSelectExam').value;
+    selectedSubject = document.getElementById('subjectSelectExam').value;
+  } else {
+    selectedClass = document.getElementById('classSelect').value;
+    selectedSubject = document.getElementById('subjectSelect').value;
+  }
   if (!selectedClass || !selectedSubject) return;
   const { data, error } = await supabaseClient
     .from('students')
@@ -204,8 +213,11 @@ async function loadStudents() {
   } else {
     students = data;
   }
-  renderSBAForm();
-  renderExamForm();
+  if (section === 'exam') {
+    renderExamForm();
+  } else {
+    renderSBAForm();
+  }
 }
 
 // 📝 Render SBA form
@@ -639,9 +651,14 @@ window.addEventListener('DOMContentLoaded', function() {
     document.getElementById('welcomeMessage').textContent = 'No teacher session found. Please log in again.';
   }
 
-  // Add event listeners to class and subject dropdowns for SBA/Exam
+  // Add event listeners to class and subject dropdowns for SBA
   const classSelect = document.getElementById('classSelect');
   const subjectSelect = document.getElementById('subjectSelect');
-  if (classSelect) classSelect.addEventListener('change', loadStudents);
-  if (subjectSelect) subjectSelect.addEventListener('change', loadStudents);
+  if (classSelect) classSelect.addEventListener('change', () => loadStudents('sba'));
+  if (subjectSelect) subjectSelect.addEventListener('change', () => loadStudents('sba'));
+  // Add event listeners to class and subject dropdowns for Exam
+  const classSelectExam = document.getElementById('classSelectExam');
+  const subjectSelectExam = document.getElementById('subjectSelectExam');
+  if (classSelectExam) classSelectExam.addEventListener('change', () => loadStudents('exam'));
+  if (subjectSelectExam) subjectSelectExam.addEventListener('change', () => loadStudents('exam'));
 });

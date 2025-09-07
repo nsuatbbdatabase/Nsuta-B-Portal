@@ -38,33 +38,6 @@
     <div id="profileSection" class="tab-section">
       <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
       <div id="assignedRoles" class="floating-roles"></div>
-      <div class="filters">
-        <label for="classSelect">Class:</label>
-        <select id="classSelect" onchange="loadStudents()">
-          <option value="">-- Select Class --</option>
-        </select>
-        <label for="subjectSelect">Subject:</label>
-        <select id="subjectSelect" onchange="loadStudents()">
-          <option value="">-- Select Subject --</option>
-        </select>
-        <label for="term">Term:</label>
-        <select id="term">
-          <option>1st Term</option>
-          <option>2nd Term</option>
-          <option>3rd Term</option>
-        </select>
-        <label for="year">Academic Year:</label>
-        <input type="text" id="year" placeholder="e.g. 2025/2026" />
-      </div>
-      <div id="teacher-filters" style="margin-bottom: 1em;">
-        <select id="termInput">
-          <option value="">-- Select Term --</option>
-          <option value="1st Term">1st Term</option>
-          <option value="2nd Term">2nd Term</option>
-          <option value="3rd Term">3rd Term</option>
-        </select>
-        <input id="yearInput" placeholder="Academic Year (e.g. 2025/2026)">
-      </div>
       <div id="studentListContainer"></div>
     </div>
 
@@ -72,6 +45,25 @@
       <div class="collapsible-panel">
         <button class="toggle-btn" onclick="togglePanel('sbaPanel')">SBA Entry</button>
         <div id="sbaPanel" class="panel-content">
+          <div class="filters">
+            <label for="classSelect">Class:</label>
+            <select id="classSelect" onchange="loadStudents()">
+              <option value="">-- Select Class --</option>
+            </select>
+            <label for="subjectSelect">Subject:</label>
+            <select id="subjectSelect" onchange="loadStudents()">
+              <option value="">-- Select Subject --</option>
+            </select>
+            <label for="termInput">Term:</label>
+            <select id="termInput">
+              <option value="">-- Select Term --</option>
+              <option value="1st Term">1st Term</option>
+              <option value="2nd Term">2nd Term</option>
+              <option value="3rd Term">3rd Term</option>
+            </select>
+            <label for="yearInput">Academic Year:</label>
+            <input id="yearInput" placeholder="Academic Year (e.g. 2025/2026)">
+          </div>
           <table>
             <thead>
               <tr>
@@ -95,6 +87,25 @@
       <div class="collapsible-panel">
         <button class="toggle-btn" onclick="togglePanel('examPanel')">Exam Entry</button>
         <div id="examPanel" class="panel-content">
+          <div class="filters">
+            <label for="classSelectExam">Class:</label>
+            <select id="classSelectExam" onchange="loadStudents()">
+              <option value="">-- Select Class --</option>
+            </select>
+            <label for="subjectSelectExam">Subject:</label>
+            <select id="subjectSelectExam" onchange="loadStudents()">
+              <option value="">-- Select Subject --</option>
+            </select>
+            <label for="termInputExam">Term:</label>
+            <select id="termInputExam">
+              <option value="">-- Select Term --</option>
+              <option value="1st Term">1st Term</option>
+              <option value="2nd Term">2nd Term</option>
+              <option value="3rd Term">3rd Term</option>
+            </select>
+            <label for="yearInputExam">Academic Year:</label>
+            <input id="yearInputExam" placeholder="Academic Year (e.g. 2025/2026)">
+          </div>
           <table>
             <thead>
               <tr>
@@ -113,22 +124,25 @@
     <div id="assignmentSection" class="tab-section" style="display:none;">
       <div class="assignment-composer">
         <h3>Send Assignment to Students</h3>
-        <label for="assignClass">Class:</label>
-        <select id="assignClass">
-          <option value="">-- Select Class --</option>
-        </select>
-        <label for="assignSubject">Subject:</label>
-        <select id="assignSubject">
-          <option value="">-- Select Subject --</option>
-        </select>
-        <label for="assignTerm">Term:</label>
-        <select id="assignTerm">
-          <option>1st Term</option>
-          <option>2nd Term</option>
-          <option>3rd Term</option>
-        </select>
-        <label for="assignYear">Academic Year:</label>
-        <input type="text" id="assignYear" placeholder="e.g. 2025/2026" />
+        <div class="filters">
+          <label for="assignClass">Class:</label>
+          <select id="assignClass">
+            <option value="">-- Select Class --</option>
+          </select>
+          <label for="assignSubject">Subject:</label>
+          <select id="assignSubject">
+            <option value="">-- Select Subject --</option>
+          </select>
+          <label for="assignTerm">Term:</label>
+          <select id="assignTerm">
+            <option value="">-- Select Term --</option>
+            <option value="1st Term">1st Term</option>
+            <option value="2nd Term">2nd Term</option>
+            <option value="3rd Term">3rd Term</option>
+          </select>
+          <label for="assignYear">Academic Year:</label>
+          <input type="text" id="assignYear" placeholder="e.g. 2025/2026" />
+        </div>
         <label for="assignTitle">Assignment Title:</label>
         <input type="text" id="assignTitle" placeholder="e.g. Algebra Practice" />
         <label for="assignText">Instructions:</label>
