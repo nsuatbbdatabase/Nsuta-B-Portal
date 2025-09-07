@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Report Card</title>
+  <link rel="stylesheet" href="report.css" />
+</head>
+<body>
+  <div class="report-container">
+    <!-- 🔽 Filters -->
+    <div id="filters" style="margin-bottom: 1em;">
+      <select id="termFilter">
+        <option value="">-- Select Term --</option>
+        <option value="1st Term">1st Term</option>
+        <option value="2nd Term">2nd Term</option>
+        <option value="3rd Term">3rd Term</option>
+      </select>
+      <input id="yearFilter" placeholder="Academic Year (e.g. 2025/2026)">
+    </div>
+
+    <!-- 🔽 Student Selector -->
+    <div class="student-selector">
+      <label for="classSelect">Select Class:</label>
+      <select id="classSelect">
+        <option value="">-- Select Class --</option>
+      </select>
+      <label for="studentSelect">Select Student:</label>
+      <select id="studentSelect" onchange="loadReportForStudent()">
+        <option value="">-- Select --</option>
+      </select>
+      <button id="bulkPrintBtn" type="button">Print Selected Class Reports</button>
+    </div>
+
+    <div id="reportSection">
+      <!-- 🏫 Header with Logo and Student Photo -->
+      <div class="report-header">
+        <div class="header-left">
+          <img src="Badge.png" alt="School Logo" class="school-logo" />
+        </div>
+        <div class="header-center">
+          <div class="ges-header">GHANA EDUCATION SERVICE</div>
+          <div class="school-name">Nkawkaw Nsuta M/A 'B' Basic School</div>
+          <h2>End of Term Report</h2>
+        </div>
+        <div class="header-right">
+          <img id="studentPhoto" src="" alt="Student Photo" class="student-photo" />
+        </div>
+      </div>
+
+      <!-- 👤 Student Info -->
+      <section class="student-info">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1em;">
+          <tr>
+            <td><strong>Name:</strong></td>
+            <td><span id="studentName">—</span></td>
+            <td><strong>Class:</strong></td>
+            <td><span id="studentClass">—</span></td>
+            <td><strong>Term:</strong></td>
+            <td><span id="term">—</span></td>
+          </tr>
+          <tr>
+            <td><strong>Academic Year:</strong></td>
+            <td><span id="year">—</span></td>
+            <td><strong>Class Size:</strong></td>
+            <td><span id="totalInClass">—</span></td>
+            <td><strong>Position:</strong></td>
+            <td><span id="position">—</span></td>
+          </tr>
+          <tr>
+            <td><strong>Date of Vacation:</strong></td>
+            <td><span id="vacationDate">—</span></td>
+            <td><strong>Reopening Date:</strong></td>
+            <td><span id="reopenDate">—</span></td>
+            <td></td>
+            <td></td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- 📊 Score Table -->
+      <section class="score-table">
+        <table>
+          <thead>
+            <tr>
+              <th colspan="7" class="results-details-header">RESULTS DETAILS</th>
+            </tr>
+            <tr>
+              <th>Subject</th>
+              <th>Class Score</th>
+              <th>Exam Score</th>
+              <th>Total</th>
+              <th>Grade Point</th>
+              <th>Remark</th>
+              <th>Position</th>
+            </tr>
+          </thead>
+          <tbody id="scoreBody">
+            <!-- Dynamic rows -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4"><strong>Total Score</strong></td>
+              <td id="totalScore">0</td>
+              <td colspan="2"></td>
+            </tr>
+            <tr>
+              <td colspan="4"><strong>Average</strong></td>
+              <td id="averageScore">0</td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <!-- 📝 Remarks -->
+      <section class="remarks">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1em;">
+          <tr>
+            <td><strong>Total Attendance:</strong></td>
+            <td><span id="totalAttendance">—</span></td>
+            <td><strong>Out of:</strong></td>
+            <td><span id="actualAttendance">—</span></td>
+            <td><strong>Promoted to:</strong></td>
+            <td><span id="promotedTo">—</span></td>
+          </tr>
+          <tr>
+            <td><strong>Interest/Talent:</strong></td>
+            <td colspan="2"><span id="studentInterest">—</span></td>
+            <td><strong>Conduct:</strong></td>
+            <td colspan="2"><span id="studentConduct">—</span></td>
+          </tr>
+        </table>
+        <p><strong>Teacher's Remark:</strong> <span id="teacherRemark">—</span></p>
+        <p><strong>Class Teacher's Approval:</strong></p>
+        <div class="signature-line">__________________________</div>
+        <p><strong>Headteacher's Approval:</strong></p>
+        <div class="signature-line">__________________________</div>
+      </section>
+
+      <!-- 🖨️ Print Button -->
+      <footer class="report-footer">
+        <div class="school-motto-footer">"KNOWLEDGE IS POWER"</div>
+        <button onclick="window.print()">Print Report</button>
+        <button id="sendResultBtn" type="button">Send Result to Student</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Watermark -->
+  <div class="watermark" style="display:none;">
+    <img src="Badge.png" alt="School Logo Watermark" />
+  </div>
+
+  <!-- Supabase + Logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="report.js"></script>
+</body>
+</html>

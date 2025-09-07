@@ -1,0 +1,336 @@
+  <!-- Admin Modal -->
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Register Admin</h3>
+      <form id="adminForm">
+        <input type="hidden" name="admin_id" />
+        <input type="text" name="full_name" placeholder="Name" required />
+        <input type="email" name="email" placeholder="Email" required />
+        <input type="tel" name="phone" placeholder="Phone" required />
+        <input type="text" name="pin" placeholder="PIN" required />
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('adminModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | School Management</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="dashboard-header">
+  <img src="Badge.png" alt="School Logo" class="school-logo" style="height:60px;margin-right:1rem;vertical-align:middle;" />
+  <h1 style="display:inline-block;vertical-align:middle;">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+    <p class="motto">"Knowledge is Power"</p>
+    <button id="logoutBtn" class="logout-btn" style="float:right;margin-top:-3.5rem;">Logout</button>
+  </header>
+
+  <nav class="sidebar">
+    <ul>
+      <li><a href="interest-conduct.html">Students Interest and Conduct</a></li>
+      <li><a href="dashboard.html">Students Interest Update</a></li>
+      <li><a href="#admins">Admins</a></li>
+    </ul>
+  </nav>
+
+  <main class="dashboard-main">
+    <section id="reports" style="margin-bottom: 2rem;">
+      <button onclick="window.location.href='report.html'" class="report-btn">View Report Dashboard</button>
+    </section>
+
+    <!-- Students Section -->
+    <section id="students">
+      <h2>Register Students</h2>
+      <button onclick="openModal('studentModal')">Add Student</button>
+      <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
+      <button onclick="importCSV()">Import CSV</button>
+      <div style="margin: 1rem 0;">
+        <label for="studentSelect">Select Student:</label>
+        <select id="studentSelect" onchange="showSelectedStudent()">
+          <option value="">-- Select Student --</option>
+        </select>
+      </div>
+      <table id="studentTable">
+        <thead>
+          <tr>
+            <th>Picture</th><th>Name</th><th>Gender</th><th>Class</th><th>Parent</th><th>Contact</th><th>Username</th><th>PIN</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Teachers Section -->
+    <section id="teachers">
+      <h2>Register Teachers</h2>
+      <button onclick="openModal('teacherModal')">Add Teacher</button>
+      <div style="margin: 1rem 0;">
+        <label for="teacherSelect">Select Teacher:</label>
+        <select id="teacherSelect" onchange="showSelectedTeacher()">
+          <option value="">-- Select Teacher --</option>
+        </select>
+      </div>
+      <table id="teacherTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Gender</th><th>DOB</th><th>Staff ID</th><th>NTC</th><th>Reg #</th><th>SSNIT</th><th>Ghana Card</th><th>Contact</th><th>Rank</th><th>Qualification</th><th>Classes</th><th>Subjects</th><th>PIN</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- Admins Section -->
+    <section id="admins">
+      <h2>Manage Admins</h2>
+      <button onclick="openModal('adminModal')">Add Admin</button>
+      <table id="adminTable">
+        <thead>
+          <tr>
+            <th>Name</th><th>Email</th><th>Phone</th><th>PIN</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Student Modal -->
+  <div id="studentModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Register Student</h3>
+      <form id="studentForm" enctype="multipart/form-data">
+        <input type="hidden" name="student_id" />
+        <input type="text" name="full_name" placeholder="Full Name" required />
+        <select name="gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+        <select name="class" required>
+          <option value="">Select Class</option>
+          <option value="JHS 1">JHS 1</option>
+          <option value="JHS 2">JHS 2</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+        <input type="text" name="parent_name" placeholder="Parent/Guardian Name" required />
+        <input type="tel" name="parent_contact" placeholder="Parent/Guardian Number" required />
+        <input type="file" name="picture" accept="image/*" />
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('studentModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Teacher Modal -->
+  <div id="teacherModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Register Teacher</h3>
+      <form id="teacherForm">
+        <input type="hidden" name="teacher_id" />
+        <input type="text" name="name" placeholder="Full Name" required />
+        <select name="gender" required>
+          <option value="">Select Gender</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
+        <label for="dob">Date of Birth</label>
+        <input type="date" id="dob" name="dob" required />
+        <input type="text" name="staff_id" placeholder="Staff ID" required />
+        <input type="text" name="ntc" placeholder="NTC Number" required />
+        <input type="text" name="registered_number" placeholder="Registered Number" required />
+        <input type="text" name="ssnit" placeholder="SSNIT Number" required />
+        <input type="text" name="ghana_card" placeholder="Ghana Card Number" required />
+        <input type="tel" name="contact" placeholder="Contact Number" required />
+        <input type="text" name="rank" placeholder="Rank" required />
+        <input type="text" name="qualification" placeholder="Highest Academic Qualification" required />
+
+        <label>Classes Taught</label>
+        <select name="classes" multiple required>
+          <option value="JHS 1">JHS 1</option>
+          <option value="JHS 2">JHS 2</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+
+        <label>Subjects Taught</label>
+        <select name="subjects" multiple required>
+          <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Science">Science</option>
+          <option value="Computing">Computing</option>
+          <option value="Social Studies">Social Studies</option>
+          <option value="RME">RME</option>
+          <option value="Creative Arts">Creative Arts</option>
+          <option value="Career Tech">Career Tech</option>
+          <option value="Twi">Twi</option>
+        </select>
+
+  <!-- Extended HR Fields -->
+  <label for="first_appointment_date">First Appointment Date</label>
+  <input type="date" id="first_appointment_date" name="first_appointment_date" />
+  <label for="date_placed_on_rank">Date Placed on Rank</label>
+  <input type="date" id="date_placed_on_rank" name="date_placed_on_rank" />
+  <input type="text" name="salary_level" placeholder="Salary Level" />
+  <input type="text" name="bank" placeholder="Bank" />
+  <input type="text" name="bank_branch" placeholder="Bank Branch" />
+  <input type="text" name="bank_account_number" placeholder="Bank Account Number" />
+  <input type="text" name="highest_professional_qualification" placeholder="Highest Professional Qualification" />
+  <label for="professional_qualification_date">Professional Qualification Date Completed</label>
+  <input type="date" id="professional_qualification_date" name="professional_qualification_date" />
+  <label for="last_promotion_date">Date of Last Promotion</label>
+  <input type="date" id="last_promotion_date" name="last_promotion_date" />
+  <input type="text" name="previous_station" placeholder="Previous Station" />
+  <input type="number" name="years_at_present_school" placeholder="Years at Present School" min="0" />
+  <input type="text" name="due_for_promotion" placeholder="Due For Promotion to Grade" />
+  <input type="text" name="responsibility" placeholder="Responsibility" />
+  <label for="denomination">Denomination</label>
+  <select name="denomination" id="denomination" required>
+    <option value="">Select Denomination</option>
+    <option>Church of Pentecost</option>
+    <option>Presbyterian Church of Ghana</option>
+    <option>Methodist Church Ghana</option>
+    <option>Roman Catholic Church Ghana</option>
+    <option>Anglican Church Ghana</option>
+    <option>Jehovah Witness</option>
+    <option>Evangelical Presbyterian Church Ghana</option>
+    <option>Seventh-day Adventist Church Ghana</option>
+    <option>Baptist Convention Ghana</option>
+    <option>Salvation Army Ghana</option>
+    <option>Ghana Pentecostal & Charismatic Council</option>
+    <option>International Central Gospel Church (ICGC)</option>
+    <option>Action Chapel International</option>
+    <option>Lighthouse Chapel International</option>
+    <option>Perez Chapel International</option>
+    <option>Royalhouse Chapel International</option>
+    <option>Living Streams International</option>
+    <option>Victory Bible Church International</option>
+    <option>Fountain Gate Chapel</option>
+    <option>Word Miracle Church International</option>
+    <option>Christ Embassy Ghana</option>
+    <option>Power Chapel Worldwide</option>
+    <option>Agape House New Testament Church</option>
+    <option>Pure Fire Miracles Ministries</option>
+    <option>House of Prayer Chapel</option>
+    <option>Christ Vision Sanctuary International</option>
+    <option>Blessed Divine Pentecostal Ministry</option>
+    <option>Achievers Generation Chapel</option>
+    <option>Family Praise Assemblies of God</option>
+    <option>Christ Jordan Church</option>
+    <option>Divine Pentecostal Church</option>
+    <option>Redeemed Christian Church of God (RCCG)</option>
+    <option>Assemblies of God Ghana</option>
+    <option>Deeper Christian Life Ministry</option>
+    <option>Winners Chapel International</option>
+    <option>Synagogue Church of All Nations (SCOAN)</option>
+    <option>Church of Jesus Christ of Latter-day Saints</option>
+    <option>Jehovah’s Witnesses</option>
+    <option>Church of Christ</option>
+    <option>Hillsong Ghana</option>
+    <option>Bethel Revival Church</option>
+    <option>Peace Chapel International</option>
+    <option>United Denominations of Action Chapel</option>
+    <option>Divine Healer’s Church</option>
+    <option>Healing Hand of God Ministry</option>
+    <option>Sacred Cherubim and Seraphim Church</option>
+    <option>Holy Trinity Healing Church</option>
+    <option>Mystic Brotherhood Church</option>
+    <option>Church of Light Mission</option>
+    <option>Christ Fellowship Church</option>
+    <option>True Church of Christ</option>
+    <option>Voice of God Ministry</option>
+    <option>Eden Revival Church</option>
+    <option>Church of the Garden of Gethsemane</option>
+    <option>Church of the Saviour</option>
+    <option>Inner Temple of Christ</option>
+    <option>World Key of Christ</option>
+    <option>Prayer Circle Church of Messiah</option>
+    <option>True Worshippers’ Church</option>
+    <option>Twer Nyame Fellowship</option>
+    <option>Israel’s Hope In Christ Church</option>
+    <option>Christ Salvation Church</option>
+    <option>Voice of Nazarene Inc.</option>
+    <option>Church of Melchizedek</option>
+    <option>Church Universal & Triumphant</option>
+    <option>Essenes Messianists Church</option>
+    <option>Christ Mystical Brotherhood Church</option>
+    <option>Accra Ridge Church</option>
+    <option>Ebenezer Presbyterian Church, Osu</option>
+    <option>Holy Trinity Cathedral, Accra</option>
+    <option>Christ the King Parish</option>
+    <option>St. Peter’s Cathedral Basilica, Kumasi</option>
+    <option>Sacred Heart Catholic Church</option>
+    <option>Emmanuel Methodist Church</option>
+    <option>St. Theresa’s Catholic Church</option>
+    <option>Christ Presbyterian Church, Akropong</option>
+    <option>Wesley Methodist Cathedral, Kumasi</option>
+    <option>Calvary Baptist Church</option>
+    <option>St. Anthony Catholic Church</option>
+    <option>St. James Anglican Church</option>
+    <option>St. Paul’s Lutheran Church</option>
+    <option>St. John’s Catholic Church</option>
+    <option>St. Mark Methodist Church</option>
+    <option>St. Augustine Catholic Church</option>
+    <option>St. Luke Anglican Church</option>
+    <option>St. Michael’s Catholic Church</option>
+    <option>St. Mary’s Catholic Church</option>
+    <option>Church of the Lord (Aladura)</option>
+    <option>Ghana Christian Church</option>
+    <option>Unity Church of Christ</option>
+    <option>United Christian Church</option>
+    <option>Bible Believers Church</option>
+    <option>Ghana Evangelical Church</option>
+    <option>Living Faith Ministries</option>
+    <option>Grace Outreach Church</option>
+    <option>End Time Revival Ministries</option>
+    <option>Christ Apostolic Church International</option>
+    <option>Jesus Generation Ministries</option>
+    <option>Faithway Community Church</option>
+    <option>Anointed Chapel International</option>
+    <option>Kingdom Power Ministries</option>
+    <option>Holy Fire Revival Church</option>
+    <option>Christ Power Gospel Church</option>
+    <option>Living Word Chapel</option>
+    <option>Divine Grace Ministries</option>
+    <option>New Life Christian Church</option>
+    <option>Christ Covenant Church</option>
+    <option>Spirit Life Revival Church</option>
+    <option>Glory Temple Ministries</option>
+    <option>Everlasting Gospel Church</option>
+    <option>Christ Reigns Chapel</option>
+    <option>Fire of God Ministries</option>
+    <option>Light of the World Church</option>
+    <option>Zion Praise Chapel</option>
+    <option>Dominion Power Ministries</option>
+    <option>Grace Tabernacle Church</option>
+    <option>Christ Redeemer Church</option>
+    <option>Living Waters Ministry</option>
+    <option>Hope Restoration Church</option>
+    <option>Christ Anointed Church</option>
+    <option>Kingdom Builders Ministries</option>
+  </select>
+  <input type="text" name="home_town" placeholder="Home Town" />
+
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="dashboard.js"></script>
+<script src="router.js"></script>
+<script>
+  document.getElementById('logoutBtn').onclick = function() {
+    sessionStorage.clear();
+    localStorage.clear();
+    window.location.href = 'index.html';
+  };
+</script>
+</body>
+</html>
