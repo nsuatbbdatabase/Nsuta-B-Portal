@@ -392,9 +392,8 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
   const teacherId = form.teacher_id.value;
-  // Generate username and pin for new teachers
+  // Generate pin for new teachers
   const name = form.name.value.trim();
-  const username = generateUsername(name);
   const pin = generatePin();
   const teacherData = {
     name,
@@ -425,17 +424,15 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     responsibility: form.responsibility.value.trim(),
     denomination: form.denomination.value.trim(),
     home_town: form.home_town.value.trim(),
-    username,
     pin
   };
 
   let result;
   if (teacherId) {
-    // Don't overwrite username/pin on update
-    const updateData = { ...teacherData };
-    delete updateData.username;
-    delete updateData.pin;
-    result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId);
+  // Don't overwrite pin on update
+  const updateData = { ...teacherData };
+  delete updateData.pin;
+  result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId);
   } else {
     result = await supabaseClient.from('teachers').insert([teacherData]);
   }
@@ -446,7 +443,7 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     if (teacherId) {
       alert('Teacher updated!');
     } else {
-      alert(`Teacher registered: ${teacherData.name}\nUsername: ${username}\nPIN: ${pin}`);
+  alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
     }
     form.reset();
     Array.from(form.classes.options).forEach(opt => opt.selected = false);
