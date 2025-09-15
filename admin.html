@@ -152,12 +152,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
+  <!-- Hamburger menu for mobile -->
+  <button id="sidebarToggle" class="sidebar-toggle" aria-label="Open menu">
+    &#9776;
+  </button>
   <header class="dashboard-header">
-  <img src="Badge.png" alt="School Logo" class="school-logo" style="height:60px;margin-right:1rem;vertical-align:middle;" />
-  <h1 style="display:inline-block;vertical-align:middle;">Nkawkaw Nsuta M/A 'B' Basic School</h1>
-    <p class="motto">"Knowledge is Power"</p>
-    <button id="logoutBtn" class="logout-btn" style="float:right;margin-top:-3.5rem;">Logout</button>
+  <div class="header-left">
+    <img src="Badge.png" alt="School Logo" class="school-logo" />
+    <div>
+      <h1>Nkawkaw Nsuta M/A 'B' Basic School</h1>
+      <p class="motto">"Knowledge is Power"</p>
+    </div>
+  </div>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
   </header>
 
   <nav class="sidebar">
@@ -165,13 +172,12 @@
       <li><a href="interest-conduct.html">Students Interest and Conduct</a></li>
       <li><a href="dashboard.html">Students Interest Update</a></li>
       <li><a href="#admins">Admins</a></li>
+      <li><a href="report.html" class="report-link">View Report Dashboard</a></li>
     </ul>
   </nav>
 
   <main class="dashboard-main">
-    <section id="reports" style="margin-bottom: 2rem;">
-      <button onclick="window.location.href='report.html'" class="report-btn">View Report Dashboard</button>
-    </section>
+
 
     <!-- Events/Timetable/Extra Classes Management Section -->
     <section id="eventsManagement">
@@ -518,6 +524,49 @@
           <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="admin.js"></script>
+</body>
+<script>
+// Sidebar toggle for mobile
+const sidebar = document.querySelector('.sidebar');
+const toggleBtn = document.getElementById('sidebarToggle');
+function updateSidebarDisplay() {
+  if (window.innerWidth <= 900) {
+    toggleBtn.style.display = 'block';
+    sidebar.classList.add('collapsed');
+  } else {
+    toggleBtn.style.display = 'none';
+    sidebar.classList.remove('collapsed');
+    sidebar.style.display = '';
+  }
+}
+toggleBtn && toggleBtn.addEventListener('click', function() {
+  sidebar.classList.toggle('open');
+  if (sidebar.classList.contains('open')) {
+    sidebar.style.display = 'block';
+    sidebar.style.zIndex = 1200;
+    sidebar.style.position = 'fixed';
+    sidebar.style.left = 0;
+    sidebar.style.top = 0;
+    sidebar.style.height = '100vh';
+    sidebar.style.background = '#00264d';
+    sidebar.style.width = '220px';
+    sidebar.style.boxShadow = '2px 0 12px rgba(0,0,0,0.12)';
+  } else {
+    sidebar.style.display = 'none';
+  }
+});
+window.addEventListener('resize', updateSidebarDisplay);
+window.addEventListener('DOMContentLoaded', updateSidebarDisplay);
+// Close sidebar when clicking outside (mobile)
+document.addEventListener('click', function(e) {
+  if (window.innerWidth <= 900 && sidebar.classList.contains('open')) {
+    if (!sidebar.contains(e.target) && e.target !== toggleBtn) {
+      sidebar.classList.remove('open');
+      sidebar.style.display = 'none';
+    }
+  }
+});
+</script>
 <script src="dashboard.js"></script>
 <script src="router.js"></script>
 <script>

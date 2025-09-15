@@ -82,5 +82,35 @@ async function loadMotivation() {
   }
 }
 
+  window.addEventListener('load', function () {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isMobile = /Mobi/i.test(navigator.userAgent);
+
+    if (isAndroid && isMobile) {
+      const prompt = document.createElement('div');
+      prompt.style.position = 'fixed';
+      prompt.style.bottom = '20px';
+      prompt.style.left = '20px';
+      prompt.style.right = '20px';
+      prompt.style.padding = '15px';
+      prompt.style.background = '#4CAF50';
+      prompt.style.color = '#fff';
+      prompt.style.fontSize = '16px';
+      prompt.style.borderRadius = '8px';
+      prompt.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+      prompt.style.zIndex = '9999';
+      prompt.innerHTML = `
+        📱 A faster experience is available in our mobile app.<br>
+        <a href="https://your-download-link.com/app.apk" style="color: #fff; text-decoration: underline;">Download Now</a>
+      `;
+
+      document.body.appendChild(prompt);
+
+      setTimeout(() => {
+        prompt.remove();
+      }, 15000); // auto-dismiss after 15 seconds
+    }
+  });
+
 // 🚀 Initialize
 loadMotivation();
