@@ -4,35 +4,55 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Dashboard</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="stylesheet" href="student-dashboard.css" />
 </head>
 <body>
-  <button id="logoutBtn" class="logout-btn" style="float:right;margin:1rem;">Logout</button>
-  <div class="school-header" style="display:flex;align-items:center;margin-bottom:1rem;">
-    <img src="Badge.png" alt="School Logo" class="school-logo" style="height:60px;margin-right:1rem;" />
-    <h1 style="margin:0;font-size:1.5rem;">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
+  <div class="school-header">
+  <img src="Badge.png" alt="School Logo" class="school-logo" />
+  <h1 class="school-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
   </div>
   <div class="dashboard-container">
-    <!-- 🌙 Dark Mode Toggle -->
+    <!-- 🗓️ Floating Events Section -->
+    <div id="floatingEventsSection" class="floating-events-section">
+      <h3>🗓️ Events & Alerts</h3>
+      <ul id="eventsList"></ul>
+    </div>
+    <!-- Timetable Show/Hide Section -->
+    <div class="collapsible-section">
+      <button class="collapsible-btn" onclick="toggleStudentTimetable()">Show Timetable</button>
+      <div id="studentTimetableWrapper" class="collapsible-content" style="display:none;">
+        <h3>Your Timetable</h3>
+        <table id="studentTimetableTable">
+          <thead>
+            <tr><th>Day</th><th>Time</th><th>Subject</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Extra Classes Show/Hide Section -->
+    <div class="collapsible-section">
+      <button class="collapsible-btn" onclick="toggleStudentExtraClasses()">Show Extra Classes</button>
+      <div id="studentExtraClassesWrapper" class="collapsible-content" style="display:none;">
+        <h3>Your Extra Classes</h3>
+        <table id="studentExtraClassesTable">
+          <thead>
+            <tr><th>Day</th><th>Class</th><th>Morning Teacher</th><th>Extra Teacher</th><th>Extra Extra Teacher</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- �🌙 Dark Mode Toggle -->
     <button id="darkModeToggle">Toggle Dark Mode</button>
 
     <!-- 👋 Welcome -->
     <h2 id="welcomeMessage">Welcome, [Student Name]</h2>
 
-    <!-- Tabbed Navigation -->
-    <div class="dashboard-tabs">
-      <button class="tab-btn" onclick="showTab('profileSection')">Profile</button>
-      <button class="tab-btn" onclick="showTab('assignmentsSection')">Assignments</button>
-      <button class="tab-btn" onclick="showTab('resultsSection')">Results</button>
-      <button class="tab-btn" onclick="showTab('submissionsSection')">Submissions</button>
-      <button class="tab-btn" onclick="showTab('resourcesSection')">Resources</button>
-      <button class="tab-btn" onclick="showTab('contactTeacherSection')">Contact Teacher</button>
-      <button class="tab-btn" onclick="showTab('resourceRequestSection')">Request Resource</button>
-      <button class="tab-btn" onclick="showTab('motivationSection')">Motivation</button>
-    </div>
-
-    <!-- 📂 Profile Section -->
-    <div id="profileSection" class="tab-section">
+    <!-- 📂 Profile Section (Always Visible) -->
+  <div id="profileSection" class="tab-section profile-section">
       <div id="studentInfo">
         <h3 id="studentName">[Student Name]</h3>
         <p id="studentClass">Class: [Class]</p>
@@ -44,8 +64,20 @@
       <img id="studentPhoto" class="passport-photo" src="" alt="Student Photo" />
     </div>
 
+    <!-- Tabbed Navigation -->
+    <div class="dashboard-tabs">
+      <button class="tab-btn" onclick="showTab('assignmentsSection')">Assignments</button>
+      <button class="tab-btn" onclick="showTab('resultsSection')">Results</button>
+      <button class="tab-btn" onclick="showTab('submissionsSection')">Submissions</button>
+      <button class="tab-btn" onclick="showTab('resourcesSection')">Resources</button>
+      <button class="tab-btn" onclick="showTab('contactTeacherSection')">Contact Teacher</button>
+      <button class="tab-btn" onclick="showTab('resourceRequestSection')">Request Resource</button>
+      <button class="tab-btn" onclick="showTab('motivationSection')">Motivation</button>
+  <!-- Study Bot tab removed -->
+    </div>
+
     <!-- 📥 Assignments Section -->
-    <div id="assignmentsSection" class="tab-section" style="display:none;">
+  <div id="assignmentsSection" class="tab-section">
       <h3>Assignments</h3>
       <table>
         <thead>
@@ -77,7 +109,7 @@
     </div>
 
     <!-- 📈 Results Section -->
-    <div id="resultsSection" class="tab-section" style="display:none;">
+  <div id="resultsSection" class="tab-section">
       <h3>Released Results</h3>
 
       <!-- 📅 Term and Year Filters -->
@@ -116,7 +148,7 @@
     </div>
 
     <!-- 📥 Submissions Section -->
-    <div id="submissionsSection" class="tab-section" style="display:none;">
+  <div id="submissionsSection" class="tab-section">
       <h3>Submission History</h3>
       <table>
         <thead>
@@ -133,15 +165,30 @@
     </div>
 
     <!-- 📚 Resources Section -->
-    <div id="resourcesSection" class="tab-section" style="display:none;">
+  <div id="resourcesSection" class="tab-section">
       <h3>Study Resources</h3>
+  <div class="resource-filter-bar">
+        <label for="resourceTypeFilter">Type:</label>
+        <select id="resourceTypeFilter" onchange="filterResources()">
+          <option value="">All</option>
+          <option value="note">Notes</option>
+          <option value="video">Videos</option>
+          <option value="quiz">Quizzes</option>
+          <option value="other">Other</option>
+        </select>
+  <input id="resourceSearch" type="text" placeholder="Search resources..." oninput="filterResources()" class="resource-search" />
+      </div>
       <ul id="resourceList">
         <!-- Links to PDFs, videos, quizzes -->
       </ul>
+  <div id="recommendedResources" class="recommended-resources">
+        <h4>Recommended for You</h4>
+        <ul id="recommendedList"></ul>
+      </div>
     </div>
 
     <!-- Contact Teacher Section -->
-    <div id="contactTeacherSection" class="tab-section" style="display:none;">
+  <div id="contactTeacherSection" class="tab-section">
       <h3>Contact Teacher</h3>
       <form id="contactTeacherForm">
         <label for="teacherSelect">Select Teacher:</label>
@@ -154,7 +201,7 @@
     </div>
 
     <!-- Resource Request Section -->
-    <div id="resourceRequestSection" class="tab-section" style="display:none;">
+  <div id="resourceRequestSection" class="tab-section">
       <h3>Request Study Resource</h3>
       <form id="resourceRequestForm">
   <label for="teacherSelectResource">Teacher:</label>
@@ -172,10 +219,12 @@
     </div>
 
     <!-- Motivation Section -->
-    <div id="motivationSection" class="tab-section" style="display:none;">
+  <div id="motivationSection" class="tab-section">
       <h3>Motivational Messages & Announcements</h3>
       <ul id="motivationList"></ul>
     </div>
+
+    <!-- Study Bot Section removed -->
   </div>
 
   <!-- Supabase + Chart.js -->
@@ -184,36 +233,6 @@
   <script src="student-dashboard.js"></script>
     <script src="router.js"></script>
 </body>
-<script>
-  document.getElementById('logoutBtn').onclick = function() {
-    sessionStorage.clear();
-    localStorage.clear();
-    window.location.href = 'index.html';
-  };
-
-  function showTab(tabId) {
-    // Hide all sections
-    document.querySelectorAll('.tab-section').forEach(sec => sec.style.display = 'none');
-    // Show selected section
-    document.getElementById(tabId).style.display = 'block';
-    // Highlight active tab
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    const tabBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId));
-    if (tabBtn) tabBtn.classList.add('active');
-    // Lazy-load data for the tab
-    if (tabId === 'profileSection') loadProfile();
-    if (tabId === 'assignmentsSection') loadAssignments();
-    if (tabId === 'resultsSection') loadReleasedResults();
-    if (tabId === 'submissionsSection') loadSubmissions();
-    if (tabId === 'resourcesSection') loadResources();
-    if (tabId === 'motivationSection') loadMotivations();
-    // No need to reload teacher dropdowns every time, but you can if needed:
-    // if (tabId === 'contactTeacherSection' || tabId === 'resourceRequestSection') populateTeacherDropdown();
-  }
-  // Show profile tab by default
-  showTab('profileSection');
-  // Optionally, load teacher dropdowns once on page load
-  if (typeof populateTeacherDropdown === 'function') populateTeacherDropdown();
-</script>
+<!-- Scripts moved to student-dashboard.js -->
 </body>
 </html>

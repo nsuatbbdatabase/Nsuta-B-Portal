@@ -1,3 +1,85 @@
+// ------------------- Attendance Feature -------------------
+function setupAttendanceSection() {
+  const attendanceClassSelect = document.getElementById('attendanceClassSelect');
+  if (attendanceClassSelect && teacher && teacher.classes) {
+    attendanceClassSelect.innerHTML = '<option value="">-- Select Class --</option>';
+    teacher.classes.forEach(cls => {
+      const opt = document.createElement('option');
+      opt.value = cls;
+      opt.textContent = cls;
+      attendanceClassSelect.appendChild(opt);
+    });
+    attendanceClassSelect.addEventListener('change', loadAttendanceStudents);
+  }
+  const attendanceDate = document.getElementById('attendanceDate');
+  if (attendanceDate) {
+    attendanceDate.valueAsDate = new Date();
+    attendanceDate.addEventListener('change', loadAttendanceStudents);
+  }
+  // Optionally, load students for the first class if desired
+}
+
+// Load students for selected class and date
+async function loadAttendanceStudents() {
+  const classVal = document.getElementById('attendanceClassSelect').value;
+  const tbody = document.getElementById('attendanceTableBody');
+  tbody.innerHTML = '';
+  if (!classVal) return;
+  const { data, error } = await supabaseClient
+    .from('students')
+    .select('id, full_name')
+    .eq('class', classVal);
+  if (error || !Array.isArray(data) || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2">No students found for this class.</td></tr>';
+    return;
+  }
+  data.forEach(student => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${student.full_name}</td>
+      <td>
+        <select class="attendance-status" data-student-id="${student.id}">
+          <option value="Present">Present</option>
+          <option value="Absent">Absent</option>
+          <option value="Late">Late</option>
+        </select>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// Submit attendance to Supabase
+async function submitAttendance() {
+  const classVal = document.getElementById('attendanceClassSelect').value;
+  const dateVal = document.getElementById('attendanceDate').value;
+  if (!classVal || !dateVal) {
+    alert('Please select class and date.');
+    return;
+  }
+  const statusSelects = document.querySelectorAll('.attendance-status');
+  const records = Array.from(statusSelects).map(sel => ({
+    student_id: sel.getAttribute('data-student-id'),
+    class: classVal,
+    date: dateVal,
+    status: sel.value,
+    marked_by: teacher.id
+  }));
+  if (records.length === 0) {
+    alert('No students to mark.');
+    return;
+  }
+  // Upsert attendance records (one per student per date)
+  const { error } = await supabaseClient
+    .from('attendance')
+    .upsert(records, { onConflict: ['student_id', 'date'] });
+  if (error) {
+    alert('Failed to submit attendance: ' + error.message);
+  } else {
+    alert('Attendance submitted successfully!');
+  }
+}
+// ----------------------------------------------------------
 // Send motivational message to selected student
 async function sendMotivationalMessage() {
   const studentId = document.getElementById('motivationStudentSelect')?.value;
@@ -173,6 +255,8 @@ async function loadTeacherDashboard(staffId) {
   // Populate Exam section dropdowns
   populateDropdown('classSelectExam', teacher.classes || []);
   populateDropdown('subjectSelectExam', teacher.subjects || []);
+  // Setup attendance section after teacher data is loaded
+  setupAttendanceSection();
   await loadAssignments();
   await loadStudentSubmissions();
   await loadStudentMessages(); // Load messages after dashboard loads
@@ -255,7 +339,7 @@ function calculateSBAScore(studentId) {
   const classTest = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="classTest"]`)?.value) || 0, 15);
   const project = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="project"]`)?.value) || 0, 15);
   const total = Math.min(individual + group + classTest + project, 60);
-  const scaled = Math.floor((total / 60) * 50);
+  const scaled = Math.round((total / 60) * 50);
   document.getElementById(`total-${studentId}`).textContent = total;
   document.getElementById(`scaled-${studentId}`).textContent = scaled;
 }
@@ -372,7 +456,7 @@ function renderExamForm() {
   document.querySelectorAll('#examTableBody input').forEach(input => {
     input.addEventListener('input', () => {
       const raw = Math.min(parseInt(input.value) || 0, 100);
-      const scaled = Math.floor((raw / 100) * 50);
+      const scaled = Math.round((raw / 100) * 50);
       document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
     });
   });

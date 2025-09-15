@@ -81,7 +81,7 @@ async function editAdmin(id) {
 async function loadAdmins() {
   const { data, error } = await supabaseClient.from('admins').select('*');
   const tbody = document.querySelector('#adminTable tbody');
-  tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
   if (error) {
     console.error('Failed to load admins:', error.message);
     return;
@@ -130,7 +130,7 @@ async function loadTeachers() {
   const { data, error } = await supabaseClient.from('teachers').select('*');
   const tbody = document.querySelector('#teacherTable tbody');
   const select = document.getElementById('teacherSelect');
-  tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
   if (select) {
     select.innerHTML = '<option value="">-- Select Teacher --</option>';
     if (data && Array.isArray(data)) {
@@ -149,7 +149,7 @@ async function loadTeachers() {
 window.showSelectedTeacher = function showSelectedTeacher() {
   const select = document.getElementById('teacherSelect');
   const tbody = document.querySelector('#teacherTable tbody');
-  tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
   const teacherId = select.value;
   if (!teacherId) return;
   supabaseClient.from('teachers').select('*').eq('id', teacherId).single().then(({ data, error }) => {
@@ -345,7 +345,7 @@ async function loadStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   const tbody = document.querySelector('#studentTable tbody');
   const select = document.getElementById('studentSelect');
-  tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
   if (select) {
     select.innerHTML = '<option value="">-- Select Student --</option>';
     if (data && Array.isArray(data)) {
@@ -363,7 +363,7 @@ async function loadStudents() {
 window.showSelectedStudent = function showSelectedStudent() {
   const select = document.getElementById('studentSelect');
   const tbody = document.querySelector('#studentTable tbody');
-  tbody.innerHTML = '';
+    if (tbody) tbody.innerHTML = '';
   const studentId = select.value;
   if (!studentId) return;
   supabaseClient.from('students').select('*').eq('id', studentId).single().then(({ data, error }) => {
@@ -471,13 +471,29 @@ async function editTeacher(id) {
   form.rank.value = data.rank || '';
   form.qualification.value = data.qualification || '';
   // Multi-select: classes
-  Array.from(form.classes.options).forEach(opt => {
-    opt.selected = (data.classes || []).includes(opt.value);
-  });
+  let teacherClasses = [];
+  if (Array.isArray(data.classes)) {
+    teacherClasses = data.classes;
+  } else if (typeof data.classes === 'string') {
+    teacherClasses = data.classes.split(',').map(s => s.trim());
+  }
+  if (form.classes && form.classes.options) {
+    Array.from(form.classes.options).forEach(opt => {
+      opt.selected = teacherClasses.includes(opt.value);
+    });
+  }
   // Multi-select: subjects
-  Array.from(form.subjects.options).forEach(opt => {
-    opt.selected = (data.subjects || []).includes(opt.value);
-  });
+  let teacherSubjects = [];
+  if (Array.isArray(data.subjects)) {
+    teacherSubjects = data.subjects;
+  } else if (typeof data.subjects === 'string') {
+    teacherSubjects = data.subjects.split(',').map(s => s.trim());
+  }
+  if (form.subjects && form.subjects.options) {
+    Array.from(form.subjects.options).forEach(opt => {
+      opt.selected = teacherSubjects.includes(opt.value);
+    });
+  }
   form.first_appointment_date.value = data.first_appointment_date || '';
   form.date_placed_on_rank.value = data.date_placed_on_rank || '';
   form.salary_level.value = data.salary_level || '';

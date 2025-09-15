@@ -1,3 +1,404 @@
+/* Timetable Table Day Styles */
+.timetable-day-monday td, .timetable-day-cell.timetable-day-monday {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+.timetable-day-tuesday td, .timetable-day-cell.timetable-day-tuesday {
+  background: #fffde7;
+  color: #fbc02d;
+}
+.timetable-day-wednesday td, .timetable-day-cell.timetable-day-wednesday {
+  background: #fce4ec;
+  color: #c2185b;
+}
+.timetable-day-thursday td, .timetable-day-cell.timetable-day-thursday {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+.timetable-day-friday td, .timetable-day-cell.timetable-day-friday {
+  background: #ede7f6;
+  color: #5e35b1;
+}
+.timetable-day-cell {
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-right: 2px solid #bdbdbd;
+}
+/* Professional Classes Management Table Styles */
+.professional-table .class-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.3rem 0.1rem;
+}
+.professional-table .slot-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-right: 0.3rem;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  display: inline-block;
+}
+.professional-table .morning-label {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+.professional-table .extra-label {
+  background: #fffde7;
+  color: #fbc02d;
+}
+.professional-table .extra-extra-label {
+  background: #fce4ec;
+  color: #c2185b;
+}
+.professional-table .teacher-slot {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #333;
+  margin-left: 0.2rem;
+}
+.professional-table td {
+  vertical-align: top;
+}
+/* Admin Dashboard Section Styles */
+.dashboard-section {
+  background: #f9f9fb;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  margin-bottom: 2.5rem;
+  padding: 2rem 1.5rem;
+  position: relative;
+}
+.dashboard-section h2 {
+  margin-top: 0;
+  font-size: 1.35rem;
+  color: #1976d2;
+  font-weight: 700;
+  margin-bottom: 1.2rem;
+}
+.section-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+.section-filters {
+  display: flex;
+  gap: 1.2rem;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+.dashboard-section table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  margin-bottom: 1.2rem;
+  overflow: hidden;
+}
+.dashboard-section th, .dashboard-section td {
+  padding: 0.7rem 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  text-align: left;
+  font-size: 1rem;
+}
+.dashboard-section th {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-weight: 600;
+}
+.dashboard-section tr:last-child td {
+  border-bottom: none;
+}
+.dashboard-section tbody tr:hover {
+  background: #f0f4ff;
+}
+.dashboard-section button {
+  background: #1976d2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dashboard-section button:hover {
+  background: #1565c0;
+}
+@media (max-width: 700px) {
+  .dashboard-section {
+    padding: 1rem 0.5rem;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .dashboard-section table {
+    font-size: 0.95rem;
+  }
+  .dashboard-section th, .dashboard-section td {
+    padding: 0.5rem 0.3rem;
+  }
+}
+.dropdown-checkbox {
+  position: relative;
+  margin-bottom: 1rem;
+}
+.dropdown-btn {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #f8f8f8;
+  cursor: pointer;
+  text-align: left;
+}
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 110%;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  z-index: 1002;
+  padding: 0.5rem 1rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.dropdown-checkbox.open .dropdown-content {
+  display: block;
+}
+.dropdown-content label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.modal-content select[multiple]#classesSelect,
+.modal-content select[multiple]#subjectsSelect {
+  width: 100%;
+  margin-bottom: 1rem;
+  min-height: 110px;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.checkbox-group label {
+  position: relative;
+  padding-left: 2.2em;
+  cursor: pointer;
+  min-width: 120px;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  user-select: none;
+}
+.checkbox-group input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+.checkbox-group label:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 1.4em;
+  height: 1.4em;
+  border: 2px solid #0074d9;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: border-color 0.2s;
+}
+.checkbox-group input[type="checkbox"]:checked + label:before {
+  border-color: #2ecc40;
+  background: #e6ffe6;
+}
+.checkbox-group input[type="checkbox"]:checked + label:after {
+  content: '\2713';
+  position: absolute;
+  left: 0.35em;
+  top: 0.2em;
+  font-size: 1.2em;
+  color: #2ecc40;
+  font-weight: bold;
+}
+.checkbox-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+.checkbox-group label {
+  min-width: 120px;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.checkbox-group.columns-2 {
+  column-count: 2;
+  column-gap: 2rem;
+}
+.modal-content select[multiple] {
+  height: 120px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  overflow-y: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.modal-content select {
+  width: 100%;
+  background: #fff;
+  z-index: 1002;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  appearance: auto;
+}
+.modal-content {
+  margin-top: 2.5rem;
+}
+.modal-content input[name="name"], .modal-content input[name="full_name"] {
+  margin-top: 1.2rem;
+}
+/* --- Modal Desktop Styles --- */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.3);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 2rem 1.5rem;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.12);
+  z-index: 1001;
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+.modal-content input, .modal-content select, .modal-content button {
+  display: block;
+  width: 100%;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+.modal-content .form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+/* --- Responsive Mobile Styles --- */
+@media (max-width: 700px) {
+  .dashboard-container {
+    padding: 0.5rem;
+  }
+  .school-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    text-align: left;
+  }
+  .school-logo {
+    height: 40px;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+  .school-title {
+    font-size: 1.1rem;
+  }
+  .dashboard-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    justify-content: flex-start;
+  }
+  .tab-btn {
+    font-size: 0.95rem;
+    padding: 0.4rem 0.7rem;
+    min-width: 90px;
+    border-radius: 6px;
+    margin-bottom: 0.2rem;
+  }
+  table {
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: collapse;
+    overflow-x: auto;
+    display: block;
+  }
+  thead {
+    display: none;
+  }
+  tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    padding: 0.7rem;
+  }
+  tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    border: none;
+    font-size: 0.97rem;
+  }
+  tbody td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #555;
+    margin-right: 0.7em;
+    min-width: 90px;
+    display: inline-block;
+  }
+  .resource-filter-bar, .quiz-generator-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+  .profile-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .passport-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+  }
+}
 /* --- Professional Responsive Dashboard --- */
 /* Tables: horizontal scroll on mobile, no block stacking */
 .dashboard-container table {

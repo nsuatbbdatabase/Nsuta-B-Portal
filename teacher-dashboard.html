@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Teacher Dashboard</title>
+  <link rel="icon" type="image/png" href="Badge.png" />
   <link rel="stylesheet" href="teacher-dashboard.css" />
 </head>
 <body>
@@ -24,8 +25,15 @@
     </div>
   </div>
   <div class="dashboard-container">
-    <div class="dashboard-tabs">
+    <!-- Teacher Welcome and Roles -->
+    <div class="teacher-header">
+      <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
+      <div id="assignedRoles" class="floating-roles"></div>
+    </div>
+    <!-- Dashboard Tabs in Grid -->
+    <div class="dashboard-tabs-grid">
       <button class="tab-btn" onclick="showTab('profileSection')">Profile</button>
+      <button class="tab-btn" onclick="showTab('attendanceSection')">Attendance</button>
       <button class="tab-btn" onclick="showTab('sbaSection')">SBA Entry</button>
       <button class="tab-btn" onclick="showTab('examSection')">Exam Entry</button>
       <button class="tab-btn" onclick="showTab('assignmentSection')">Assignment Composer</button>
@@ -34,12 +42,35 @@
       <button class="tab-btn" onclick="showTab('resourceRequestsSection')">Resource Requests</button>
       <button class="tab-btn" onclick="showTab('motivationSection')">Motivation</button>
     </div>
-
-    <div id="profileSection" class="tab-section">
-      <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
-      <div id="assignedRoles" class="floating-roles"></div>
-      <div id="studentListContainer"></div>
+    <!-- Attendance Section -->
+    <div id="attendanceSection" class="tab-section" style="display:none;">
+      <div class="collapsible-panel">
+        <button class="toggle-btn" onclick="togglePanel('attendancePanel')">Attendance</button>
+        <div id="attendancePanel" class="panel-content">
+          <div class="filters">
+            <label for="attendanceClassSelect">Class:</label>
+            <select id="attendanceClassSelect">
+              <option value="">-- Select Class --</option>
+            </select>
+            <label for="attendanceDate">Date:</label>
+            <input type="date" id="attendanceDate" />
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceTableBody"></tbody>
+          </table>
+          <button onclick="submitAttendance()">Submit Attendance</button>
+        </div>
+      </div>
     </div>
+    </div>
+
+   
 
     <div id="sbaSection" class="tab-section" style="display:none;">
       <div class="collapsible-panel">
@@ -284,15 +315,20 @@
 </script>
 <script>
   window.showTab = function(tabId) {
-  document.querySelectorAll('.tab-section').forEach(section => {
-    section.style.display = 'none';
-  });
-  document.getElementById(tabId).style.display = 'block';
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.classList.remove('active');
-    if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
-  });
-}
+    document.querySelectorAll('.tab-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    var tabSection = document.getElementById(tabId);
+    if (tabSection) {
+      tabSection.style.display = 'block';
+    } else {
+      console.warn('Tab section not found:', tabId);
+    }
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
+    });
+  }
 showTab('profileSection'); // Show profile by default
 </script>
 </body>

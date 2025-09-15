@@ -1,3 +1,300 @@
+/* Collapsible Show/Hide Button Styles */
+.collapsible-btn {
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+  color: #fff;
+  border: none;
+  border-radius: 22px;
+  padding: 0.5rem 1.4rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.08);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  outline: none;
+}
+.collapsible-btn:hover, .collapsible-btn:focus {
+  background: linear-gradient(90deg, #1565c0 0%, #1e88e5 100%);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.16);
+  transform: translateY(-2px) scale(1.03);
+}
+/* Floating Events Section Styles */
+.floating-events-section {
+  position: sticky;
+  top: 1.5rem;
+  z-index: 10;
+  background: #f9f9fb;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 1.2rem 1rem 1rem 1rem;
+  margin-bottom: 2rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.floating-events-section h3 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: #1976d2;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+}
+#eventsList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#eventsList li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 7px;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.event-holiday {
+  background: #fffde7;
+  color: #fbc02d;
+  border-left: 5px solid #fbc02d;
+}
+.event-activity {
+  background: #e3f2fd;
+  color: #1976d2;
+  border-left: 5px solid #1976d2;
+}
+.event-timetable {
+  background: #e8f5e9;
+  color: #388e3c;
+  border-left: 5px solid #388e3c;
+}
+.event-extra-class {
+  background: #fce4ec;
+  color: #c2185b;
+  border-left: 5px solid #c2185b;
+}
+.event-type {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+.event-date {
+  margin-left: auto;
+  font-size: 0.97rem;
+  color: #888;
+}
+/* --- Responsive Mobile Styles --- */
+@media (max-width: 700px) {
+  .dashboard-container {
+    padding: 0.5rem;
+  }
+  .school-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    text-align: left;
+  }
+  .school-logo {
+    height: 40px;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
+  }
+  .school-title {
+    font-size: 1.1rem;
+  }
+  .dashboard-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    justify-content: flex-start;
+  }
+  .tab-btn {
+    font-size: 0.95rem;
+    padding: 0.4rem 0.7rem;
+    min-width: 90px;
+    border-radius: 6px;
+    margin-bottom: 0.2rem;
+  }
+  table {
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: collapse;
+    overflow-x: auto;
+    display: block;
+  }
+  thead {
+    display: none;
+  }
+  tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    padding: 0.7rem;
+  }
+  tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    border: none;
+    font-size: 0.97rem;
+  }
+  tbody td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #555;
+    margin-right: 0.7em;
+    min-width: 90px;
+    display: inline-block;
+  }
+  .resource-filter-bar, .quiz-generator-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+  .profile-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .passport-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+  }
+}
+/* --- School Header --- */
+.school-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.school-logo {
+  height: 60px;
+  margin-right: 1rem;
+}
+.school-title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+/* --- Logout Button --- */
+.logout-btn {
+  float: right;
+  margin: 1rem;
+}
+
+/* --- Profile Section --- */
+.profile-section {
+  display: block;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Tab Sections --- */
+.tab-section[hidden] {
+  display: none !important;
+}
+
+/* --- Resource Filter Bar --- */
+.resource-filter-bar {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+.resource-search {
+  flex: 1;
+  min-width: 180px;
+}
+.recommended-resources {
+  margin-top: 2rem;
+}
+
+/* --- Quiz Generator Bar --- */
+.quiz-generator-bar {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.quiz-topic-input {
+  flex: 1;
+  min-width: 160px;
+}
+.quiz-generate-btn {
+  padding: 0.5rem 1rem;
+}
+
+/* --- GPT Chat Box & Status --- */
+.gpt-chat-box {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 1rem;
+  background: #fafbfc;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+.gpt-status {
+  margin-top: 0.5rem;
+  color: #888;
+  font-size: 0.9em;
+}
+.gpt-powered {
+  margin-top: 0.5rem;
+  font-size: 0.8em;
+  color: #888;
+}
+/* --- Profile Section Responsive Styles --- */
+#profileSection {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: #f4f8ff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+#studentInfo {
+  flex: 1;
+}
+.passport-photo {
+  width: 90px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 50%;
+  border: 2px solid #004080;
+  background: #fff;
+}
+@media (max-width: 700px) {
+  #profileSection {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.7rem 0.5rem;
+    gap: 0.7rem;
+  }
+  .passport-photo {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 0.5rem;
+  }
+  #studentInfo h3 {
+    font-size: 1.1rem;
+  }
+  #studentInfo p {
+    font-size: 0.98rem;
+    margin-bottom: 0.3rem;
+  }
+}
 /* --- Professional Responsive Dashboard --- */
 /* Tabs: horizontally scrollable on mobile, clear highlight, touch-friendly */
 .dashboard-tabs {
@@ -39,17 +336,6 @@
 }
 
 /* Section transitions */
-.tab-section {
-  display: none;
-  animation: fadeInTab 0.3s;
-}
-.tab-section.open {
-  display: block;
-}
-@keyframes fadeInTab {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: none; }
-}
 
 /* Tables: horizontal scroll on mobile, no block stacking */
 .dashboard-container table {

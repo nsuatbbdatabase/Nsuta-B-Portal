@@ -1,3 +1,131 @@
+  <!-- Event Modal -->
+  <div id="eventModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Add/Edit Event or Holiday</h3>
+      <form id="eventForm">
+        <input type="hidden" name="event_id" />
+        <label for="eventType">Type:</label>
+        <select name="type" id="eventType" required>
+          <option value="">Select Type</option>
+          <option value="event">Event</option>
+          <option value="holiday">Holiday</option>
+        </select>
+        <label for="eventTitle">Title:</label>
+        <input type="text" name="title" id="eventTitle" placeholder="e.g. Independence Day" required />
+        <label for="eventDate">Date:</label>
+        <input type="date" name="date" id="eventDate" required />
+        <label for="eventClass">Class (optional):</label>
+        <select name="class" id="eventClass">
+          <option value="">All Classes</option>
+          <option value="JHS 1 A">JHS 1 A</option>
+          <option value="JHS 1 B">JHS 1 B</option>
+          <option value="JHS 2 A">JHS 2 A</option>
+          <option value="JHS 2 B">JHS 2 B</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+        <label for="eventDetails">Details (optional):</label>
+        <textarea name="details" id="eventDetails" placeholder="Details or description..."></textarea>
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('eventModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Timetable Modal -->
+
+  <div id="timetableModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Add/Edit Timetable Entry</h3>
+      <form id="timetableForm">
+        <input type="hidden" name="timetable_id" />
+        <label for="timetableClass">Class:</label>
+        <select name="class" id="timetableClass" required>
+          <option value="">Select Class</option>
+          <option value="JHS 1 A">JHS 1 A</option>
+          <option value="JHS 1 B">JHS 1 B</option>
+          <option value="JHS 2 A">JHS 2 A</option>
+          <option value="JHS 2 B">JHS 2 B</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+        <label for="timetableSubject">Subject:</label>
+        <select name="subject" id="timetableSubject" required>
+          <option value="">Select Subject</option>
+          <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Science">Science</option>
+          <option value="Computing">Computing</option>
+          <option value="Social Studies">Social Studies</option>
+          <option value="RME">RME</option>
+          <option value="Creative Arts">Creative Arts</option>
+          <option value="Career Tech">Career Tech</option>
+          <option value="Twi">Twi</option>
+        </select>
+        <label for="timetableDay">Day:</label>
+        <select name="day" id="timetableDay" required>
+          <option value="">Select Day</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+        </select>
+        <label for="timetableStartTime">Start Time:</label>
+        <input type="time" name="start_time" id="timetableStartTime" required />
+        <label for="timetableEndTime">End Time:</label>
+        <input type="time" name="end_time" id="timetableEndTime" required />
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('timetableModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Extra Class Modal -->
+  <div id="extraClassModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Add/Edit Extra Class</h3>
+      <form id="extraClassForm">
+        <input type="hidden" name="extra_class_id" />
+        <label for="daySelect">Day:</label>
+        <select name="day" id="daySelect" required>
+          <option value="">Select Day</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
+        </select>
+        <label for="classExtraClass">Class:</label>
+        <select name="class" id="classExtraClass" required>
+          <option value="">Select Class</option>
+          <option value="JHS 1 A">JHS 1 A</option>
+          <option value="JHS 1 B">JHS 1 B</option>
+          <option value="JHS 2 A">JHS 2 A</option>
+          <option value="JHS 2 B">JHS 2 B</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+        <label for="teacherMorningClass">Morning Classes Teacher:</label>
+        <select name="teacher_morning_class" id="teacherMorningClass" required>
+          <option value="">Select Teacher</option>
+        </select>
+        <label for="teacherExtraClass">Extra Classes Teacher:</label>
+        <select name="teacher_extra_class" id="teacherExtraClass" required>
+          <option value="">Select Teacher</option>
+        </select>
+        <label for="teacherExtraExtraClass">Extra Extra Classes Teacher:</label>
+        <select name="teacher_extra_extra_class" id="teacherExtraExtraClass" required>
+          <option value="">Select Teacher</option>
+        </select>
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('extraClassModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div
   <!-- Admin Modal -->
   <div id="adminModal" class="modal hidden">
     <div class="modal-content">
@@ -45,13 +173,64 @@
       <button onclick="window.location.href='report.html'" class="report-btn">View Report Dashboard</button>
     </section>
 
+    <!-- Events/Timetable/Extra Classes Management Section -->
+    <section id="eventsManagement">
+      <h2>Manage Events, Timetable & Extra Classes</h2>
+      <div class="event-actions">
+        <button onclick="openModal('eventModal')">Add Event</button>
+        <button onclick="openModal('extraClassModal')">Add Extra Class</button>
+      </div>
+      <div class="event-tables">
+        <h3>Events</h3>
+        <table id="eventsTable">
+          <thead>
+            <tr><th>Title</th><th>Date</th><th>Class</th><th>Details</th><th>Actions</th></tr>
+          </thead>
+          <tbody></tbody>
+  </table>
+        <h3>Extra Classes</h3>
+        <table id="extraClassesTable">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Class</th>
+              <th>Morning Teacher</th>
+              <th>Extra Teacher</th>
+              <th>Extra Extra Teacher</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <h3>Timetable</h3>
+        <button onclick="openModal('timetableModal')" style="margin-bottom:10px;">Add Timetable Entry</button>
+        <table id="timetableTable">
+          <thead>
+            <tr>
+              <th>Class</th>
+              <th>Subject</th>
+              <th>Day</th>
+              <th>Start Time</th>
+              <th>End Time</th>
+              <th>Details</th>
+              <th>Teacher</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- Students Section -->
-    <section id="students">
+    <section id="students" class="dashboard-section">
       <h2>Register Students</h2>
-      <button onclick="openModal('studentModal')">Add Student</button>
-      <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
-      <button onclick="importCSV()">Import CSV</button>
-      <div style="margin: 1rem 0; display: flex; gap: 1rem; align-items: center;">
+      <div class="section-actions">
+        <button onclick="openModal('studentModal')">Add Student</button>
+        <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
+        <button onclick="importCSV()">Import CSV</button>
+      </div>
+      <div class="section-filters">
         <label for="classFilter">Class:</label>
         <select id="classFilter">
           <option value="">-- All Classes --</option>
@@ -74,11 +253,12 @@
       </table>
     </section>
 
-    <!-- Teachers Section -->
-    <section id="teachers">
+    <section id="teachers" class="dashboard-section">
       <h2>Register Teachers</h2>
-      <button onclick="openModal('teacherModal')">Add Teacher</button>
-      <div style="margin: 1rem 0;">
+      <div class="section-actions">
+        <button onclick="openModal('teacherModal')">Add Teacher</button>
+      </div>
+      <div class="section-filters">
         <label for="teacherSelect">Select Teacher:</label>
         <select id="teacherSelect" onchange="showSelectedTeacher()">
           <option value="">-- Select Teacher --</option>
@@ -94,10 +274,11 @@
       </table>
     </section>
 
-    <!-- Admins Section -->
-    <section id="admins">
+    <section id="admins" class="dashboard-section">
       <h2>Manage Admins</h2>
-      <button onclick="openModal('adminModal')">Add Admin</button>
+      <div class="section-actions">
+        <button onclick="openModal('adminModal')">Add Admin</button>
+      </div>
       <table id="adminTable">
         <thead>
           <tr>
@@ -162,24 +343,30 @@
         <input type="text" name="qualification" placeholder="Highest Academic Qualification" required />
 
         <label>Classes Taught</label>
-        <select name="classes" multiple required>
-          <option value="JHS 1">JHS 1</option>
-          <option value="JHS 2">JHS 2</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
+        <div class="dropdown-checkbox">
+          <button type="button" class="dropdown-btn" onclick="toggleDropdown('classesDropdown')">Select Classes</button>
+          <div id="classesDropdown" class="dropdown-content">
+            <label><input type="checkbox" name="classes" value="JHS 1"> JHS 1</label>
+            <label><input type="checkbox" name="classes" value="JHS 2"> JHS 2</label>
+            <label><input type="checkbox" name="classes" value="JHS 3"> JHS 3</label>
+          </div>
+        </div>
 
         <label>Subjects Taught</label>
-        <select name="subjects" multiple required>
-          <option value="Maths">Maths</option>
-          <option value="English">English</option>
-          <option value="Science">Science</option>
-          <option value="Computing">Computing</option>
-          <option value="Social Studies">Social Studies</option>
-          <option value="RME">RME</option>
-          <option value="Creative Arts">Creative Arts</option>
-          <option value="Career Tech">Career Tech</option>
-          <option value="Twi">Twi</option>
-        </select>
+        <div class="dropdown-checkbox">
+          <button type="button" class="dropdown-btn" onclick="toggleDropdown('subjectsDropdown')">Select Subjects</button>
+          <div id="subjectsDropdown" class="dropdown-content">
+            <label><input type="checkbox" name="subjects" value="Maths"> Maths</label>
+            <label><input type="checkbox" name="subjects" value="English"> English</label>
+            <label><input type="checkbox" name="subjects" value="Science"> Science</label>
+            <label><input type="checkbox" name="subjects" value="Computing"> Computing</label>
+            <label><input type="checkbox" name="subjects" value="Social Studies"> Social Studies</label>
+            <label><input type="checkbox" name="subjects" value="RME"> RME</label>
+            <label><input type="checkbox" name="subjects" value="Creative Arts"> Creative Arts</label>
+            <label><input type="checkbox" name="subjects" value="Career Tech"> Career Tech</label>
+            <label><input type="checkbox" name="subjects" value="Twi"> Twi</label>
+          </div>
+        </div>
 
   <!-- Extended HR Fields -->
   <label for="first_appointment_date">First Appointment Date</label>
