@@ -4,22 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Report Card</title>
+  <link rel="icon" type="image/png" href="Badge.png" />
   <link rel="stylesheet" href="report.css" />
 </head>
 <body>
   <div class="report-container">
-    <!-- 🔽 Filters -->
-    <div id="filters" style="margin-bottom: 1em;">
-      <select id="termFilter">
-        <option value="">-- Select Term --</option>
-        <option value="1st Term">1st Term</option>
-        <option value="2nd Term">2nd Term</option>
-        <option value="3rd Term">3rd Term</option>
-      </select>
-      <input id="yearFilter" placeholder="Academic Year (e.g. 2025/2026)">
+  <button id="backToReportBtn" class="back-btn" style="display:none;">Back to Report Dashboard</button>
+    <!-- 📋 Dashboard Overview Section -->
+    <div id="dashboardOverview" class="dashboard-overview">
+      <h2>Report Dashboard Overview</h2>
+      <div class="dashboard-cards">
+        <div class="dashboard-card" data-section="reportSection">
+          <span>View Report Card</span>
+        </div>
+        <div class="dashboard-card" data-section="filters">
+          <span>Filter Reports</span>
+        </div>
+        <div class="dashboard-card" data-section="student-selector">
+          <span>Select Student</span>
+        </div>
+      </div>
     </div>
 
-    <!-- 🔽 Student Selector -->
+
+    <!-- 🔽 Student Selector (with Filters) -->
     <div class="student-selector">
       <label for="classSelect">Select Class:</label>
       <select id="classSelect">
@@ -29,6 +37,14 @@
       <select id="studentSelect" onchange="loadReportForStudent()">
         <option value="">-- Select --</option>
       </select>
+      <label for="termFilter">Term:</label>
+      <select id="termFilter">
+        <option value="">-- Select Term --</option>
+        <option value="1st Term">1st Term</option>
+        <option value="2nd Term">2nd Term</option>
+        <option value="3rd Term">3rd Term</option>
+      </select>
+      <input id="yearFilter" placeholder="Academic Year (e.g. 2025/2026)">
       <button id="bulkPrintBtn" type="button">Print Selected Class Reports</button>
     </div>
 

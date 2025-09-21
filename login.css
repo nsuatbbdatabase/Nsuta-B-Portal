@@ -80,16 +80,42 @@ body, html {
   align-items: center;
 }
 
+
+
+body.index-dashboard-bg {
+  min-height: 100vh;
+  min-width: 100vw;
+  background: #f4f6f8;
+  position: relative;
+  overflow: hidden;
+}
+
+
+body.index-dashboard-bg::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)), url('Background.jpg') center center / cover no-repeat fixed;
+  background-blend-mode: lighten;
+}
+
 /* 📦 Login Container */
+
 .login-container {
   width: 100%;
   max-width: 420px;
-  background-color: #ffffffee;
+  background: rgba(255,255,255,0.92);
   padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 0 25px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   text-align: center;
   animation: fadeIn 0.8s ease-in-out;
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 
 /* 🏫 School Header */

@@ -1,3 +1,18 @@
+// Dashboard Overview Back Button Logic
+window.addEventListener('DOMContentLoaded', () => {
+  const backBtn = document.getElementById('backToDashboardBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+  }
+  const backToAdminBtn = document.getElementById('backToAdminBtn');
+  if (backToAdminBtn) {
+    backToAdminBtn.addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
+  }
+});
 // --- Render Student Timetable Table ---
 async function renderStudentTimetable() {
   const tbody = document.querySelector('#studentTimetableTable tbody');
@@ -100,8 +115,9 @@ async function renderStudentExtraClasses() {
 // --- Render Student Header ---
 function renderStudentHeader() {
   if (!window.student) return;
-  document.getElementById('welcomeMessage').textContent = `Welcome, ${window.student.full_name || ''}`;
-  document.getElementById('studentName').textContent = window.student.full_name || '';
+  const studentName = `${window.student.first_name || ''} ${window.student.surname || ''}`.trim();
+  document.getElementById('welcomeMessage').textContent = `Welcome, ${studentName}`;
+  document.getElementById('studentName').textContent = studentName;
   document.getElementById('studentClass').textContent = 'Class: ' + (window.student.class || '');
   document.getElementById('studentGender').textContent = 'Gender: ' + (window.student.gender || '');
   document.getElementById('studentPhoto').src = window.student.picture_url || 'default-photo.png';
@@ -170,7 +186,8 @@ const supabaseClient = createClient(
 // --- Load Profile Section ---
 function loadProfile() {
   if (!window.student) return;
-  document.getElementById('studentName').textContent = window.student.full_name || '';
+  const studentName = `${window.student.first_name || ''} ${window.student.surname || ''}`.trim();
+  document.getElementById('studentName').textContent = studentName;
   document.getElementById('studentClass').textContent = 'Class: ' + (window.student.class || '');
   document.getElementById('studentGender').textContent = 'Gender: ' + (window.student.gender || '');
   document.getElementById('studentPhoto').src = window.student.picture_url || 'default-photo.png';
@@ -192,6 +209,7 @@ function loadProfile() {
       .order('updated_at', { ascending: false })
       .limit(1)
       .single()
+      .accept('application/json')
       .then(({ data }) => {
         if (data) {
           if (data.interest && interestElem) interestElem.textContent = 'Interest: ' + data.interest;
@@ -345,33 +363,50 @@ async function loadReleasedResults() {
     .eq('year', year);
   const { data } = await query;
 
-  const subjects = [];
-  const classScores = [];
-  const examScores = [];
+  // Aggregate Career Tech
+  const subjectMap = {};
+  let careerTechClass = 0, careerTechExam = 0, hasCareerTech = false;
+  if (Array.isArray(data)) {
+    data.forEach(item => {
+      if (item.subject === 'Pre-Technical' || item.subject === 'Home Economics') {
+        hasCareerTech = true;
+        careerTechClass += item.class_score || 0;
+        careerTechExam += item.exam_score || 0;
+      } else {
+        if (!subjectMap[item.subject]) {
+          subjectMap[item.subject] = { class_score: 0, exam_score: 0 };
+        }
+        subjectMap[item.subject].class_score += item.class_score || 0;
+        subjectMap[item.subject].exam_score += item.exam_score || 0;
+      }
+    });
+  }
+  if (hasCareerTech) {
+    subjectMap['Career Tech'] = { class_score: careerTechClass, exam_score: careerTechExam };
+    delete subjectMap['Pre-Technical'];
+    delete subjectMap['Home Economics'];
+  }
+  const subjects = Object.keys(subjectMap);
+  const classScores = subjects.map(s => subjectMap[s].class_score);
+  const examScores = subjects.map(s => subjectMap[s].exam_score);
 
   if (table) {
     table.innerHTML = '';
     if (!data || data.length === 0) {
       table.innerHTML = '<tr><td colspan="4">No released results found.</td></tr>';
     } else {
-      data.forEach(item => {
+      subjects.forEach(subject => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${item.subject}</td>
-          <td>${item.class_score}</td>
-          <td>${item.exam_score}</td>
-          <td>${(item.class_score || 0) + (item.exam_score || 0)}</td>
+          <td>${subject}</td>
+          <td>${subjectMap[subject].class_score}</td>
+          <td>${subjectMap[subject].exam_score}</td>
+          <td>${(subjectMap[subject].class_score || 0) + (subjectMap[subject].exam_score || 0)}</td>
         `;
         table.appendChild(row);
       });
     }
   }
-
-  data.forEach(item => {
-    subjects.push(item.subject);
-    classScores.push(item.class_score);
-    examScores.push(item.exam_score);
-  });
 
   const ctx = document.getElementById('scoreChart').getContext('2d');
   if (scoreChartInstance) {

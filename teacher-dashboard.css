@@ -1,3 +1,163 @@
+.back-btn {
+  margin-bottom: 1.5rem;
+}
+/* Back button for dashboard overview (shared with report/student) */
+.back-btn {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  padding: 0.7rem 2.2rem;
+  background: #004080;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.back-btn:hover {
+  background: #0059b3;
+}
+/* Back to Dashboard Button */
+.back-to-dashboard {
+  display: inline-block;
+  margin: 1.2rem 0 1.5rem 0;
+  padding: 0.6rem 1.3rem;
+  background: #004080;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,64,128,0.07);
+  transition: background 0.18s, color 0.18s, transform 0.15s;
+  outline: none;
+}
+.back-to-dashboard:hover, .back-to-dashboard:focus {
+  background: #ffa500;
+  color: #004080;
+  transform: translateY(-2px) scale(1.03);
+}
+/* Dashboard Overview Cards */
+.dashboard-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2rem;
+  margin: 2.5rem 0 2.5rem 0;
+  padding: 1.5rem 0.5rem;
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,64,128,0.08);
+  z-index: 1;
+}
+.dashboard-card {
+  background: linear-gradient(120deg, #004080 60%, #ffa500 100%);
+  color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0,64,128,0.10);
+  padding: 2.2rem 1.2rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+  position: relative;
+  outline: none;
+  border: none;
+  user-select: none;
+}
+.dashboard-card:hover, .dashboard-card:focus {
+  background: linear-gradient(120deg, #ffa500 40%, #004080 100%);
+  color: #fff;
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 8px 32px rgba(0,64,128,0.18);
+}
+@media (max-width: 700px) {
+  .dashboard-overview {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    padding: 0.7rem 0.2rem;
+  }
+  .dashboard-card {
+    font-size: 1.05rem;
+    padding: 1.2rem 0.5rem;
+  }
+}
+/* About Me Button: visible and styled */
+#aboutMeBtn {
+  float: right;
+  margin: 1rem 1rem 0 0;
+  background: #ffa500;
+  color: #fff;
+  border: none;
+  padding: 0.7rem 1.3rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,64,128,0.07);
+  cursor: pointer;
+  z-index: 2;
+  position: relative;
+  transition: background 0.2s, color 0.2s;
+}
+#aboutMeBtn:hover, #aboutMeBtn:focus {
+  background: #004080;
+  color: #fff;
+}
+/* --- Teacher Dashboard Background and Overlay --- */
+.teacher-dashboard-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('teacher dashboard background.jpg') no-repeat center center/cover;
+  z-index: -2;
+}
+.dashboard-bg-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 64, 128, 0.55);
+  z-index: -1;
+}
+
+/* --- Teacher Dashboard Main Layout --- */
+.teacher-dashboard-main {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2.5rem 0.5rem 2rem 0.5rem;
+}
+
+@media (max-width: 700px) {
+  .teacher-dashboard-main {
+    padding: 1.2rem 0.2rem 1rem 0.2rem;
+  }
+  .teacher-dashboard-bg, .dashboard-bg-overlay {
+    height: 100vh;
+    min-height: 100vh;
+  }
+}
+
+/* --- Tab Section Visibility --- */
+.tab-section {
+  display: none;
+  animation: fadeInTab 0.3s;
+}
+.tab-section.open {
+  display: block;
+}
+
+@keyframes fadeInTab {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
 /* --- Responsive Mobile Styles --- */
 @media (max-width: 700px) {
   .dashboard-container {
@@ -219,6 +379,7 @@
 }
 /* --- Professional Responsive Dashboard --- */
 /* Tabs: horizontally scrollable on mobile, clear highlight, touch-friendly */
+/* Hide scrollbar for dashboard-tabs: Firefox and Webkit browsers */
 .dashboard-tabs {
   display: flex;
   gap: 0.5rem;
@@ -226,9 +387,13 @@
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
   background: #f8f9fa;
-  scrollbar-width: none;
+  /* Hide scrollbar for Firefox */
+  scrollbar-width: none; /* Not supported in Chrome <121, Safari, Samsung Internet */
 }
-.dashboard-tabs::-webkit-scrollbar { display: none; }
+/* Hide scrollbar for Webkit browsers (Chrome, Safari, Edge) */
+.dashboard-tabs::-webkit-scrollbar {
+  display: none;
+}
 .tab-btn {
   flex: 0 0 auto;
   min-width: 120px;
@@ -749,11 +914,14 @@ button:hover {
   object-fit: contain;
   margin-right: 1rem;
 }
+/* School name: ensure visibility on dark background */
 .school-header h1 {
   margin: 0;
   font-size: 1.5rem;
   display: inline-block;
   vertical-align: middle;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.7), 0 1px 0 #004080;
 }
 
 /* Tab Navigation - Professional & Consistent */

@@ -1,3 +1,18 @@
+// Dashboard Overview Back Button Logic
+window.addEventListener('DOMContentLoaded', () => {
+  const backBtn = document.getElementById('backToDashboardBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+  }
+  const backToAdminBtn = document.getElementById('backToAdminBtn');
+  if (backToAdminBtn) {
+    backToAdminBtn.addEventListener('click', () => {
+      window.location.href = 'admin.html';
+    });
+  }
+});
 // ------------------- Attendance Feature -------------------
 function setupAttendanceSection() {
   const attendanceClassSelect = document.getElementById('attendanceClassSelect');
@@ -27,7 +42,7 @@ async function loadAttendanceStudents() {
   if (!classVal) return;
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, full_name')
+    .select('id, first_name, surname')
     .eq('class', classVal);
   if (error || !Array.isArray(data) || data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="2">No students found for this class.</td></tr>';
@@ -36,7 +51,7 @@ async function loadAttendanceStudents() {
   data.forEach(student => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${student.full_name}</td>
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
       <td>
         <select class="attendance-status" data-student-id="${student.id}">
           <option value="Present">Present</option>
@@ -125,14 +140,14 @@ async function populateMotivationStudentDropdown() {
   // Fetch students in any of the teacher's classes
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, full_name, class')
+    .select('id, first_name, surname, class')
     .in('class', teacher.classes);
   select.innerHTML = '<option value="">-- Select Student --</option>';
   if (!error && Array.isArray(data)) {
     data.forEach(student => {
       const option = document.createElement('option');
       option.value = student.id;
-      option.textContent = `${student.full_name} (${student.class})`;
+      option.textContent = `${student.first_name || ''} ${student.surname || ''} (${student.class})`;
       select.appendChild(option);
     });
   }
@@ -152,7 +167,7 @@ async function loadResourceRequests() {
   tbody.innerHTML = '';
   const { data, error } = await supabaseClient
     .from('resource_requests')
-    .select('id, student_id, resource, reason, response, created_at, students(full_name)')
+    .select('id, student_id, resource, reason, response, created_at, students(first_name, surname)')
     .eq('teacher_id', teacher.id)
     .order('created_at', { ascending: false });
   if (error || !Array.isArray(data)) {
@@ -165,8 +180,9 @@ async function loadResourceRequests() {
   }
   data.forEach(msg => {
     const row = document.createElement('tr');
+    let studentName = msg.students ? `${msg.students.first_name || ''} ${msg.students.surname || ''}`.trim() : msg.student_id;
     row.innerHTML = `
-      <td>${msg.students?.full_name || msg.student_id}</td>
+      <td>${studentName}</td>
       <td>${msg.message}</td>
       <td>${new Date(msg.created_at).toLocaleString()}</td>
       <td>
@@ -206,7 +222,7 @@ async function loadStudentMessages() {
   tbody.innerHTML = '';
   const { data, error } = await supabaseClient
     .from('teacher_messages')
-    .select('id, student_id, message, response, created_at, students(full_name)')
+  .select('id, student_id, message, response, created_at, students(first_name, surname)')
     .eq('teacher_id', teacher.id)
     .order('created_at', { ascending: false });
   if (error || !Array.isArray(data)) {
@@ -220,7 +236,7 @@ async function loadStudentMessages() {
   data.forEach(msg => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${msg.students?.full_name || msg.student_id}</td>
+  <td>${msg.students ? `${msg.students.first_name || ''} ${msg.students.surname || ''}`.trim() : msg.student_id}</td>
       <td>${msg.message}</td>
       <td>${msg.response || ''}</td>
       <td>${new Date(msg.created_at).toLocaleString()}</td>
@@ -286,10 +302,11 @@ async function loadStudents(section = 'sba') {
     selectedClass = document.getElementById('classSelect').value;
     selectedSubject = document.getElementById('subjectSelect').value;
   }
-  if (!selectedClass || !selectedSubject) return;
+  // For Career Tech, allow loading students as soon as class is selected
+  if (!selectedClass) return;
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, full_name')
+  .select('id, first_name, surname')
     .eq('class', selectedClass);
   if (error) {
     console.error('Failed to load students:', error.message);
@@ -314,25 +331,94 @@ function renderSBAForm() {
     tbody.appendChild(row);
     return;
   }
+  const selectedSubject = document.getElementById('subjectSelect').value;
+  // Subjects with sub-areas
+  const subjectAreas = {
+    'Career Tech': ['Pre-Technical', 'Home Economics']
+    // Add more subjects with areas if needed
+  };
+  let assignedAreas = [];
+  if (subjectAreas[selectedSubject] && teacher && Array.isArray(teacher.subjects)) {
+    assignedAreas = subjectAreas[selectedSubject].filter(a => teacher.subjects.includes(a));
+  }
+  let selectedArea = window.selectedSubjectArea || '';
+  const sbaTable = document.getElementById('sbaTable');
+  let areaDiv = document.getElementById('subjectAreaDiv');
+  if (assignedAreas.length > 0 && sbaTable) {
+    if (!areaDiv) {
+      areaDiv = document.createElement('div');
+      areaDiv.id = 'subjectAreaDiv';
+      areaDiv.style.margin = '10px 0';
+      if (assignedAreas.length === 1) {
+        areaDiv.innerHTML = `<strong>Area: ${assignedAreas[0]}</strong>`;
+        window.selectedSubjectArea = assignedAreas[0];
+        selectedArea = assignedAreas[0];
+      } else {
+        areaDiv.innerHTML = `<label for=\"subjectAreaSelect\">Select Area: </label><select id=\"subjectAreaSelect\"><option value=\"\">-- Select --</option>${assignedAreas.map(a => `<option value=\"${a}\">${a}</option>`).join('')}</select>`;
+        document.getElementById('subjectAreaSelect')?.addEventListener('change', function() {
+          window.selectedSubjectArea = this.value;
+          renderSBAForm();
+        });
+      }
+      sbaTable.parentNode.insertBefore(areaDiv, sbaTable);
+    }
+    if (assignedAreas.length > 1) {
+      selectedArea = document.getElementById('subjectAreaSelect')?.value || '';
+    }
+  } else if (areaDiv) {
+    areaDiv.remove();
+    window.selectedSubjectArea = '';
+    selectedArea = '';
+  }
   students.forEach(student => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${student.full_name}</td>
-      <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" /></td>
-      <td><span id="total-${student.id}">0</span></td>
-      <td><span id="scaled-${student.id}">0</span></td>
-    `;
+    if (assignedAreas.length > 0 && selectedArea) {
+      if (selectedArea === 'Pre-Technical') {
+        row.innerHTML = `
+          <td>${student.first_name || ''} ${student.surname || ''}</td>
+          <td><input type=\"number\" data-type=\"pretech-individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Individual\" /></td>
+          <td><input type=\"number\" data-type=\"pretech-group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Group\" /></td>
+          <td><input type=\"number\" data-type=\"pretech-classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Class Test\" /></td>
+          <td><input type=\"number\" data-type=\"pretech-project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Project\" /></td>
+          <td><span id=\"total-careertech-${student.id}\">0</span></td>
+          <td><span id=\"scaled-careertech-${student.id}\">0</span></td>
+        `;
+      } else if (selectedArea === 'Home Economics') {
+        row.innerHTML = `
+          <td>${student.first_name || ''} ${student.surname || ''}</td>
+          <td><input type=\"number\" data-type=\"homeec-individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Individual\" /></td>
+          <td><input type=\"number\" data-type=\"homeec-group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Group\" /></td>
+          <td><input type=\"number\" data-type=\"homeec-classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Class Test\" /></td>
+          <td><input type=\"number\" data-type=\"homeec-project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Project\" /></td>
+          <td><span id=\"total-careertech-${student.id}\">0</span></td>
+          <td><span id=\"scaled-careertech-${student.id}\">0</span></td>
+        `;
+      }
+    } else if (!assignedAreas.length) {
+      row.innerHTML = `
+        <td>${student.first_name || ''} ${student.surname || ''}</td>
+        <td><input type=\"number\" data-type=\"individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
+        <td><input type=\"number\" data-type=\"group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
+        <td><input type=\"number\" data-type=\"classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
+        <td><input type=\"number\" data-type=\"project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
+        <td><span id=\"total-${student.id}\">0</span></td>
+        <td><span id=\"scaled-${student.id}\">0</span></td>
+      `;
+    }
     tbody.appendChild(row);
   });
-  document.querySelectorAll('#sbaTableBody input').forEach(input => {
-    input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
-  });
+  if (assignedAreas.length > 0 && selectedArea) {
+    document.querySelectorAll('#sbaTableBody input').forEach(input => {
+      input.addEventListener('input', () => calculateCareerTechSBAScore(input.dataset.id));
+    });
+  } else if (!assignedAreas.length) {
+    document.querySelectorAll('#sbaTableBody input').forEach(input => {
+      input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
+    });
+  }
 }
 
-// 🧮 Calculate SBA scaled score
+// 🧮 Calculate SBA scaled score (regular subjects)
 function calculateSBAScore(studentId) {
   const individual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="individual"]`)?.value) || 0, 15);
   const group = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="group"]`)?.value) || 0, 15);
@@ -342,6 +428,30 @@ function calculateSBAScore(studentId) {
   const scaled = Math.round((total / 60) * 50);
   document.getElementById(`total-${studentId}`).textContent = total;
   document.getElementById(`scaled-${studentId}`).textContent = scaled;
+}
+
+// 🧮 Calculate SBA scaled score (Career Tech)
+function calculateCareerTechSBAScore(studentId) {
+  // Pre-Technical
+  const pretechIndividual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-individual"]`)?.value) || 0, 15);
+  const pretechGroup = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-group"]`)?.value) || 0, 15);
+  const pretechClassTest = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-classTest"]`)?.value) || 0, 15);
+  const pretechProject = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-project"]`)?.value) || 0, 15);
+  const pretechTotal = Math.min(pretechIndividual + pretechGroup + pretechClassTest + pretechProject, 60);
+  const pretechScaled = Math.round((pretechTotal / 60) * 25); // Each sub-area max 25
+
+  // Home Economics
+  const homeecIndividual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-individual"]`)?.value) || 0, 15);
+  const homeecGroup = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-group"]`)?.value) || 0, 15);
+  const homeecClassTest = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-classTest"]`)?.value) || 0, 15);
+  const homeecProject = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-project"]`)?.value) || 0, 15);
+  const homeecTotal = Math.min(homeecIndividual + homeecGroup + homeecClassTest + homeecProject, 60);
+  const homeecScaled = Math.round((homeecTotal / 60) * 25);
+
+  // Career Tech total (max 50)
+  const total = pretechScaled + homeecScaled;
+  document.getElementById(`total-careertech-${studentId}`).textContent = pretechTotal + homeecTotal;
+  document.getElementById(`scaled-careertech-${studentId}`).textContent = total;
 }
 
 // Get term and year from input fields when submitting SBA/exam/assignment
@@ -388,7 +498,7 @@ async function submitSBA() {
   for (const student of students) {
     const scaled = parseInt(document.getElementById(`scaled-${student.id}`).textContent);
     if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-      alert(`Invalid SBA score for ${student.full_name}. Must be between 0 and 50.`);
+  alert(`Invalid SBA score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
       continue;
     }
     // Fetch existing exam score for this student/subject/term/year
@@ -444,62 +554,165 @@ function renderExamForm() {
     tbody.appendChild(row);
     return;
   }
+  const selectedSubject = document.getElementById('subjectSelectExam').value;
+  const isCareerTech = selectedSubject === 'Career Tech';
+  // Career Tech sub-area logic
+  let assignedAreas = [];
+  if (isCareerTech && teacher && Array.isArray(teacher.subjects)) {
+    if (teacher.subjects.includes('Pre-Technical')) assignedAreas.push('Pre-Technical');
+    if (teacher.subjects.includes('Home Economics')) assignedAreas.push('Home Economics');
+  }
+  let selectedArea = window.selectedCareerTechAreaExam || '';
+  const examTable = document.getElementById('examTable');
+  let areaDiv = document.getElementById('careerTechAreaExamDiv');
+  if (isCareerTech && assignedAreas.length > 0 && examTable) {
+    if (!areaDiv) {
+      areaDiv = document.createElement('div');
+      areaDiv.id = 'careerTechAreaExamDiv';
+      areaDiv.style.margin = '10px 0';
+      if (assignedAreas.length === 1) {
+        areaDiv.innerHTML = `<strong>Career Tech Area: ${assignedAreas[0]}</strong>`;
+        window.selectedCareerTechAreaExam = assignedAreas[0];
+        selectedArea = assignedAreas[0];
+      } else {
+        areaDiv.innerHTML = `<label for="careerTechAreaExamSelect">Select Career Tech Area: </label><select id="careerTechAreaExamSelect"><option value="">-- Select --</option>${assignedAreas.map(a => `<option value="${a}">${a}</option>`).join('')}</select>`;
+        document.getElementById('careerTechAreaExamSelect')?.addEventListener('change', function() {
+          window.selectedCareerTechAreaExam = this.value;
+          renderExamForm();
+        });
+      }
+      examTable.parentNode.insertBefore(areaDiv, examTable);
+    }
+    if (assignedAreas.length > 1) {
+      selectedArea = document.getElementById('careerTechAreaExamSelect')?.value || '';
+    }
+  } else if (areaDiv) {
+    areaDiv.remove();
+    window.selectedCareerTechAreaExam = '';
+    selectedArea = '';
+  }
   students.forEach(student => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${student.full_name}</td>
-      <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" /></td>
-      <td><span id="examScaled-${student.id}">0</span></td>
-    `;
+    if (isCareerTech && selectedArea) {
+      if (selectedArea === 'Pre-Technical') {
+        row.innerHTML = `
+          <td>${student.first_name || ''} ${student.surname || ''}</td>
+          <td><input type="number" data-type="pretech-exam" data-id="${student.id}" max="100" min="0" placeholder="Pre-Tech Exam" /></td>
+          <td><span id="examScaled-careertech-${student.id}">0</span></td>
+        `;
+      } else if (selectedArea === 'Home Economics') {
+        row.innerHTML = `
+          <td>${student.first_name || ''} ${student.surname || ''}</td>
+          <td><input type="number" data-type="homeec-exam" data-id="${student.id}" max="100" min="0" placeholder="Home Ec Exam" /></td>
+          <td><span id="examScaled-careertech-${student.id}">0</span></td>
+        `;
+      }
+    } else if (!isCareerTech) {
+      row.innerHTML = `
+        <td>${student.first_name || ''} ${student.surname || ''}</td>
+        <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" /></td>
+        <td><span id="examScaled-${student.id}">0</span></td>
+      `;
+    }
     tbody.appendChild(row);
   });
-  document.querySelectorAll('#examTableBody input').forEach(input => {
-    input.addEventListener('input', () => {
-      const raw = Math.min(parseInt(input.value) || 0, 100);
-      const scaled = Math.round((raw / 100) * 50);
-      document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
+  if (isCareerTech && selectedArea) {
+    document.querySelectorAll('#examTableBody input').forEach(input => {
+      input.addEventListener('input', () => calculateCareerTechExamScore(input.dataset.id));
     });
-  });
+  } else if (!isCareerTech) {
+    document.querySelectorAll('#examTableBody input').forEach(input => {
+      input.addEventListener('input', () => {
+        const raw = Math.min(parseInt(input.value) || 0, 100);
+        const scaled = Math.round((raw / 100) * 50);
+        document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
+      });
+    });
+  }
+}
+
+// 🧮 Calculate Exam scaled score (Career Tech)
+function calculateCareerTechExamScore(studentId) {
+  const pretechExam = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-exam"]`)?.value) || 0, 100);
+  const homeecExam = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-exam"]`)?.value) || 0, 100);
+  // Each sub-area max 25
+  const pretechScaled = Math.round((pretechExam / 100) * 25);
+  const homeecScaled = Math.round((homeecExam / 100) * 25);
+  const total = pretechScaled + homeecScaled;
+  document.getElementById(`examScaled-careertech-${studentId}`).textContent = total;
 }
 
 // ✅ Submit Exam scores
 async function submitExams() {
   const subject = document.getElementById('subjectSelect').value;
+  const subjectExam = document.getElementById('subjectSelectExam').value;
   const { term, year } = getTermYear();
-  if (!subject || !term || !year) {
+  if (!(subject || subjectExam) || !term || !year) {
     alert('Please select subject, term, and year.');
     return;
   }
+  const isCareerTech = (subjectExam || subject) === 'Career Tech';
   const submissions = [];
   for (const student of students) {
-    const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
-    if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-      alert(`Invalid exam score for ${student.full_name}. Must be between 0 and 50.`);
-      continue;
-    }
-    // Fetch existing SBA score for this student/subject/term/year
-    let class_score = 0;
-    try {
-      const { data: existing } = await supabaseClient
-        .from('results')
-        .select('class_score')
-        .eq('student_id', student.id)
-        .eq('subject', subject)
-        .eq('term', term)
-        .eq('year', year)
-        .single();
-      if (existing && typeof existing.class_score === 'number') {
-        class_score = existing.class_score;
+    if (isCareerTech) {
+      const scaled = parseInt(document.getElementById(`examScaled-careertech-${student.id}`).textContent);
+      if (isNaN(scaled) || scaled < 0 || scaled > 50) {
+        alert(`Invalid Career Tech exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
+        continue;
       }
-    } catch (e) {}
-    submissions.push({
-      student_id: student.id,
-      subject,
-      term,
-      year,
-      class_score,
-      exam_score: scaled
-    });
+      // Fetch existing SBA score for this student/subject/term/year
+      let class_score = 0;
+      try {
+        const { data: existing } = await supabaseClient
+          .from('results')
+          .select('class_score')
+          .eq('student_id', student.id)
+          .eq('subject', 'Career Tech')
+          .eq('term', term)
+          .eq('year', year)
+          .single();
+        if (existing && typeof existing.class_score === 'number') {
+          class_score = existing.class_score;
+        }
+      } catch (e) {}
+      submissions.push({
+        student_id: student.id,
+        subject: 'Career Tech',
+        term,
+        year,
+        class_score,
+        exam_score: scaled
+      });
+    } else {
+      const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
+      if (isNaN(scaled) || scaled < 0 || scaled > 50) {
+        alert(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
+        continue;
+      }
+      // Fetch existing SBA score for this student/subject/term/year
+      let class_score = 0;
+      try {
+        const { data: existing } = await supabaseClient
+          .from('results')
+          .select('class_score')
+          .eq('student_id', student.id)
+          .eq('subject', subjectExam || subject)
+          .eq('term', term)
+          .eq('year', year)
+          .single();
+        if (existing && typeof existing.class_score === 'number') {
+          class_score = existing.class_score;
+        }
+      } catch (e) {}
+      submissions.push({
+        student_id: student.id,
+        subject: subjectExam || subject,
+        term,
+        year,
+        class_score,
+        exam_score: scaled
+      });
+    }
   }
   if (submissions.length === 0) {
     alert('No valid exam scores to submit.');
@@ -662,7 +875,7 @@ async function loadStudentSubmissions() {
   }
   const { data: submissions, error: sErr } = await supabaseClient
     .from('student_submissions')
-    .select('id, student_id, assignment_id, file_url, submitted_at, students(full_name), assignments(title)')
+  .select('id, student_id, assignment_id, file_url, submitted_at, students(first_name, surname), assignments(title)')
     .in('assignment_id', assignmentIds);
   console.log('DEBUG: Submissions fetched for these assignment IDs:', submissions, sErr);
   if (sErr || !Array.isArray(submissions) || submissions.length === 0) {
@@ -672,7 +885,7 @@ async function loadStudentSubmissions() {
   submissions.forEach(item => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${item.students?.full_name || item.student_id}</td>
+  <td>${item.students ? `${item.students.first_name || ''} ${item.students.surname || ''}`.trim() : item.student_id}</td>
       <td>${item.assignments?.title || item.assignment_id}</td>
       <td>${new Date(item.submitted_at).toLocaleString()}</td>
       <td>${item.file_url ? `<a href="${item.file_url}" target="_blank">Download</a>` : 'No file'}</td>

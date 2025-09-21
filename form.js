@@ -22,10 +22,13 @@ async function populateClassDropdown() {
 // 🔽 Populate student dropdown by class and term
 async function populateStudentDropdown(className, term, year) {
   const select = document.getElementById('studentSelect');
+  // Preserve the previously selected student
+  const prevSelected = select.value;
   select.innerHTML = '<option value="">-- Select --</option>';
   if (!className) return;
-  const { data: students, error: studentError } = await supabaseClient.from('students').select('id, full_name').eq('class', className);
+  const { data: students, error: studentError } = await supabaseClient.from('students').select('id, first_name, surname').eq('class', className);
   if (studentError) return console.error('Failed to load students:', studentError.message);
+  let foundPrev = false;
   for (const student of students) {
     let hasProfile = false;
     if (term && year) {
@@ -34,8 +37,22 @@ async function populateStudentDropdown(className, term, year) {
     }
     const option = document.createElement('option');
     option.value = student.id;
-    option.textContent = student.full_name + (hasProfile ? ' (Has Data)' : '');
+    option.textContent = `${student.first_name || ''} ${student.surname || ''}`.trim() + (hasProfile ? ' (Has Data)' : '');
+    if (student.id === prevSelected) {
+      option.selected = true;
+      foundPrev = true;
+    }
     select.appendChild(option);
+  }
+  // If previous student is still available, reload their profile
+  if (foundPrev && select.value) {
+    loadStudentProfileForUpdate();
+  } else {
+    // Otherwise, clear profile fields
+    document.getElementById('attendanceTotal').value = '';
+    document.getElementById('attendanceActual').value = '';
+    document.getElementById('interest').value = '';
+    document.getElementById('conduct').value = '';
   }
 }
 
@@ -44,7 +61,12 @@ async function loadStudentProfileForUpdate() {
   const studentId = document.getElementById('studentSelect').value;
   const term = document.getElementById('term').value.trim();
   if (!studentId || !term) return;
-  const { data: profile, error } = await supabaseClient.from('profiles').select('interest, conduct, attendance_total, attendance_actual').eq('student_id', studentId).eq('term', term).single();
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('interest, conduct, attendance_total, attendance_actual')
+    .eq('student_id', studentId)
+    .eq('term', term)
+    .single();
   if (profile) {
     document.getElementById('attendanceTotal').value = profile.attendance_total || '';
     document.getElementById('attendanceActual').value = profile.attendance_actual || '';
@@ -107,6 +129,14 @@ async function submitProfile() {
 
   if (result.error) {
     alert('Error saving profile: ' + result.error.message);
+    // Extra logging for debugging
+    console.error('Full Supabase error:', result.error);
+    if (result.status) {
+      console.error('Supabase response status:', result.status);
+    }
+    if (result.data) {
+      console.error('Supabase response data:', result.data);
+    }
   } else {
     alert('Profile saved successfully.');
     document.getElementById('term').value = '';
@@ -122,19 +152,31 @@ async function submitProfile() {
 
 // 🚀 Initialize
 populateClassDropdown();
-document.getElementById('classSelect').addEventListener('change', function() {
-  const term = document.getElementById('term').value.trim();
-  const year = document.getElementById('year')?.value?.trim() || '';
-  populateStudentDropdown(this.value, term, year);
-});
-document.getElementById('term').addEventListener('change', function() {
-  const className = document.getElementById('classSelect').value;
-  const year = document.getElementById('year')?.value?.trim() || '';
-  populateStudentDropdown(className, this.value.trim(), year);
-});
-document.getElementById('year').addEventListener('input', function() {
-  const className = document.getElementById('classSelect').value;
-  const term = document.getElementById('term').value.trim();
-  populateStudentDropdown(className, term, this.value.trim());
-});
-document.getElementById('studentSelect').addEventListener('change', loadStudentProfileForUpdate);
+const classSelect = document.getElementById('classSelect');
+if (classSelect) {
+  classSelect.addEventListener('change', function() {
+    const term = document.getElementById('term')?.value?.trim() || '';
+    const year = document.getElementById('year')?.value?.trim() || '';
+    populateStudentDropdown(this.value, term, year);
+  });
+}
+const termInput = document.getElementById('term');
+if (termInput) {
+  termInput.addEventListener('change', function() {
+    const className = document.getElementById('classSelect')?.value || '';
+    const year = document.getElementById('year')?.value?.trim() || '';
+    populateStudentDropdown(className, this.value.trim(), year);
+  });
+}
+const yearInput = document.getElementById('year');
+if (yearInput) {
+  yearInput.addEventListener('input', function() {
+    const className = document.getElementById('classSelect')?.value || '';
+    const term = document.getElementById('term')?.value?.trim() || '';
+    populateStudentDropdown(className, term, this.value.trim());
+  });
+}
+const studentSelect = document.getElementById('studentSelect');
+if (studentSelect) {
+  studentSelect.addEventListener('change', loadStudentProfileForUpdate);
+}

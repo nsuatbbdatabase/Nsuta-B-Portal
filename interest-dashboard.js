@@ -43,7 +43,7 @@ async function loadProfiles() {
 
   const { data: students, error: studentError } = await supabaseClient
     .from('students')
-    .select('id, full_name, class')
+    .select('id, first_name, surname, class')
     .eq('class', className);
 
   if (studentError) {
@@ -65,7 +65,7 @@ async function loadProfiles() {
     const profile = profiles.find(p => p.student_id === student.id);
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${student.full_name}</td>
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
       <td>${student.class}</td>
       <td>
         <input type="number" value="${profile?.attendance_total ?? ''}" data-student="${student.id}" data-field="attendance_total" />

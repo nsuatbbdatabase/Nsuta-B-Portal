@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="student-dashboard.css" />
 </head>
 <body>
+  <div class="student-dashboard-bg"></div>
+  <div class="dashboard-bg-overlay"></div>
   <button id="logoutBtn" class="logout-btn">Logout</button>
   <div class="school-header">
   <img src="Badge.png" alt="School Logo" class="school-logo" />
@@ -64,20 +66,20 @@
       <img id="studentPhoto" class="passport-photo" src="" alt="Student Photo" />
     </div>
 
-    <!-- Tabbed Navigation -->
-    <div class="dashboard-tabs">
-      <button class="tab-btn" onclick="showTab('assignmentsSection')">Assignments</button>
-      <button class="tab-btn" onclick="showTab('resultsSection')">Results</button>
-      <button class="tab-btn" onclick="showTab('submissionsSection')">Submissions</button>
-      <button class="tab-btn" onclick="showTab('resourcesSection')">Resources</button>
-      <button class="tab-btn" onclick="showTab('contactTeacherSection')">Contact Teacher</button>
-      <button class="tab-btn" onclick="showTab('resourceRequestSection')">Request Resource</button>
-      <button class="tab-btn" onclick="showTab('motivationSection')">Motivation</button>
-  <!-- Study Bot tab removed -->
+    <!-- Dashboard Overview Cards -->
+    <div id="dashboardOverview" class="dashboard-overview">
+      <div class="dashboard-card" data-section="assignmentsSection">Assignments</div>
+      <div class="dashboard-card" data-section="resultsSection">Results</div>
+      <div class="dashboard-card" data-section="submissionsSection">Submissions</div>
+      <div class="dashboard-card" data-section="resourcesSection">Resources</div>
+      <div class="dashboard-card" data-section="contactTeacherSection">Contact Teacher</div>
+      <div class="dashboard-card" data-section="resourceRequestSection">Request Resource</div>
+      <div class="dashboard-card" data-section="motivationSection">Motivation</div>
     </div>
 
     <!-- 📥 Assignments Section -->
   <div id="assignmentsSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Assignments</h3>
       <table>
         <thead>
@@ -110,6 +112,7 @@
 
     <!-- 📈 Results Section -->
   <div id="resultsSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Released Results</h3>
 
       <!-- 📅 Term and Year Filters -->
@@ -149,6 +152,7 @@
 
     <!-- 📥 Submissions Section -->
   <div id="submissionsSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Submission History</h3>
       <table>
         <thead>
@@ -166,6 +170,7 @@
 
     <!-- 📚 Resources Section -->
   <div id="resourcesSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Study Resources</h3>
   <div class="resource-filter-bar">
         <label for="resourceTypeFilter">Type:</label>
@@ -189,6 +194,7 @@
 
     <!-- Contact Teacher Section -->
   <div id="contactTeacherSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Contact Teacher</h3>
       <form id="contactTeacherForm">
         <label for="teacherSelect">Select Teacher:</label>
@@ -202,6 +208,7 @@
 
     <!-- Resource Request Section -->
   <div id="resourceRequestSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Request Study Resource</h3>
       <form id="resourceRequestForm">
   <label for="teacherSelectResource">Teacher:</label>
@@ -220,6 +227,7 @@
 
     <!-- Motivation Section -->
   <div id="motivationSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Motivational Messages & Announcements</h3>
       <ul id="motivationList"></ul>
     </div>
@@ -232,7 +240,36 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="student-dashboard.js"></script>
     <script src="router.js"></script>
-</body>
-<!-- Scripts moved to student-dashboard.js -->
+<script>
+  // Show dashboard overview by default
+  function showDashboardOverview() {
+    document.getElementById('dashboardOverview').style.display = 'grid';
+    document.querySelectorAll('.tab-section').forEach(section => {
+      section.style.display = 'none';
+    });
+  }
+  // Show a specific section and hide dashboard overview
+  function showTabSection(tabId) {
+    document.getElementById('dashboardOverview').style.display = 'none';
+    document.querySelectorAll('.tab-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    var tabSection = document.getElementById(tabId);
+    if (tabSection) {
+      tabSection.style.display = 'block';
+    } else {
+      console.warn('Tab section not found:', tabId);
+    }
+  }
+  // Add click listeners to dashboard cards
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+      card.onclick = function() {
+        showTabSection(card.getAttribute('data-section'));
+      };
+    });
+    showDashboardOverview();
+  });
+</script>
 </body>
 </html>

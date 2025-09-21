@@ -1,3 +1,50 @@
+// 📋 Dashboard Overview Navigation Logic
+window.addEventListener('DOMContentLoaded', () => {
+  // Hide all main sections except dashboard overview on load
+  const dashboardOverview = document.getElementById('dashboardOverview');
+  const filters = document.getElementById('filters');
+  const studentSelector = document.querySelector('.student-selector');
+  const reportSection = document.getElementById('reportSection');
+  const backToReportBtn = document.getElementById('backToReportBtn');
+  if (dashboardOverview) dashboardOverview.style.display = 'block';
+  if (filters) filters.style.display = 'none';
+  if (studentSelector) studentSelector.style.display = 'none';
+  if (reportSection) reportSection.style.display = 'none';
+  if (backToReportBtn) backToReportBtn.style.display = 'none';
+
+  // Card click navigation
+  document.querySelectorAll('.dashboard-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const section = card.getAttribute('data-section');
+      if (dashboardOverview) dashboardOverview.style.display = 'none';
+      if (filters) filters.style.display = (section === 'filters') ? 'block' : 'none';
+      if (studentSelector) studentSelector.style.display = (section === 'student-selector') ? 'flex' : 'none';
+      if (reportSection) reportSection.style.display = (section === 'reportSection') ? 'block' : 'none';
+      // Show back button for subdashboards
+      if (backToReportBtn) {
+        if (section === 'filters' || section === 'student-selector' || section === 'reportSection') {
+          backToReportBtn.style.display = 'inline-block';
+        } else {
+          backToReportBtn.style.display = 'none';
+        }
+      }
+    });
+  });
+
+  // Back to report dashboard button
+  if (backToReportBtn) {
+    backToReportBtn.addEventListener('click', () => {
+      // Hide all subdashboard sections
+      if (filters) filters.style.display = 'none';
+      if (studentSelector) studentSelector.style.display = 'none';
+      if (reportSection) reportSection.style.display = 'none';
+      // Show dashboard overview
+      if (dashboardOverview) dashboardOverview.style.display = 'block';
+      // Hide back button
+      backToReportBtn.style.display = 'none';
+    });
+  }
+});
 // ✅ Supabase client setup
 const { createClient } = supabase;
 const supabaseClient = createClient(
@@ -102,7 +149,23 @@ async function loadReportForStudent() {
     document.getElementById("totalScore").textContent = "—";
     document.getElementById("averageScore").textContent = "—";
     document.getElementById("teacherRemark").textContent = "—";
+    document.getElementById("vacationDate").textContent = "—";
+    document.getElementById("reopenDate").textContent = "—";
     return;
+  }
+  // Fetch vacation and reopening dates from school_dates table
+  try {
+    const { data, error } = await supabaseClient
+      .from('school_dates')
+      .select('*')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    const latest = data && data.length > 0 ? data[0] : null;
+    document.getElementById("vacationDate").textContent = latest && latest.vacation_date ? new Date(latest.vacation_date).toLocaleDateString() : "—";
+    document.getElementById("reopenDate").textContent = latest && latest.reopen_date ? new Date(latest.reopen_date).toLocaleDateString() : "—";
+  } catch (e) {
+    document.getElementById("vacationDate").textContent = "—";
+    document.getElementById("reopenDate").textContent = "—";
   }
   // Hide prompt and show report
   reportPrompt.style.display = 'none';
@@ -256,7 +319,7 @@ document.getElementById('classSelect').addEventListener('change', async function
 
 // Modified populateStudentDropdown to filter by class
 async function populateStudentDropdown(filterClass) {
-  let query = supabaseClient.from('students').select('id, full_name, class, picture_url');
+  let query = supabaseClient.from('students').select('id, first_name, surname, class, picture_url');
   if (filterClass) query = query.eq('class', filterClass);
   const { data, error } = await query;
   const select = document.getElementById('studentSelect');
@@ -265,7 +328,7 @@ async function populateStudentDropdown(filterClass) {
   data.forEach(student => {
     const option = document.createElement('option');
     option.value = student.id;
-    option.textContent = student.full_name;
+    option.textContent = `${student.first_name || ''} ${student.surname || ''}`.trim();
     option.dataset.class = student.class;
     option.dataset.picture = student.picture_url || '';
     select.appendChild(option);

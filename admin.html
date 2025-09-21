@@ -1,131 +1,3 @@
-  <!-- Event Modal -->
-  <div id="eventModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Add/Edit Event or Holiday</h3>
-      <form id="eventForm">
-        <input type="hidden" name="event_id" />
-        <label for="eventType">Type:</label>
-        <select name="type" id="eventType" required>
-          <option value="">Select Type</option>
-          <option value="event">Event</option>
-          <option value="holiday">Holiday</option>
-        </select>
-        <label for="eventTitle">Title:</label>
-        <input type="text" name="title" id="eventTitle" placeholder="e.g. Independence Day" required />
-        <label for="eventDate">Date:</label>
-        <input type="date" name="date" id="eventDate" required />
-        <label for="eventClass">Class (optional):</label>
-        <select name="class" id="eventClass">
-          <option value="">All Classes</option>
-          <option value="JHS 1 A">JHS 1 A</option>
-          <option value="JHS 1 B">JHS 1 B</option>
-          <option value="JHS 2 A">JHS 2 A</option>
-          <option value="JHS 2 B">JHS 2 B</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
-        <label for="eventDetails">Details (optional):</label>
-        <textarea name="details" id="eventDetails" placeholder="Details or description..."></textarea>
-        <div class="form-actions">
-          <button type="submit">Save</button>
-          <button type="button" onclick="closeModal('eventModal')">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Timetable Modal -->
-
-  <div id="timetableModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Add/Edit Timetable Entry</h3>
-      <form id="timetableForm">
-        <input type="hidden" name="timetable_id" />
-        <label for="timetableClass">Class:</label>
-        <select name="class" id="timetableClass" required>
-          <option value="">Select Class</option>
-          <option value="JHS 1 A">JHS 1 A</option>
-          <option value="JHS 1 B">JHS 1 B</option>
-          <option value="JHS 2 A">JHS 2 A</option>
-          <option value="JHS 2 B">JHS 2 B</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
-        <label for="timetableSubject">Subject:</label>
-        <select name="subject" id="timetableSubject" required>
-          <option value="">Select Subject</option>
-          <option value="Maths">Maths</option>
-          <option value="English">English</option>
-          <option value="Science">Science</option>
-          <option value="Computing">Computing</option>
-          <option value="Social Studies">Social Studies</option>
-          <option value="RME">RME</option>
-          <option value="Creative Arts">Creative Arts</option>
-          <option value="Career Tech">Career Tech</option>
-          <option value="Twi">Twi</option>
-        </select>
-        <label for="timetableDay">Day:</label>
-        <select name="day" id="timetableDay" required>
-          <option value="">Select Day</option>
-          <option value="Monday">Monday</option>
-          <option value="Tuesday">Tuesday</option>
-          <option value="Wednesday">Wednesday</option>
-          <option value="Thursday">Thursday</option>
-          <option value="Friday">Friday</option>
-        </select>
-        <label for="timetableStartTime">Start Time:</label>
-        <input type="time" name="start_time" id="timetableStartTime" required />
-        <label for="timetableEndTime">End Time:</label>
-        <input type="time" name="end_time" id="timetableEndTime" required />
-        <div class="form-actions">
-          <button type="submit">Save</button>
-          <button type="button" onclick="closeModal('timetableModal')">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Extra Class Modal -->
-  <div id="extraClassModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Add/Edit Extra Class</h3>
-      <form id="extraClassForm">
-        <input type="hidden" name="extra_class_id" />
-        <label for="daySelect">Day:</label>
-        <select name="day" id="daySelect" required>
-          <option value="">Select Day</option>
-          <option value="Monday">Monday</option>
-          <option value="Tuesday">Tuesday</option>
-          <option value="Wednesday">Wednesday</option>
-          <option value="Thursday">Thursday</option>
-          <option value="Friday">Friday</option>
-        </select>
-        <label for="classExtraClass">Class:</label>
-        <select name="class" id="classExtraClass" required>
-          <option value="">Select Class</option>
-          <option value="JHS 1 A">JHS 1 A</option>
-          <option value="JHS 1 B">JHS 1 B</option>
-          <option value="JHS 2 A">JHS 2 A</option>
-          <option value="JHS 2 B">JHS 2 B</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
-        <label for="teacherMorningClass">Morning Classes Teacher:</label>
-        <select name="teacher_morning_class" id="teacherMorningClass" required>
-          <option value="">Select Teacher</option>
-        </select>
-        <label for="teacherExtraClass">Extra Classes Teacher:</label>
-        <select name="teacher_extra_class" id="teacherExtraClass" required>
-          <option value="">Select Teacher</option>
-        </select>
-        <label for="teacherExtraExtraClass">Extra Extra Classes Teacher:</label>
-        <select name="teacher_extra_extra_class" id="teacherExtraExtraClass" required>
-          <option value="">Select Teacher</option>
-        </select>
-        <div class="form-actions">
-          <button type="submit">Save</button>
-          <button type="button" onclick="closeModal('extraClassModal')">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div
   <!-- Admin Modal -->
   <div id="adminModal" class="modal hidden">
     <div class="modal-content">
@@ -152,91 +24,127 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Hamburger menu for mobile -->
-  <button id="sidebarToggle" class="sidebar-toggle" aria-label="Open menu">
-    &#9776;
-  </button>
+
+  <div class="admin-bg-overlay"></div>
+
   <header class="dashboard-header">
-  <div class="header-left">
-    <img src="Badge.png" alt="School Logo" class="school-logo" />
-    <div>
-      <h1>Nkawkaw Nsuta M/A 'B' Basic School</h1>
-      <p class="motto">"Knowledge is Power"</p>
-    </div>
-  </div>
+  <img src="Badge.png" alt="School Logo" class="school-logo" />
+  <h1 class="school-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+    <p class="motto">"Knowledge is Power"</p>
   <button id="logoutBtn" class="logout-btn">Logout</button>
   </header>
 
-  <nav class="sidebar">
-    <ul>
-      <li><a href="interest-conduct.html">Students Interest and Conduct</a></li>
-      <li><a href="dashboard.html">Students Interest Update</a></li>
-      <li><a href="#admins">Admins</a></li>
-      <li><a href="report.html" class="report-link">View Report Dashboard</a></li>
-    </ul>
-  </nav>
+
 
   <main class="dashboard-main">
-
-
-    <!-- Events/Timetable/Extra Classes Management Section -->
-    <section id="eventsManagement">
-      <h2>Manage Events, Timetable & Extra Classes</h2>
-      <div class="event-actions">
-        <button onclick="openModal('eventModal')">Add Event</button>
-        <button onclick="openModal('extraClassModal')">Add Extra Class</button>
+    <!-- Dashboard Overview Cards -->
+    <div id="dashboardOverview" class="dashboard-overview">
+      <div class="dashboard-card" data-section="reports">
+        <img src="icons/reports.svg" alt="Reports" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Reports</span>
+        <span class="dashboard-card-desc">View and manage school reports</span>
       </div>
-      <div class="event-tables">
-        <h3>Events</h3>
-        <table id="eventsTable">
-          <thead>
-            <tr><th>Title</th><th>Date</th><th>Class</th><th>Details</th><th>Actions</th></tr>
-          </thead>
-          <tbody></tbody>
-  </table>
-        <h3>Extra Classes</h3>
-        <table id="extraClassesTable">
-          <thead>
-            <tr>
-              <th>Day</th>
-              <th>Class</th>
-              <th>Morning Teacher</th>
-              <th>Extra Teacher</th>
-              <th>Extra Extra Teacher</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <h3>Timetable</h3>
-        <button onclick="openModal('timetableModal')" style="margin-bottom:10px;">Add Timetable Entry</button>
-        <table id="timetableTable">
-          <thead>
-            <tr>
-              <th>Class</th>
-              <th>Subject</th>
-              <th>Day</th>
-              <th>Start Time</th>
-              <th>End Time</th>
-              <th>Details</th>
-              <th>Teacher</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="dashboard-card" data-section="schoolDatesSection">
+        <img src="icons/school-dates.svg" alt="School Dates" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">School Dates</span>
+        <span class="dashboard-card-desc">Set and view vacation/reopening</span>
+      </div>
+      <div class="dashboard-card" data-section="students">
+        <img src="icons/students.svg" alt="Students" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Students</span>
+        <span class="dashboard-card-desc">Register and manage students</span>
+      </div>
+      <div class="dashboard-card" data-section="teachers">
+        <img src="icons/teachers.svg" alt="Teachers" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Teachers</span>
+        <span class="dashboard-card-desc">Register and manage teachers</span>
+      </div>
+      <div class="dashboard-card" data-section="admins">
+        <img src="icons/admins.svg" alt="Admins" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Admins</span>
+        <span class="dashboard-card-desc">Manage admin accounts</span>
+      </div>
+      <div class="dashboard-card" data-section="interestConduct">
+        <img src="icons/interest-conduct.svg" alt="Interest & Conduct" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Interest & Conduct</span>
+        <span class="dashboard-card-desc">Student interest & conduct</span>
+      </div>
+      <div class="dashboard-card" data-section="interestUpdate">
+        <img src="icons/interest-update.svg" alt="Interest Update" class="dashboard-card-icon" />
+        <span class="dashboard-card-title">Interest Update</span>
+        <span class="dashboard-card-desc">Update student interests</span>
+      </div>
+    </div>
+    <!-- Student Interest & Conduct Subdashboard -->
+    <section id="interestConduct" class="dashboard-section">
+      <h2>Student Interest & Conduct</h2>
+      <button onclick="window.location.href='interest-conduct.html'" class="report-btn">Go to Interest & Conduct</button>
+    </section>
+
+    <!-- Student Interest Update Subdashboard -->
+    <section id="interestUpdate" class="dashboard-section">
+      <h2>Student Interest Update</h2>
+      <button onclick="window.location.href='dashboard.html'" class="report-btn">Go to Interest Update</button>
+    </section>
+
+    <!-- Reports Section -->
+    <section id="reports" class="dashboard-section enhanced-section">
+      <div class="section-header">
+        <img src="icons/reports.svg" alt="Reports" class="section-header-icon" />
+        <div>
+          <h2>Reports</h2>
+          <p class="section-desc">View and manage all school reports</p>
+        </div>
+      </div>
+      <button onclick="window.location.href='report.html'" class="report-btn">View Report Dashboard</button>
+    </section>
+
+    <!-- School Dates Section -->
+  <section id="schoolDatesSection" class="dashboard-section enhanced-section">
+      <div class="section-header">
+        <img src="icons/school-dates.svg" alt="School Dates" class="section-header-icon" />
+        <div>
+          <h2>School Dates</h2>
+          <p class="section-desc">Set and view vacation and reopening dates</p>
+        </div>
+      </div>
+      <div id="schoolDatesDisplay">
+        <p>Vacation Date: <span id="vacationDateDisplay">—</span></p>
+        <p>Reopening Date: <span id="reopenDateDisplay">—</span></p>
+        <button onclick="openModal('schoolDatesModal')">Edit Dates</button>
       </div>
     </section>
 
-    <!-- Students Section -->
-    <section id="students" class="dashboard-section">
-      <h2>Register Students</h2>
-      <div class="section-actions">
-        <button onclick="openModal('studentModal')">Add Student</button>
-        <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
-        <button onclick="importCSV()">Import CSV</button>
+    <!-- School Dates Modal -->
+    <div id="schoolDatesModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Set School Dates</h3>
+        <form id="schoolDatesForm">
+          <label for="vacation_date">Vacation Date</label>
+          <input type="date" id="vacation_date" name="vacation_date" required />
+          <label for="reopen_date">Reopening Date</label>
+          <input type="date" id="reopen_date" name="reopen_date" required />
+          <div class="form-actions">
+            <button type="submit">Save</button>
+            <button type="button" onclick="closeModal('schoolDatesModal')">Cancel</button>
+          </div>
+        </form>
       </div>
-      <div class="section-filters">
+    </div>
+
+    <!-- Students Section -->
+    <section id="students" class="enhanced-section">
+      <div class="section-header">
+        <img src="icons/students.svg" alt="Students" class="section-header-icon" />
+        <div>
+          <h2>Register Students</h2>
+          <p class="section-desc">Add, import, and manage student records</p>
+        </div>
+      </div>
+      <button onclick="openModal('studentModal')">Add Student</button>
+      <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
+      <button onclick="importCSV()">Import CSV</button>
+  <div class="student-filter-row">
         <label for="classFilter">Class:</label>
         <select id="classFilter">
           <option value="">-- All Classes --</option>
@@ -252,19 +160,35 @@
       <table id="studentTable">
         <thead>
           <tr>
-            <th>Picture</th><th>Name</th><th>Gender</th><th>Class</th><th>Parent</th><th>Contact</th><th>Username</th><th>PIN</th><th>Actions</th>
+            <th>Picture</th>
+            <th>Name</th>
+            <th>Area</th>
+            <th>DOB</th>
+            <th>NHIS Number</th>
+            <th>Gender</th>
+            <th>Class</th>
+            <th>Parent</th>
+            <th>Contact</th>
+            <th>Username</th>
+            <th>PIN</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody></tbody>
       </table>
     </section>
 
-    <section id="teachers" class="dashboard-section">
-      <h2>Register Teachers</h2>
-      <div class="section-actions">
-        <button onclick="openModal('teacherModal')">Add Teacher</button>
+    <!-- Teachers Section -->
+    <section id="teachers" class="enhanced-section">
+      <div class="section-header">
+        <img src="icons/teachers.svg" alt="Teachers" class="section-header-icon" />
+        <div>
+          <h2>Register Teachers</h2>
+          <p class="section-desc">Add and manage teacher records</p>
+        </div>
       </div>
-      <div class="section-filters">
+      <button onclick="openModal('teacherModal')">Add Teacher</button>
+  <div class="teacher-filter-row">
         <label for="teacherSelect">Select Teacher:</label>
         <select id="teacherSelect" onchange="showSelectedTeacher()">
           <option value="">-- Select Teacher --</option>
@@ -280,11 +204,16 @@
       </table>
     </section>
 
-    <section id="admins" class="dashboard-section">
-      <h2>Manage Admins</h2>
-      <div class="section-actions">
-        <button onclick="openModal('adminModal')">Add Admin</button>
+    <!-- Admins Section -->
+    <section id="admins" class="enhanced-section">
+      <div class="section-header">
+        <img src="icons/admins.svg" alt="Admins" class="section-header-icon" />
+        <div>
+          <h2>Manage Admins</h2>
+          <p class="section-desc">Add and manage admin accounts</p>
+        </div>
       </div>
+      <button onclick="openModal('adminModal')">Add Admin</button>
       <table id="adminTable">
         <thead>
           <tr>
@@ -295,6 +224,7 @@
       </table>
     </section>
   </main>
+  <script src="admin-section-toggle.js"></script>
 
   <!-- Student Modal -->
   <div id="studentModal" class="modal hidden">
@@ -302,13 +232,18 @@
       <h3>Register Student</h3>
       <form id="studentForm" enctype="multipart/form-data">
         <input type="hidden" name="student_id" />
-        <input type="text" name="full_name" placeholder="Full Name" required />
-        <select name="gender" required>
+        <input type="text" name="first_name" placeholder="First Name" required />
+        <input type="text" name="surname" placeholder="Surname" required />
+        <input type="text" name="area" placeholder="Area" required />
+        <label for="student_dob">Date of Birth</label>
+        <input type="date" id="student_dob" name="dob" required />
+        <input type="text" name="nhis_number" placeholder="NHIS Number" />
+  <select name="gender" required title="Gender">
           <option value="">Select Gender</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
-        <select name="class" required>
+  <select name="class" required title="Class">
           <option value="">Select Class</option>
           <option value="JHS 1">JHS 1</option>
           <option value="JHS 2">JHS 2</option>
@@ -316,7 +251,7 @@
         </select>
         <input type="text" name="parent_name" placeholder="Parent/Guardian Name" required />
         <input type="tel" name="parent_contact" placeholder="Parent/Guardian Number" required />
-        <input type="file" name="picture" accept="image/*" />
+  <input type="file" name="picture" accept="image/*" title="Upload Picture" placeholder="Upload Picture" />
         <div class="form-actions">
           <button type="submit">Save</button>
           <button type="button" onclick="closeModal('studentModal')">Cancel</button>
@@ -332,7 +267,7 @@
       <form id="teacherForm">
         <input type="hidden" name="teacher_id" />
         <input type="text" name="name" placeholder="Full Name" required />
-        <select name="gender" required>
+  <select name="gender" required title="Gender">
           <option value="">Select Gender</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
@@ -348,35 +283,82 @@
         <input type="text" name="rank" placeholder="Rank" required />
         <input type="text" name="qualification" placeholder="Highest Academic Qualification" required />
 
-        <label>Classes Taught</label>
-        <div class="dropdown-checkbox">
-          <button type="button" class="dropdown-btn" onclick="toggleDropdown('classesDropdown')">Select Classes</button>
-          <div id="classesDropdown" class="dropdown-content">
-            <label><input type="checkbox" name="classes" value="JHS 1"> JHS 1</label>
-            <label><input type="checkbox" name="classes" value="JHS 2"> JHS 2</label>
-            <label><input type="checkbox" name="classes" value="JHS 3"> JHS 3</label>
-          </div>
-        </div>
+        <label>Subject-Class Assignments</label>
+        <div id="subjectClassAssignmentUI" style="margin-bottom:1rem;"></div>
+        <button type="button" id="addAssignmentRowBtn" style="margin-bottom:1rem;">Add Subject-Class Pair</button>
+        <script>
+        // Subject and class options
+        const SUBJECT_OPTIONS = [
+          'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
+        ];
+        const CLASS_OPTIONS = ['JHS 1','JHS 2','JHS 3'];
 
-        <label>Subjects Taught</label>
-        <div class="dropdown-checkbox">
-          <button type="button" class="dropdown-btn" onclick="toggleDropdown('subjectsDropdown')">Select Subjects</button>
-          <div id="subjectsDropdown" class="dropdown-content">
-            <label><input type="checkbox" name="subjects" value="Maths"> Maths</label>
-            <label><input type="checkbox" name="subjects" value="English"> English</label>
-            <label><input type="checkbox" name="subjects" value="Science"> Science</label>
-            <label><input type="checkbox" name="subjects" value="Computing"> Computing</label>
-            <label><input type="checkbox" name="subjects" value="Social Studies"> Social Studies</label>
-            <label><input type="checkbox" name="subjects" value="RME"> RME</label>
-            <label><input type="checkbox" name="subjects" value="Creative Arts"> Creative Arts</label>
-            <label><input type="checkbox" name="subjects" value="Career Tech"> Career Tech</label>
-            <label><input type="checkbox" name="subjects" value="Twi"> Twi</label>
-          </div>
-        </div>
+        function createAssignmentRow(selectedClass = '', selectedSubject = '') {
+          const row = document.createElement('div');
+          row.className = 'assignment-row';
+          row.style.display = 'flex';
+          row.style.gap = '0.5rem';
+          // Class select
+          const classSelect = document.createElement('select');
+          classSelect.name = 'assignment_class[]';
+          classSelect.required = true;
+          classSelect.innerHTML = '<option value="">Class</option>' + CLASS_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
+          classSelect.value = selectedClass;
+          // Subject select
+          const subjectSelect = document.createElement('select');
+          subjectSelect.name = 'assignment_subject[]';
+          subjectSelect.required = true;
+          subjectSelect.innerHTML = '<option value="">Subject</option>' + SUBJECT_OPTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
+          subjectSelect.value = selectedSubject;
+          // Remove button
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.textContent = 'Remove';
+          removeBtn.onclick = () => row.remove();
+          row.appendChild(classSelect);
+          row.appendChild(subjectSelect);
+          row.appendChild(removeBtn);
+          return row;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+          const container = document.getElementById('subjectClassAssignmentUI');
+          const addBtn = document.getElementById('addAssignmentRowBtn');
+          if (container && addBtn) {
+            addBtn.onclick = function() {
+              container.appendChild(createAssignmentRow());
+            };
+            // Add one row by default for new teacher
+            if (container.childElementCount === 0) {
+              container.appendChild(createAssignmentRow());
+            }
+          }
+        });
+        </script>
+  <script src="admin-section-toggle.js"></script>
+  <script>
+    // Show/hide Career Tech subselect in teacher modal
+    document.addEventListener('DOMContentLoaded', function() {
+      var subjectsSelect = document.getElementById('teacherSubjectsSelect');
+      var subselectWrapper = document.getElementById('careerTechSubselectWrapper');
+      if(subjectsSelect && subselectWrapper) {
+        subjectsSelect.addEventListener('change', function() {
+          var selected = Array.from(subjectsSelect.selectedOptions).map(opt => opt.value);
+          subselectWrapper.style.display = selected.includes('Career Tech') ? '' : 'none';
+        });
+      }
+    });
+  </script>
 
   <!-- Extended HR Fields -->
   <label for="first_appointment_date">First Appointment Date</label>
   <input type="date" id="first_appointment_date" name="first_appointment_date" />
+  <label for="year_posted_station">Year Posted to Current Station</label>
+  <input type="number" id="year_posted_station" name="year_posted_station" min="1900" max="2099" step="1" placeholder="e.g. 2020" />
+  <label for="years_at_present_school">Years at Present Station or School</label>
+  <input type="number" id="years_at_present_school" name="years_at_present_school" placeholder="Years at Present Station or School" min="1" readonly />
+  <label for="date_promoted_last_rank">Date Promoted to Last Rank</label>
+  <input type="date" id="date_promoted_last_rank" name="date_promoted_last_rank" />
   <label for="date_placed_on_rank">Date Placed on Rank</label>
   <input type="date" id="date_placed_on_rank" name="date_placed_on_rank" />
   <input type="text" name="salary_level" placeholder="Salary Level" />
@@ -389,7 +371,22 @@
   <label for="last_promotion_date">Date of Last Promotion</label>
   <input type="date" id="last_promotion_date" name="last_promotion_date" />
   <input type="text" name="previous_station" placeholder="Previous Station" />
-  <input type="number" name="years_at_present_school" placeholder="Years at Present School" min="0" />
+  <script>
+    // Auto-calculate Years at Present School
+    document.addEventListener('DOMContentLoaded', function() {
+      var yearPostedInput = document.getElementById('year_posted_station');
+      var yearsAtPresentInput = document.getElementById('years_at_present_school');
+      if(yearPostedInput && yearsAtPresentInput) {
+        yearPostedInput.addEventListener('input', function() {
+          var postedYear = parseInt(yearPostedInput.value, 10);
+          var currentYear = new Date().getFullYear();
+          var years = currentYear - postedYear + 1;
+          if (isNaN(years) || years < 1) years = 1;
+          yearsAtPresentInput.value = years;
+        });
+      }
+    });
+  </script>
   <input type="text" name="due_for_promotion" placeholder="Due For Promotion to Grade" />
   <input type="text" name="responsibility" placeholder="Responsibility" />
   <label for="denomination">Denomination</label>
@@ -524,49 +521,6 @@
           <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="admin.js"></script>
-</body>
-<script>
-// Sidebar toggle for mobile
-const sidebar = document.querySelector('.sidebar');
-const toggleBtn = document.getElementById('sidebarToggle');
-function updateSidebarDisplay() {
-  if (window.innerWidth <= 900) {
-    toggleBtn.style.display = 'block';
-    sidebar.classList.add('collapsed');
-  } else {
-    toggleBtn.style.display = 'none';
-    sidebar.classList.remove('collapsed');
-    sidebar.style.display = '';
-  }
-}
-toggleBtn && toggleBtn.addEventListener('click', function() {
-  sidebar.classList.toggle('open');
-  if (sidebar.classList.contains('open')) {
-    sidebar.style.display = 'block';
-    sidebar.style.zIndex = 1200;
-    sidebar.style.position = 'fixed';
-    sidebar.style.left = 0;
-    sidebar.style.top = 0;
-    sidebar.style.height = '100vh';
-    sidebar.style.background = '#00264d';
-    sidebar.style.width = '220px';
-    sidebar.style.boxShadow = '2px 0 12px rgba(0,0,0,0.12)';
-  } else {
-    sidebar.style.display = 'none';
-  }
-});
-window.addEventListener('resize', updateSidebarDisplay);
-window.addEventListener('DOMContentLoaded', updateSidebarDisplay);
-// Close sidebar when clicking outside (mobile)
-document.addEventListener('click', function(e) {
-  if (window.innerWidth <= 900 && sidebar.classList.contains('open')) {
-    if (!sidebar.contains(e.target) && e.target !== toggleBtn) {
-      sidebar.classList.remove('open');
-      sidebar.style.display = 'none';
-    }
-  }
-});
-</script>
 <script src="dashboard.js"></script>
 <script src="router.js"></script>
 <script>

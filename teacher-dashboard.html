@@ -6,14 +6,81 @@
   <title>Teacher Dashboard</title>
   <link rel="icon" type="image/png" href="Badge.png" />
   <link rel="stylesheet" href="teacher-dashboard.css" />
+  <style>
+    body {
+      background: url('teacher dashboard background.jpg') no-repeat center center fixed;
+      background-size: cover;
+      position: relative;
+    }
+    .dashboard-bg-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100vw; height: 100vh;
+      background: linear-gradient(120deg, rgba(0,32,64,0.55) 0%, rgba(0,32,64,0.25) 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .dashboard-container {
+      position: relative;
+      z-index: 1;
+      background: rgba(255,255,255,0.93);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 8px rgba(0,32,64,0.08);
+      border-radius: 18px;
+      padding: 2.5rem 2rem 2rem 2rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+    }
+    .logout-btn {
+      float: right;
+      margin: 1rem;
+      position: relative;
+      z-index: 2;
+    }
+    .school-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .school-logo {
+      height: 60px;
+      margin-right: 1rem;
+    }
+    .school-header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    /* #aboutMeBtn style moved to teacher-dashboard.css for consistency */
+    .tab-section {
+      display: none;
+    }
+    .tab-section.active {
+      display: block;
+    }
+    @media (max-width: 700px) {
+      .dashboard-container {
+        padding: 1rem 0.3rem;
+        border-radius: 10px;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .school-logo {
+        height: 40px;
+        margin-right: 0.5rem;
+      }
+      .school-header h1 {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
 </head>
 <body>
-  <button id="logoutBtn" class="logout-btn" style="float:right;margin:1rem;">Logout</button>
-  <div class="school-header" style="display:flex;align-items:center;margin-bottom:1rem;">
-    <img src="Badge.png" alt="School Logo" class="school-logo" style="height:60px;margin-right:1rem;" />
-    <h1 style="margin:0;font-size:1.5rem;">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+  <div class="dashboard-bg-overlay"></div>
+  <button id="logoutBtn" class="logout-btn">Logout</button>
+  <div class="school-header">
+    <img src="Badge.png" alt="School Logo" class="school-logo" />
+    <h1>Nkawkaw Nsuta M/A 'B' Basic School</h1>
   </div>
-  <button id="aboutMeBtn" style="float:right;margin:1rem 1rem 0 0;">About Me</button>
+  <button id="aboutMeBtn">About Me</button>
   <!-- About Me Modal -->
   <div id="aboutMeModal" class="modal hidden">
     <div class="modal-content">
@@ -25,25 +92,28 @@
     </div>
   </div>
   <div class="dashboard-container">
+  <button id="backToAdminBtn" class="back-btn">Back to Admin Dashboard</button>
     <!-- Teacher Welcome and Roles -->
     <div class="teacher-header">
       <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
       <div id="assignedRoles" class="floating-roles"></div>
     </div>
-    <!-- Dashboard Tabs in Grid -->
-    <div class="dashboard-tabs-grid">
-      <button class="tab-btn" onclick="showTab('profileSection')">Profile</button>
-      <button class="tab-btn" onclick="showTab('attendanceSection')">Attendance</button>
-      <button class="tab-btn" onclick="showTab('sbaSection')">SBA Entry</button>
-      <button class="tab-btn" onclick="showTab('examSection')">Exam Entry</button>
-      <button class="tab-btn" onclick="showTab('assignmentSection')">Assignment Composer</button>
-      <button class="tab-btn" onclick="showTab('inboxSection')">Assignment Inbox</button>
-      <button class="tab-btn" onclick="showTab('messagesSection')">Messages</button>
-      <button class="tab-btn" onclick="showTab('resourceRequestsSection')">Resource Requests</button>
-      <button class="tab-btn" onclick="showTab('motivationSection')">Motivation</button>
+    <!-- Dashboard Overview Cards -->
+    <div id="dashboardOverview" class="dashboard-overview">
+  <button id="backToDashboardBtn" class="back-btn">Back to Main Dashboard</button>
+      <div class="dashboard-card" data-section="profileSection">Profile</div>
+      <div class="dashboard-card" data-section="attendanceSection">Attendance</div>
+      <div class="dashboard-card" data-section="sbaSection">SBA Entry</div>
+      <div class="dashboard-card" data-section="examSection">Exam Entry</div>
+      <div class="dashboard-card" data-section="assignmentSection">Assignment Composer</div>
+      <div class="dashboard-card" data-section="inboxSection">Assignment Inbox</div>
+      <div class="dashboard-card" data-section="messagesSection">Messages</div>
+      <div class="dashboard-card" data-section="resourceRequestsSection">Resource Requests</div>
+      <div class="dashboard-card" data-section="motivationSection">Motivation</div>
     </div>
     <!-- Attendance Section -->
-    <div id="attendanceSection" class="tab-section" style="display:none;">
+  <div id="attendanceSection" class="tab-section">
+      <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <div class="collapsible-panel">
         <button class="toggle-btn" onclick="togglePanel('attendancePanel')">Attendance</button>
         <div id="attendancePanel" class="panel-content">
@@ -72,7 +142,8 @@
 
    
 
-    <div id="sbaSection" class="tab-section" style="display:none;">
+  <div id="sbaSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <div class="collapsible-panel">
         <button class="toggle-btn" onclick="togglePanel('sbaPanel')">SBA Entry</button>
         <div id="sbaPanel" class="panel-content">
@@ -114,7 +185,8 @@
       </div>
     </div>
 
-    <div id="examSection" class="tab-section" style="display:none;">
+  <div id="examSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <div class="collapsible-panel">
         <button class="toggle-btn" onclick="togglePanel('examPanel')">Exam Entry</button>
         <div id="examPanel" class="panel-content">
@@ -152,7 +224,8 @@
       </div>
     </div>
 
-    <div id="assignmentSection" class="tab-section" style="display:none;">
+  <div id="assignmentSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <div class="assignment-composer">
         <h3>Send Assignment to Students</h3>
         <div class="filters">
@@ -184,7 +257,8 @@
       </div>
     </div>
 
-    <div id="inboxSection" class="tab-section" style="display:none;">
+  <div id="inboxSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <div id="assignmentInbox">
         <h3>Student Assignment Submissions</h3>
         <table>
@@ -204,7 +278,8 @@
       </div>
     </div>
 
-    <div id="messagesSection" class="tab-section" style="display:none;">
+  <div id="messagesSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Messages from Students</h3>
       <table>
         <thead>
@@ -221,7 +296,8 @@
       </table>
     </div>
 
-    <div id="resourceRequestsSection" class="tab-section" style="display:none;">
+  <div id="resourceRequestsSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Resource Requests</h3>
       <table>
         <thead>
@@ -239,7 +315,8 @@
       </table>
     </div>
 
-    <div id="motivationSection" class="tab-section" style="display:none;">
+  <div id="motivationSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
       <h3>Send Motivational Message</h3>
       <label for="motivationStudentSelect">Student:</label>
       <select id="motivationStudentSelect">
@@ -285,10 +362,8 @@
       openAboutMeModal();
       return;
     }
-    const { data, error } = await supabase.createClient(
-      'https://omhmahhfeduejykrxflx.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
-    ).from('teachers').select('*').eq('staff_id', staffId).single();
+    const { data, error } = await supabaseClient
+      .from('teachers').select('*').eq('staff_id', staffId).single();
     if (error || !data) {
       document.getElementById('aboutMeContent').innerHTML = '<p style="color:red;">Could not load teacher info. Please log in again.</p>';
       openAboutMeModal();
@@ -314,7 +389,16 @@
   });
 </script>
 <script>
-  window.showTab = function(tabId) {
+  // Show dashboard overview by default
+  function showDashboardOverview() {
+    document.getElementById('dashboardOverview').style.display = 'grid';
+    document.querySelectorAll('.tab-section').forEach(section => {
+      section.style.display = 'none';
+    });
+  }
+  // Show a specific section and hide dashboard overview
+  function showTabSection(tabId) {
+    document.getElementById('dashboardOverview').style.display = 'none';
     document.querySelectorAll('.tab-section').forEach(section => {
       section.style.display = 'none';
     });
@@ -324,23 +408,30 @@
     } else {
       console.warn('Tab section not found:', tabId);
     }
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.classList.remove('active');
-      if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId)) btn.classList.add('active');
-    });
   }
-showTab('profileSection'); // Show profile by default
+  // Add click listeners to dashboard cards
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.dashboard-card').forEach(card => {
+      card.onclick = function() {
+        showTabSection(card.getAttribute('data-section'));
+      };
+    });
+    showDashboardOverview();
+  });
 </script>
 </body>
 <script>
   document.getElementById('logoutBtn').onclick = function() {
-    sessionStorage.clear();
-    localStorage.clear();
-    // Remove all possible teacher session keys
-    sessionStorage.removeItem('teacher_staff_id');
-    localStorage.removeItem('teacherId');
-    // Redirect to login page (index.html or login.html)
-    window.location.href = 'index.html';
+    if (typeof logout === 'function') {
+      logout();
+    } else {
+      // fallback: clear session and redirect
+      sessionStorage.clear();
+      localStorage.clear();
+      sessionStorage.removeItem('teacher_staff_id');
+      localStorage.removeItem('teacherId');
+      window.location.href = 'login.html';
+    }
   };
 </script>
 </body>

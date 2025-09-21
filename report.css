@@ -1,3 +1,84 @@
+.back-btn {
+  margin-bottom: 1.5rem;
+}
+/* === Dashboard Overview Styles === */
+.dashboard-overview {
+  background: #f8fafc;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  padding: 2rem 1.5rem 1.5rem 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+.dashboard-overview h2 {
+  color: #004080;
+  margin-bottom: 1.5rem;
+  font-size: 2rem;
+  letter-spacing: 1px;
+}
+.dashboard-cards {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+.dashboard-card {
+  background: #fff;
+  border: 2px solid #ffa500;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(255,165,0,0.08);
+  padding: 2rem 2.5rem;
+  min-width: 180px;
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #004080;
+  cursor: pointer;
+  transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.dashboard-card:hover {
+  background: #fff7e6;
+  border-color: #ff8800;
+  box-shadow: 0 4px 16px rgba(255,165,0,0.18);
+}
+.back-btn {
+  background: #004080;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.7rem 2.2rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 1.5rem;
+  margin-bottom: 1.2rem;
+  transition: background 0.2s;
+  display: inline-block;
+}
+.back-btn:hover {
+  background: #0059b3;
+}
+@media (max-width: 700px) {
+  .dashboard-cards {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .dashboard-card {
+    min-width: 120px;
+    padding: 1.2rem 1rem;
+    font-size: 1rem;
+  }
+  .dashboard-overview {
+    padding: 1rem 0.5rem 1rem 0.5rem;
+  }
+}
 /* Responsive Design for Mobile and Tablet */
 @media (max-width: 900px) {
   .report-container {
@@ -623,10 +704,11 @@ span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="y
   text-align: center;
   display: block;
 }
-span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"]::after {
-  content: "";
-  display: block;
+span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"], span#vacationDate, span#reopenDate {
+  display: inline-block;
+  min-width: 2.5em;
   border-bottom: 3px double orange;
   margin-top: 2px;
   width: 100%;
+  text-align: center;
 }

@@ -81,7 +81,7 @@ async function editAdmin(id) {
 async function loadAdmins() {
   const { data, error } = await supabaseClient.from('admins').select('*');
   const tbody = document.querySelector('#adminTable tbody');
-    if (tbody) tbody.innerHTML = '';
+  tbody.innerHTML = '';
   if (error) {
     console.error('Failed to load admins:', error.message);
     return;
@@ -130,7 +130,7 @@ async function loadTeachers() {
   const { data, error } = await supabaseClient.from('teachers').select('*');
   const tbody = document.querySelector('#teacherTable tbody');
   const select = document.getElementById('teacherSelect');
-    if (tbody) tbody.innerHTML = '';
+  tbody.innerHTML = '';
   if (select) {
     select.innerHTML = '<option value="">-- Select Teacher --</option>';
     if (data && Array.isArray(data)) {
@@ -149,7 +149,7 @@ async function loadTeachers() {
 window.showSelectedTeacher = function showSelectedTeacher() {
   const select = document.getElementById('teacherSelect');
   const tbody = document.querySelector('#teacherTable tbody');
-    if (tbody) tbody.innerHTML = '';
+  tbody.innerHTML = '';
   const teacherId = select.value;
   if (!teacherId) return;
   supabaseClient.from('teachers').select('*').eq('id', teacherId).single().then(({ data, error }) => {
@@ -207,18 +207,21 @@ window.addEventListener('DOMContentLoaded', function() {
   const studentForm = document.getElementById('studentForm');
   if (studentForm) {
     studentForm.addEventListener('submit', async (e) => {
-      console.log('DEBUG: Student form submit handler triggered');
       e.preventDefault();
       const form = e.target;
       const studentId = form.student_id.value;
-      const fullName = form.full_name.value.trim();
+      const firstName = form.first_name.value.trim();
+      const surname = form.surname.value.trim();
+      const area = form.area.value.trim();
+      const dob = form.dob.value;
+      const nhisNumber = form.nhis_number.value.trim();
       const gender = form.gender.value;
       const studentClass = form.class.value.trim();
       const parentName = form.parent_name.value.trim();
       const parentContact = form.parent_contact.value.trim();
       const pictureFile = form.picture.files[0];
 
-      if (!fullName || !gender || !studentClass || !parentName || !parentContact) {
+      if (!firstName || !surname || !area || !dob || !gender || !studentClass || !parentName || !parentContact) {
         alert('Please fill in all required fields.');
         return;
       }
@@ -226,33 +229,23 @@ window.addEventListener('DOMContentLoaded', function() {
       let pictureUrl = null;
       if (pictureFile) {
         const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
-        console.log('DEBUG: Uploading student picture to:', uploadPath);
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('student-pictures')
           .upload(uploadPath, pictureFile);
-        console.log('DEBUG: Upload response:', uploadData, uploadError);
         if (uploadError) {
           alert('Picture upload failed: ' + uploadError.message);
           return;
         }
         let publicUrl = null;
         if (uploadData && uploadData.path) {
-          console.log('DEBUG: uploadData.path:', uploadData.path);
           const publicUrlResult = supabaseClient.storage
             .from('student-pictures')
             .getPublicUrl(uploadData.path);
-          console.log('DEBUG: Full publicUrlResult:', publicUrlResult);
           if (publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl) {
             publicUrl = publicUrlResult.data.publicUrl;
-            console.log('DEBUG: Extracted publicUrl:', publicUrl);
           } else if (publicUrlResult && publicUrlResult.publicUrl) {
             publicUrl = publicUrlResult.publicUrl;
-            console.log('DEBUG: Extracted legacy publicUrl:', publicUrl);
-          } else {
-            console.log('DEBUG: No publicUrl found in publicUrlResult.');
           }
-        } else {
-          console.log('DEBUG: No uploadData.path returned.');
         }
         pictureUrl = publicUrl;
         if (!pictureUrl) {
@@ -261,10 +254,14 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-      const username = generateUsername(fullName);
+      const username = (firstName + '.' + surname).toLowerCase();
       const pin = generatePin();
       const payload = {
-        full_name: fullName,
+        first_name: firstName,
+        surname: surname,
+        area: area,
+        dob: dob,
+        nhis_number: nhisNumber,
         gender,
         class: studentClass,
         parent_name: parentName,
@@ -301,13 +298,13 @@ function importCSV() {
     const lines = e.target.result.split('\n');
     const insertPromises = [];
     for (let line of lines.slice(1)) {
-      const [full_name, gender, studentClass, parent_name, parent_contact] = line.split(',');
-      if (!full_name || !gender || !studentClass || !parent_name || !parent_contact) continue;
-      const username = generateUsername(full_name);
+      const [first_name, surname, area, dob, nhis_number, gender, studentClass, parent_name, parent_contact] = line.split(',');
+      if (!first_name || !surname || !area || !dob || !gender || !studentClass || !parent_name || !parent_contact) continue;
+      const username = (first_name + '.' + surname).toLowerCase();
       const pin = generatePin();
       insertPromises.push(
         supabaseClient.from('students').insert([
-          { full_name, gender, class: studentClass, parent_name, parent_contact, username, pin }
+          { first_name, surname, area, dob, nhis_number, gender, class: studentClass, parent_name, parent_contact, username, pin }
         ])
       );
     }
@@ -323,12 +320,16 @@ async function editStudent(id) {
   const { data, error } = await supabaseClient.from('students').select('*').eq('id', id).single();
   if (error) return alert('Failed to load student.');
   const form = document.getElementById('studentForm');
-  form.student_id.value = data.id;
-  form.full_name.value = data.full_name;
-  form.gender.value = data.gender;
-  form.class.value = data.class;
-  form.parent_name.value = data.parent_name;
-  form.parent_contact.value = data.parent_contact;
+  form.student_id.value = data.id || '';
+  form.first_name.value = data.first_name || '';
+  form.surname.value = data.surname || '';
+  form.area.value = data.area || '';
+  form.dob.value = data.dob || '';
+  form.nhis_number.value = data.nhis_number || '';
+  form.gender.value = data.gender || '';
+  form.class.value = data.class || '';
+  form.parent_name.value = data.parent_name || '';
+  form.parent_contact.value = data.parent_contact || '';
   openModal('studentModal');
 }
 
@@ -345,14 +346,24 @@ async function loadStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   const tbody = document.querySelector('#studentTable tbody');
   const select = document.getElementById('studentSelect');
-    if (tbody) tbody.innerHTML = '';
+  tbody.innerHTML = '';
   if (select) {
     select.innerHTML = '<option value="">-- Select Student --</option>';
     if (data && Array.isArray(data)) {
       data.forEach(student => {
         const opt = document.createElement('option');
         opt.value = student.id;
-        opt.textContent = student.full_name + ' (' + student.class + ')';
+        let name = '';
+        if (student.first_name && student.surname) {
+          name = student.first_name + ' ' + student.surname;
+        } else if (student.first_name) {
+          name = student.first_name;
+        } else if (student.surname) {
+          name = student.surname;
+        } else {
+          name = '[No Name]';
+        }
+        opt.textContent = name + ' (' + (student.class || '') + ')';
         select.appendChild(opt);
       });
     }
@@ -363,7 +374,7 @@ async function loadStudents() {
 window.showSelectedStudent = function showSelectedStudent() {
   const select = document.getElementById('studentSelect');
   const tbody = document.querySelector('#studentTable tbody');
-    if (tbody) tbody.innerHTML = '';
+  tbody.innerHTML = '';
   const studentId = select.value;
   if (!studentId) return;
   supabaseClient.from('students').select('*').eq('id', studentId).single().then(({ data, error }) => {
@@ -371,7 +382,10 @@ window.showSelectedStudent = function showSelectedStudent() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><img src="${data.picture_url || ''}" alt="Student" width="40" height="40" /></td>
-      <td>${data.full_name}</td>
+      <td>${(data.first_name ? data.first_name + ' ' : '') + (data.surname || '')}</td>
+      <td>${data.area || ''}</td>
+      <td>${data.dob || ''}</td>
+      <td>${data.nhis_number || ''}</td>
       <td>${data.gender}</td>
       <td>${data.class}</td>
       <td>${data.parent_name}</td>
@@ -429,10 +443,10 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
 
   let result;
   if (teacherId) {
-  // Don't overwrite pin on update
-  const updateData = { ...teacherData };
-  delete updateData.pin;
-  result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId);
+    // Don't overwrite pin on update
+    const updateData = { ...teacherData };
+    delete updateData.pin;
+    result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId);
   } else {
     result = await supabaseClient.from('teachers').insert([teacherData]);
   }
@@ -442,14 +456,17 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   } else {
     if (teacherId) {
       alert('Teacher updated!');
+      // Re-fetch and reopen the edit modal with latest data
+      await loadTeachers();
+      setTimeout(() => editTeacher(teacherId), 300); // slight delay to ensure list is refreshed
     } else {
-  alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
+      alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
+      form.reset();
+      Array.from(form.classes.options).forEach(opt => opt.selected = false);
+      Array.from(form.subjects.options).forEach(opt => opt.selected = false);
+      closeModal('teacherModal');
+      loadTeachers();
     }
-    form.reset();
-    Array.from(form.classes.options).forEach(opt => opt.selected = false);
-    Array.from(form.subjects.options).forEach(opt => opt.selected = false);
-    closeModal('teacherModal');
-    loadTeachers();
   }
 });
 
@@ -471,29 +488,13 @@ async function editTeacher(id) {
   form.rank.value = data.rank || '';
   form.qualification.value = data.qualification || '';
   // Multi-select: classes
-  let teacherClasses = [];
-  if (Array.isArray(data.classes)) {
-    teacherClasses = data.classes;
-  } else if (typeof data.classes === 'string') {
-    teacherClasses = data.classes.split(',').map(s => s.trim());
-  }
-  if (form.classes && form.classes.options) {
-    Array.from(form.classes.options).forEach(opt => {
-      opt.selected = teacherClasses.includes(opt.value);
-    });
-  }
+  Array.from(form.classes.options).forEach(opt => {
+    opt.selected = (data.classes || []).includes(opt.value);
+  });
   // Multi-select: subjects
-  let teacherSubjects = [];
-  if (Array.isArray(data.subjects)) {
-    teacherSubjects = data.subjects;
-  } else if (typeof data.subjects === 'string') {
-    teacherSubjects = data.subjects.split(',').map(s => s.trim());
-  }
-  if (form.subjects && form.subjects.options) {
-    Array.from(form.subjects.options).forEach(opt => {
-      opt.selected = teacherSubjects.includes(opt.value);
-    });
-  }
+  Array.from(form.subjects.options).forEach(opt => {
+    opt.selected = (data.subjects || []).includes(opt.value);
+  });
   form.first_appointment_date.value = data.first_appointment_date || '';
   form.date_placed_on_rank.value = data.date_placed_on_rank || '';
   form.salary_level.value = data.salary_level || '';
