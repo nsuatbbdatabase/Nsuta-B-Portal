@@ -39,6 +39,37 @@
   <main class="dashboard-main">
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
+  <div class="dashboard-card" data-section="promotionExamAdminSection">Promotion Exam Submissions</div>
+  <!-- Promotion Exam Admin Section -->
+  <div id="promotionExamAdminSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
+    <h3>Submitted Promotion Exam Entries (JHS 2)</h3>
+    <div class="filters">
+      <label for="promotionAdminClassSelect">Class:</label>
+      <select id="promotionAdminClassSelect">
+        <option value="JHS 2">JHS 2</option>
+      </select>
+      <label for="promotionAdminSubjectSelect">Subject:</label>
+      <select id="promotionAdminSubjectSelect">
+        <option value="">-- All Subjects --</option>
+      </select>
+      <label for="promotionAdminYearInput">Academic Year:</label>
+      <input id="promotionAdminYearInput" placeholder="Academic Year (e.g. 2025/2026)">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Subject</th>
+          <th>Score</th>
+          <th>Term</th>
+          <th>Year</th>
+          <th>Marked By</th>
+        </tr>
+      </thead>
+      <tbody id="promotionExamAdminTableBody"></tbody>
+    </table>
+  </div>
       <div class="dashboard-card" data-section="reports">
         <img src="icons/reports.svg" alt="Reports" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Reports</span>
@@ -144,6 +175,7 @@
       <button onclick="openModal('studentModal')">Add Student</button>
       <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
       <button onclick="importCSV()">Import CSV</button>
+  <button onclick="exportStudentsCSV()">Export CSV</button>
   <div class="student-filter-row">
         <label for="classFilter">Class:</label>
         <select id="classFilter">
@@ -266,77 +298,107 @@
       <h3>Register Teacher</h3>
       <form id="teacherForm">
         <input type="hidden" name="teacher_id" />
-        <input type="text" name="name" placeholder="Full Name" required />
-  <select name="gender" required title="Gender">
-          <option value="">Select Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
-        <label for="dob">Date of Birth</label>
-        <input type="date" id="dob" name="dob" required />
-        <input type="text" name="staff_id" placeholder="Staff ID" required />
-        <input type="text" name="ntc" placeholder="NTC Number" required />
-        <input type="text" name="registered_number" placeholder="Registered Number" required />
-        <input type="text" name="ssnit" placeholder="SSNIT Number" required />
-        <input type="text" name="ghana_card" placeholder="Ghana Card Number" required />
-        <input type="tel" name="contact" placeholder="Contact Number" required />
-        <input type="text" name="rank" placeholder="Rank" required />
-        <input type="text" name="qualification" placeholder="Highest Academic Qualification" required />
-
-        <label>Subject-Class Assignments</label>
-        <div id="subjectClassAssignmentUI" style="margin-bottom:1rem;"></div>
-        <button type="button" id="addAssignmentRowBtn" style="margin-bottom:1rem;">Add Subject-Class Pair</button>
-        <script>
-        // Subject and class options
-        const SUBJECT_OPTIONS = [
-          'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
-        ];
-        const CLASS_OPTIONS = ['JHS 1','JHS 2','JHS 3'];
-
-        function createAssignmentRow(selectedClass = '', selectedSubject = '') {
-          const row = document.createElement('div');
-          row.className = 'assignment-row';
-          row.style.display = 'flex';
-          row.style.gap = '0.5rem';
-          // Class select
-          const classSelect = document.createElement('select');
-          classSelect.name = 'assignment_class[]';
-          classSelect.required = true;
-          classSelect.innerHTML = '<option value="">Class</option>' + CLASS_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
-          classSelect.value = selectedClass;
-          // Subject select
-          const subjectSelect = document.createElement('select');
-          subjectSelect.name = 'assignment_subject[]';
-          subjectSelect.required = true;
-          subjectSelect.innerHTML = '<option value="">Subject</option>' + SUBJECT_OPTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
-          subjectSelect.value = selectedSubject;
-          // Remove button
-          const removeBtn = document.createElement('button');
-          removeBtn.type = 'button';
-          removeBtn.textContent = 'Remove';
-          removeBtn.onclick = () => row.remove();
-          row.appendChild(classSelect);
-          row.appendChild(subjectSelect);
-          row.appendChild(removeBtn);
-          return row;
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-          const container = document.getElementById('subjectClassAssignmentUI');
-          const addBtn = document.getElementById('addAssignmentRowBtn');
-          if (container && addBtn) {
-            addBtn.onclick = function() {
-              container.appendChild(createAssignmentRow());
-            };
-            // Add one row by default for new teacher
-            if (container.childElementCount === 0) {
-              container.appendChild(createAssignmentRow());
-            }
-          }
-        });
-        </script>
+        <div class="modal-form-grid">
+          <div class="form-group"><input type="text" name="name" placeholder="Full Name" required /></div>
+          <div class="form-group">
+            <select name="gender" required title="Gender">
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="dob">Date of Birth</label><input type="date" id="dob" name="dob" required /></div>
+          <div class="form-group"><input type="text" name="staff_id" placeholder="Staff ID" required /></div>
+          <div class="form-group"><input type="text" name="ntc" placeholder="NTC Number" required /></div>
+          <div class="form-group"><input type="text" name="registered_number" placeholder="Registered Number" required /></div>
+          <div class="form-group"><input type="text" name="ssnit" placeholder="SSNIT Number" required /></div>
+          <div class="form-group"><input type="text" name="ghana_card" placeholder="Ghana Card Number" required /></div>
+          <div class="form-group"><input type="tel" name="contact" placeholder="Contact Number" required /></div>
+          <div class="form-group"><input type="text" name="rank" placeholder="Rank" required /></div>
+          <div class="form-group"><input type="text" name="qualification" placeholder="Highest Academic Qualification" required /></div>
+          <div class="form-group full-width"><label>Class-Subject Assignments</label></div>
+          <div class="form-group full-width"><div id="assignmentRowsContainer"></div></div>
+          <div class="form-group full-width"><button type="button" id="addAssignmentRowBtn">Add Class-Subject Pair</button></div>
+        </div>
   <script src="admin-section-toggle.js"></script>
   <script>
+// --- Dynamic Class-Subject Assignment Rows ---
+const SUBJECT_OPTIONS = [
+  'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
+];
+const CLASS_OPTIONS = ['JHS 1','JHS 2','JHS 3'];
+
+  function createAssignmentRow(selectedClass = '', selectedSubject = '', selectedArea = '') {
+  const row = document.createElement('div');
+  row.className = 'assignment-row';
+  row.style.display = 'flex';
+  row.style.gap = '0.5rem';
+  // Class select
+  const classSelect = document.createElement('select');
+  classSelect.name = 'assignment_class[]';
+  classSelect.required = true;
+  classSelect.innerHTML = '<option value="">Class</option>' + CLASS_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
+  classSelect.value = selectedClass;
+  // Subject select
+  const subjectSelect = document.createElement('select');
+  subjectSelect.name = 'assignment_subject[]';
+  subjectSelect.required = true;
+  subjectSelect.innerHTML = '<option value="">Subject</option>' + SUBJECT_OPTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
+  subjectSelect.value = selectedSubject;
+
+  // Career Tech area dropdown (hidden by default)
+  const areaSelectWrapper = document.createElement('div');
+  areaSelectWrapper.style.display = 'none';
+  areaSelectWrapper.style.flex = '1';
+  const areaSelect = document.createElement('select');
+  areaSelect.name = 'assignment_career_area[]';
+  areaSelect.innerHTML = '<option value="">Select Area</option>' + ['Home Economics','Pre Technical'].map(a => `<option value="${a}">${a}</option>`).join('');
+  areaSelectWrapper.appendChild(areaSelect);
+  if (selectedArea) areaSelect.value = selectedArea;
+
+  // Show/hide area dropdown when Career Tech is selected
+  subjectSelect.addEventListener('change', function() {
+    if (subjectSelect.value === 'Career Tech') {
+      areaSelectWrapper.style.display = '';
+      areaSelect.required = true;
+    } else {
+      areaSelectWrapper.style.display = 'none';
+      areaSelect.required = false;
+      areaSelect.value = '';
+    }
+  });
+
+  // If editing, show area if subject is Career Tech
+  if (selectedSubject === 'Career Tech') {
+    areaSelectWrapper.style.display = '';
+    areaSelect.required = true;
+  }
+
+  // Remove button
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.textContent = 'Remove';
+  removeBtn.onclick = () => row.remove();
+  row.appendChild(classSelect);
+  row.appendChild(subjectSelect);
+  row.appendChild(areaSelectWrapper);
+  row.appendChild(removeBtn);
+  return row;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.getElementById('assignmentRowsContainer');
+  const addBtn = document.getElementById('addAssignmentRowBtn');
+  if (container && addBtn) {
+    addBtn.onclick = function() {
+      container.appendChild(createAssignmentRow());
+    };
+    // Add one row by default for new teacher
+    if (!container.hasChildNodes()) {
+      container.appendChild(createAssignmentRow());
+    }
+  }
+});
     // Show/hide Career Tech subselect in teacher modal
     document.addEventListener('DOMContentLoaded', function() {
       var subjectsSelect = document.getElementById('teacherSubjectsSelect');
@@ -388,7 +450,15 @@
     });
   </script>
   <input type="text" name="due_for_promotion" placeholder="Due For Promotion to Grade" />
-  <input type="text" name="responsibility" placeholder="Responsibility" />
+  <label for="responsibility">Responsibility</label>
+  <select name="responsibility" id="responsibility" required>
+    <option value="">Select Responsibility</option>
+    <option value="Class Teacher">Class Teacher</option>
+    <option value="Subject Teacher">Subject Teacher</option>
+    <option value="Career Tech Teacher">Career Tech Teacher</option>
+    <option value="Other">Other</option>
+  </select>
+  <div id="attendanceNote" style="display:none; color:green; font-weight:bold; margin-bottom:8px;">Attendance will be enabled for Class Teachers only.</div>
   <label for="denomination">Denomination</label>
   <select name="denomination" id="denomination" required>
     <option value="">Select Denomination</option>

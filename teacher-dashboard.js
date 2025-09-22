@@ -248,36 +248,166 @@ let students = [];
 
 // 🔐 Load teacher profile and dashboard
 async function loadTeacherDashboard(staffId) {
-  const { data, error } = await supabaseClient
+  // Load teacher basic info
+  const { data: teacherData, error: teacherError } = await supabaseClient
     .from('teachers')
-    .select('id, name, classes, subjects, staff_id')
+    .select('id, name, staff_id, responsibility')
     .eq('staff_id', staffId)
     .single();
-  if (error || !data) {
+  if (teacherError || !teacherData) {
     document.getElementById('welcomeMessage').textContent = 'Access denied or teacher not found.';
     return;
   }
-  teacher = data;
+  teacher = teacherData;
+  // Load assignments
+  const { data: assignments, error: assignError } = await supabaseClient
+    .from('teaching_assignments')
+    .select('class, subject, area')
+    .eq('teacher_id', teacher.id);
+  if (assignError) {
+    document.getElementById('welcomeMessage').textContent = 'Error loading assignments.';
+    return;
+  }
+  // Build assigned classes/subjects/areas
+  teacher.assignments = assignments || [];
+  teacher.classes = [...new Set(assignments.map(a => a.class))];
+  teacher.subjects = [...new Set(assignments.map(a => a.subject))];
+  teacher.areas = [...new Set(assignments.filter(a => a.subject === 'Career Tech').map(a => a.area).filter(Boolean))];
+
   document.getElementById('welcomeMessage').textContent = `Welcome, ${teacher.name} (${teacher.staff_id})`;
   const rolesDiv = document.getElementById('assignedRoles');
-  rolesDiv.innerHTML = `
-    <strong>Assigned Classes:</strong> ${teacher.classes?.join(', ') || ''}<br/>
-    <strong>Assigned Subjects:</strong> ${teacher.subjects?.join(', ') || ''}
-  `;
-  populateDropdown('classSelect', teacher.classes || []);
-  populateDropdown('subjectSelect', teacher.subjects || []);
-  populateDropdown('assignClass', teacher.classes || []);
-  populateDropdown('assignSubject', teacher.subjects || []);
-  // Populate Exam section dropdowns
-  populateDropdown('classSelectExam', teacher.classes || []);
-  populateDropdown('subjectSelectExam', teacher.subjects || []);
-  // Setup attendance section after teacher data is loaded
-  setupAttendanceSection();
+  let rolesHtml = `<strong>Assigned Classes:</strong> ${teacher.classes.join(', ')}<br/><strong>Assigned Subjects:</strong> ${teacher.subjects.join(', ')}`;
+  if (teacher.areas.length) {
+    rolesHtml += `<br/><strong>Career Tech Areas:</strong> ${teacher.areas.join(', ')}`;
+  }
+  rolesDiv.innerHTML = rolesHtml;
+
+  // Populate dropdowns for mark entry
+  populateDropdown('classSelect', teacher.classes);
+  populateDropdown('subjectSelect', teacher.subjects);
+  populateDropdown('classSelectExam', teacher.classes);
+  populateDropdown('subjectSelectExam', teacher.subjects);
+  populateDropdown('assignClass', teacher.classes);
+  populateDropdown('assignSubject', teacher.subjects);
+  // Restrict dropdowns to assigned pairs
+  function setupRestrictedDropdowns() {
+    // SBA Section
+    const classSelect = document.getElementById('classSelect');
+    const subjectSelect = document.getElementById('subjectSelect');
+    if (classSelect && subjectSelect && teacher.assignments) {
+      subjectSelect.addEventListener('change', function() {
+        const subjectVal = subjectSelect.value;
+        const allowedClasses = teacher.assignments.filter(a => a.subject === subjectVal).map(a => a.class);
+        const prevClass = classSelect.value;
+        classSelect.innerHTML = `<option value="">-- Select Class --</option>`;
+        [...new Set(allowedClasses)].forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls;
+          opt.textContent = cls;
+          classSelect.appendChild(opt);
+        });
+        // Restore previous selection if still valid
+        if (allowedClasses.includes(prevClass)) {
+          classSelect.value = prevClass;
+        }
+      });
+      classSelect.addEventListener('change', function() {
+        const classVal = classSelect.value;
+        const allowedSubjects = teacher.assignments.filter(a => a.class === classVal).map(a => a.subject);
+        const prevSubject = subjectSelect.value;
+        subjectSelect.innerHTML = `<option value="">-- Select Subject --</option>`;
+        [...new Set(allowedSubjects)].forEach(subj => {
+          const opt = document.createElement('option');
+          opt.value = subj;
+          opt.textContent = subj;
+          subjectSelect.appendChild(opt);
+        });
+        // Restore previous selection if still valid
+        if (allowedSubjects.includes(prevSubject)) {
+          subjectSelect.value = prevSubject;
+        }
+      });
+    }
+    // Exam Section
+    const classSelectExam = document.getElementById('classSelectExam');
+    const subjectSelectExam = document.getElementById('subjectSelectExam');
+    if (classSelectExam && subjectSelectExam && teacher.assignments) {
+      subjectSelectExam.addEventListener('change', function() {
+        const subjectVal = subjectSelectExam.value;
+        const allowedClasses = teacher.assignments.filter(a => a.subject === subjectVal).map(a => a.class);
+        classSelectExam.innerHTML = `<option value="">-- Select Class --</option>`;
+        [...new Set(allowedClasses)].forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls;
+          opt.textContent = cls;
+          classSelectExam.appendChild(opt);
+        });
+      });
+      classSelectExam.addEventListener('change', function() {
+        const classVal = classSelectExam.value;
+        const allowedSubjects = teacher.assignments.filter(a => a.class === classVal).map(a => a.subject);
+        subjectSelectExam.innerHTML = `<option value="">-- Select Subject --</option>`;
+        [...new Set(allowedSubjects)].forEach(subj => {
+          const opt = document.createElement('option');
+          opt.value = subj;
+          opt.textContent = subj;
+          subjectSelectExam.appendChild(opt);
+        });
+      });
+    }
+  }
+  setupRestrictedDropdowns();
+  // For Career Tech, show area dropdown if needed
+  const subjectSelect = document.getElementById('subjectSelect');
+  const areaSelect = document.getElementById('careerTechAreaSelect');
+  if (subjectSelect && areaSelect) {
+    subjectSelect.addEventListener('change', function() {
+      if (subjectSelect.value === 'Career Tech') {
+        areaSelect.style.display = '';
+        // Only show areas assigned to this teacher
+        areaSelect.innerHTML = '<option value="">Select Area</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+      } else {
+        areaSelect.style.display = 'none';
+        areaSelect.innerHTML = '';
+      }
+    });
+    // Hide area dropdown by default
+    areaSelect.style.display = 'none';
+  }
+  // Show/hide attendance section based on responsibility
+  const attendanceSection = document.getElementById('attendanceSection');
+  if (teacher && teacher.responsibility === 'Class Teacher') {
+    if (attendanceSection) attendanceSection.style.display = '';
+    setupAttendanceSection();
+  } else {
+    if (attendanceSection) attendanceSection.style.display = 'none';
+  }
   await loadAssignments();
   await loadStudentSubmissions();
-  await loadStudentMessages(); // Load messages after dashboard loads
-  await loadResourceRequests(); // Load resource requests after dashboard loads
-  await populateMotivationStudentDropdown(); // Populate motivation dropdown after dashboard loads
+  await loadStudentMessages();
+  await loadResourceRequests();
+  await populateMotivationStudentDropdown();
+
+  // Always refresh student list dropdown after assignments are loaded
+  if (document.getElementById('studentClassFilter')) {
+    // Only refresh the dropdown, do not switch tab
+    const classFilter = document.getElementById('studentClassFilter');
+    if (classFilter) {
+      classFilter.innerHTML = '<option value="">-- All Assigned Classes --</option>';
+      if (teacher && teacher.classes && teacher.classes.length > 0) {
+        teacher.classes.forEach(cls => {
+          const opt = document.createElement('option');
+          opt.value = cls;
+          opt.textContent = cls;
+          classFilter.appendChild(opt);
+        });
+      }
+    }
+    // Show dashboard overview by default
+    if (typeof showDashboardOverview === 'function') {
+      showDashboardOverview();
+    }
+  }
 }
 
 // 🔽 Populate dropdown
@@ -293,6 +423,115 @@ function populateDropdown(id, items) {
 }
 
 // 📋 Load students by selected class (handles both SBA and Exam sections)
+// Promotion Exam: Load JHS 2 students and subjects
+async function loadPromotionExamStudents() {
+  const classVal = document.getElementById('promotionClassSelect').value;
+  const subjectVal = document.getElementById('promotionSubjectSelect').value;
+  const tbody = document.getElementById('promotionExamTableBody');
+  tbody.innerHTML = '';
+  if (!classVal || !subjectVal) return;
+  const { data, error } = await supabaseClient
+    .from('students')
+    .select('id, first_name, surname')
+    .eq('class', classVal);
+  if (error || !Array.isArray(data) || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="2">No JHS 2 students found.</td></tr>';
+    return;
+  }
+  data.forEach(student => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td><input type="number" min="0" max="100" class="promotion-score" data-student-id="${student.id}" /></td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// Promotion Exam: Submit entries to Supabase
+async function submitPromotionExam() {
+  const classVal = document.getElementById('promotionClassSelect').value;
+  const subjectVal = document.getElementById('promotionSubjectSelect').value;
+  const termVal = document.getElementById('promotionTermInput').value;
+  const yearVal = document.getElementById('promotionYearInput').value;
+  if (!classVal || !subjectVal || !termVal || !yearVal) {
+    alert('Please fill all fields.');
+    return;
+  }
+  const scoreInputs = document.querySelectorAll('.promotion-score');
+  const records = Array.from(scoreInputs).map(input => ({
+    student_id: input.getAttribute('data-student-id'),
+    class: classVal,
+    subject: subjectVal,
+    term: termVal,
+    year: yearVal,
+    score: parseInt(input.value, 10) || 0,
+    marked_by: teacher.id,
+    submitted_to_admin: true
+  }));
+  if (records.length === 0) {
+    alert('No students to mark.');
+    return;
+  }
+  const { error } = await supabaseClient
+    .from('promotion_exams')
+    .upsert(records, { onConflict: ['student_id', 'subject', 'term', 'year'] });
+  if (error) {
+    alert('Failed to submit promotion exam: ' + error.message);
+  } else {
+    alert('Promotion exam submitted to admin!');
+    document.getElementById('promotionExamTableBody').innerHTML = '';
+  }
+}
+
+// Populate promotion subjects dropdown (JHS 2 assigned subjects)
+function populatePromotionSubjects() {
+  const select = document.getElementById('promotionSubjectSelect');
+  select.innerHTML = '<option value="">-- Select Subject --</option>';
+  if (teacher && teacher.assignments) {
+    const jhs2Subjects = teacher.assignments.filter(a => a.class === 'JHS 2').map(a => a.subject);
+    [...new Set(jhs2Subjects)].forEach(subj => {
+      const opt = document.createElement('option');
+      opt.value = subj;
+      opt.textContent = subj;
+      select.appendChild(opt);
+    });
+  }
+}
+
+// Add event listeners for promotion exam tab
+document.addEventListener('DOMContentLoaded', function() {
+  const classSelect = document.getElementById('promotionClassSelect');
+  const subjectSelect = document.getElementById('promotionSubjectSelect');
+  if (classSelect && subjectSelect) {
+    classSelect.addEventListener('change', () => {
+      populatePromotionSubjects();
+      // Wait for subjects to populate, then load students if subject is selected
+      setTimeout(() => {
+        if (subjectSelect.value) loadPromotionExamStudents();
+      }, 50);
+    });
+    subjectSelect.addEventListener('change', loadPromotionExamStudents);
+  }
+  // If tab is opened, always reset and reload
+  const promoCard = document.querySelector('.dashboard-card[data-section="promotionExamSection"]');
+  if (promoCard) {
+    promoCard.addEventListener('click', () => {
+      // Reset filters
+      if (classSelect) classSelect.value = 'JHS 2';
+      populatePromotionSubjects();
+      setTimeout(() => {
+        if (subjectSelect && subjectSelect.value) {
+          loadPromotionExamStudents();
+        } else {
+          document.getElementById('promotionExamTableBody').innerHTML = '';
+        }
+      }, 50);
+    });
+  }
+});
+
+window.submitPromotionExam = submitPromotionExam;
 async function loadStudents(section = 'sba') {
   let selectedClass, selectedSubject;
   if (section === 'exam') {
@@ -302,8 +541,7 @@ async function loadStudents(section = 'sba') {
     selectedClass = document.getElementById('classSelect').value;
     selectedSubject = document.getElementById('subjectSelect').value;
   }
-  // For Career Tech, allow loading students as soon as class is selected
-  if (!selectedClass) return;
+  if (!selectedClass || !selectedSubject) return;
   const { data, error } = await supabaseClient
     .from('students')
   .select('id, first_name, surname')
@@ -331,94 +569,25 @@ function renderSBAForm() {
     tbody.appendChild(row);
     return;
   }
-  const selectedSubject = document.getElementById('subjectSelect').value;
-  // Subjects with sub-areas
-  const subjectAreas = {
-    'Career Tech': ['Pre-Technical', 'Home Economics']
-    // Add more subjects with areas if needed
-  };
-  let assignedAreas = [];
-  if (subjectAreas[selectedSubject] && teacher && Array.isArray(teacher.subjects)) {
-    assignedAreas = subjectAreas[selectedSubject].filter(a => teacher.subjects.includes(a));
-  }
-  let selectedArea = window.selectedSubjectArea || '';
-  const sbaTable = document.getElementById('sbaTable');
-  let areaDiv = document.getElementById('subjectAreaDiv');
-  if (assignedAreas.length > 0 && sbaTable) {
-    if (!areaDiv) {
-      areaDiv = document.createElement('div');
-      areaDiv.id = 'subjectAreaDiv';
-      areaDiv.style.margin = '10px 0';
-      if (assignedAreas.length === 1) {
-        areaDiv.innerHTML = `<strong>Area: ${assignedAreas[0]}</strong>`;
-        window.selectedSubjectArea = assignedAreas[0];
-        selectedArea = assignedAreas[0];
-      } else {
-        areaDiv.innerHTML = `<label for=\"subjectAreaSelect\">Select Area: </label><select id=\"subjectAreaSelect\"><option value=\"\">-- Select --</option>${assignedAreas.map(a => `<option value=\"${a}\">${a}</option>`).join('')}</select>`;
-        document.getElementById('subjectAreaSelect')?.addEventListener('change', function() {
-          window.selectedSubjectArea = this.value;
-          renderSBAForm();
-        });
-      }
-      sbaTable.parentNode.insertBefore(areaDiv, sbaTable);
-    }
-    if (assignedAreas.length > 1) {
-      selectedArea = document.getElementById('subjectAreaSelect')?.value || '';
-    }
-  } else if (areaDiv) {
-    areaDiv.remove();
-    window.selectedSubjectArea = '';
-    selectedArea = '';
-  }
   students.forEach(student => {
     const row = document.createElement('tr');
-    if (assignedAreas.length > 0 && selectedArea) {
-      if (selectedArea === 'Pre-Technical') {
-        row.innerHTML = `
-          <td>${student.first_name || ''} ${student.surname || ''}</td>
-          <td><input type=\"number\" data-type=\"pretech-individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Individual\" /></td>
-          <td><input type=\"number\" data-type=\"pretech-group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Group\" /></td>
-          <td><input type=\"number\" data-type=\"pretech-classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Class Test\" /></td>
-          <td><input type=\"number\" data-type=\"pretech-project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Pre-Tech Project\" /></td>
-          <td><span id=\"total-careertech-${student.id}\">0</span></td>
-          <td><span id=\"scaled-careertech-${student.id}\">0</span></td>
-        `;
-      } else if (selectedArea === 'Home Economics') {
-        row.innerHTML = `
-          <td>${student.first_name || ''} ${student.surname || ''}</td>
-          <td><input type=\"number\" data-type=\"homeec-individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Individual\" /></td>
-          <td><input type=\"number\" data-type=\"homeec-group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Group\" /></td>
-          <td><input type=\"number\" data-type=\"homeec-classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Class Test\" /></td>
-          <td><input type=\"number\" data-type=\"homeec-project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" placeholder=\"Home Ec Project\" /></td>
-          <td><span id=\"total-careertech-${student.id}\">0</span></td>
-          <td><span id=\"scaled-careertech-${student.id}\">0</span></td>
-        `;
-      }
-    } else if (!assignedAreas.length) {
-      row.innerHTML = `
-        <td>${student.first_name || ''} ${student.surname || ''}</td>
-        <td><input type=\"number\" data-type=\"individual\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
-        <td><input type=\"number\" data-type=\"group\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
-        <td><input type=\"number\" data-type=\"classTest\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
-        <td><input type=\"number\" data-type=\"project\" data-id=\"${student.id}\" max=\"15\" min=\"0\" /></td>
-        <td><span id=\"total-${student.id}\">0</span></td>
-        <td><span id=\"scaled-${student.id}\">0</span></td>
-      `;
-    }
+    row.innerHTML = `
+  <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" /></td>
+      <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" /></td>
+      <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" /></td>
+      <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" /></td>
+      <td><span id="total-${student.id}">0</span></td>
+      <td><span id="scaled-${student.id}">0</span></td>
+    `;
     tbody.appendChild(row);
   });
-  if (assignedAreas.length > 0 && selectedArea) {
-    document.querySelectorAll('#sbaTableBody input').forEach(input => {
-      input.addEventListener('input', () => calculateCareerTechSBAScore(input.dataset.id));
-    });
-  } else if (!assignedAreas.length) {
-    document.querySelectorAll('#sbaTableBody input').forEach(input => {
-      input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
-    });
-  }
+  document.querySelectorAll('#sbaTableBody input').forEach(input => {
+    input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
+  });
 }
 
-// 🧮 Calculate SBA scaled score (regular subjects)
+// 🧮 Calculate SBA scaled score
 function calculateSBAScore(studentId) {
   const individual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="individual"]`)?.value) || 0, 15);
   const group = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="group"]`)?.value) || 0, 15);
@@ -428,30 +597,6 @@ function calculateSBAScore(studentId) {
   const scaled = Math.round((total / 60) * 50);
   document.getElementById(`total-${studentId}`).textContent = total;
   document.getElementById(`scaled-${studentId}`).textContent = scaled;
-}
-
-// 🧮 Calculate SBA scaled score (Career Tech)
-function calculateCareerTechSBAScore(studentId) {
-  // Pre-Technical
-  const pretechIndividual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-individual"]`)?.value) || 0, 15);
-  const pretechGroup = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-group"]`)?.value) || 0, 15);
-  const pretechClassTest = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-classTest"]`)?.value) || 0, 15);
-  const pretechProject = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-project"]`)?.value) || 0, 15);
-  const pretechTotal = Math.min(pretechIndividual + pretechGroup + pretechClassTest + pretechProject, 60);
-  const pretechScaled = Math.round((pretechTotal / 60) * 25); // Each sub-area max 25
-
-  // Home Economics
-  const homeecIndividual = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-individual"]`)?.value) || 0, 15);
-  const homeecGroup = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-group"]`)?.value) || 0, 15);
-  const homeecClassTest = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-classTest"]`)?.value) || 0, 15);
-  const homeecProject = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-project"]`)?.value) || 0, 15);
-  const homeecTotal = Math.min(homeecIndividual + homeecGroup + homeecClassTest + homeecProject, 60);
-  const homeecScaled = Math.round((homeecTotal / 60) * 25);
-
-  // Career Tech total (max 50)
-  const total = pretechScaled + homeecScaled;
-  document.getElementById(`total-careertech-${studentId}`).textContent = pretechTotal + homeecTotal;
-  document.getElementById(`scaled-careertech-${studentId}`).textContent = total;
 }
 
 // Get term and year from input fields when submitting SBA/exam/assignment
@@ -554,165 +699,62 @@ function renderExamForm() {
     tbody.appendChild(row);
     return;
   }
-  const selectedSubject = document.getElementById('subjectSelectExam').value;
-  const isCareerTech = selectedSubject === 'Career Tech';
-  // Career Tech sub-area logic
-  let assignedAreas = [];
-  if (isCareerTech && teacher && Array.isArray(teacher.subjects)) {
-    if (teacher.subjects.includes('Pre-Technical')) assignedAreas.push('Pre-Technical');
-    if (teacher.subjects.includes('Home Economics')) assignedAreas.push('Home Economics');
-  }
-  let selectedArea = window.selectedCareerTechAreaExam || '';
-  const examTable = document.getElementById('examTable');
-  let areaDiv = document.getElementById('careerTechAreaExamDiv');
-  if (isCareerTech && assignedAreas.length > 0 && examTable) {
-    if (!areaDiv) {
-      areaDiv = document.createElement('div');
-      areaDiv.id = 'careerTechAreaExamDiv';
-      areaDiv.style.margin = '10px 0';
-      if (assignedAreas.length === 1) {
-        areaDiv.innerHTML = `<strong>Career Tech Area: ${assignedAreas[0]}</strong>`;
-        window.selectedCareerTechAreaExam = assignedAreas[0];
-        selectedArea = assignedAreas[0];
-      } else {
-        areaDiv.innerHTML = `<label for="careerTechAreaExamSelect">Select Career Tech Area: </label><select id="careerTechAreaExamSelect"><option value="">-- Select --</option>${assignedAreas.map(a => `<option value="${a}">${a}</option>`).join('')}</select>`;
-        document.getElementById('careerTechAreaExamSelect')?.addEventListener('change', function() {
-          window.selectedCareerTechAreaExam = this.value;
-          renderExamForm();
-        });
-      }
-      examTable.parentNode.insertBefore(areaDiv, examTable);
-    }
-    if (assignedAreas.length > 1) {
-      selectedArea = document.getElementById('careerTechAreaExamSelect')?.value || '';
-    }
-  } else if (areaDiv) {
-    areaDiv.remove();
-    window.selectedCareerTechAreaExam = '';
-    selectedArea = '';
-  }
   students.forEach(student => {
     const row = document.createElement('tr');
-    if (isCareerTech && selectedArea) {
-      if (selectedArea === 'Pre-Technical') {
-        row.innerHTML = `
-          <td>${student.first_name || ''} ${student.surname || ''}</td>
-          <td><input type="number" data-type="pretech-exam" data-id="${student.id}" max="100" min="0" placeholder="Pre-Tech Exam" /></td>
-          <td><span id="examScaled-careertech-${student.id}">0</span></td>
-        `;
-      } else if (selectedArea === 'Home Economics') {
-        row.innerHTML = `
-          <td>${student.first_name || ''} ${student.surname || ''}</td>
-          <td><input type="number" data-type="homeec-exam" data-id="${student.id}" max="100" min="0" placeholder="Home Ec Exam" /></td>
-          <td><span id="examScaled-careertech-${student.id}">0</span></td>
-        `;
-      }
-    } else if (!isCareerTech) {
-      row.innerHTML = `
-        <td>${student.first_name || ''} ${student.surname || ''}</td>
-        <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" /></td>
-        <td><span id="examScaled-${student.id}">0</span></td>
-      `;
-    }
+    row.innerHTML = `
+  <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" /></td>
+      <td><span id="examScaled-${student.id}">0</span></td>
+    `;
     tbody.appendChild(row);
   });
-  if (isCareerTech && selectedArea) {
-    document.querySelectorAll('#examTableBody input').forEach(input => {
-      input.addEventListener('input', () => calculateCareerTechExamScore(input.dataset.id));
+  document.querySelectorAll('#examTableBody input').forEach(input => {
+    input.addEventListener('input', () => {
+      const raw = Math.min(parseInt(input.value) || 0, 100);
+      const scaled = Math.round((raw / 100) * 50);
+      document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
     });
-  } else if (!isCareerTech) {
-    document.querySelectorAll('#examTableBody input').forEach(input => {
-      input.addEventListener('input', () => {
-        const raw = Math.min(parseInt(input.value) || 0, 100);
-        const scaled = Math.round((raw / 100) * 50);
-        document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
-      });
-    });
-  }
-}
-
-// 🧮 Calculate Exam scaled score (Career Tech)
-function calculateCareerTechExamScore(studentId) {
-  const pretechExam = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="pretech-exam"]`)?.value) || 0, 100);
-  const homeecExam = Math.min(parseInt(document.querySelector(`input[data-id="${studentId}"][data-type="homeec-exam"]`)?.value) || 0, 100);
-  // Each sub-area max 25
-  const pretechScaled = Math.round((pretechExam / 100) * 25);
-  const homeecScaled = Math.round((homeecExam / 100) * 25);
-  const total = pretechScaled + homeecScaled;
-  document.getElementById(`examScaled-careertech-${studentId}`).textContent = total;
+  });
 }
 
 // ✅ Submit Exam scores
 async function submitExams() {
   const subject = document.getElementById('subjectSelect').value;
-  const subjectExam = document.getElementById('subjectSelectExam').value;
   const { term, year } = getTermYear();
-  if (!(subject || subjectExam) || !term || !year) {
+  if (!subject || !term || !year) {
     alert('Please select subject, term, and year.');
     return;
   }
-  const isCareerTech = (subjectExam || subject) === 'Career Tech';
   const submissions = [];
   for (const student of students) {
-    if (isCareerTech) {
-      const scaled = parseInt(document.getElementById(`examScaled-careertech-${student.id}`).textContent);
-      if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-        alert(`Invalid Career Tech exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
-        continue;
-      }
-      // Fetch existing SBA score for this student/subject/term/year
-      let class_score = 0;
-      try {
-        const { data: existing } = await supabaseClient
-          .from('results')
-          .select('class_score')
-          .eq('student_id', student.id)
-          .eq('subject', 'Career Tech')
-          .eq('term', term)
-          .eq('year', year)
-          .single();
-        if (existing && typeof existing.class_score === 'number') {
-          class_score = existing.class_score;
-        }
-      } catch (e) {}
-      submissions.push({
-        student_id: student.id,
-        subject: 'Career Tech',
-        term,
-        year,
-        class_score,
-        exam_score: scaled
-      });
-    } else {
-      const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
-      if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-        alert(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
-        continue;
-      }
-      // Fetch existing SBA score for this student/subject/term/year
-      let class_score = 0;
-      try {
-        const { data: existing } = await supabaseClient
-          .from('results')
-          .select('class_score')
-          .eq('student_id', student.id)
-          .eq('subject', subjectExam || subject)
-          .eq('term', term)
-          .eq('year', year)
-          .single();
-        if (existing && typeof existing.class_score === 'number') {
-          class_score = existing.class_score;
-        }
-      } catch (e) {}
-      submissions.push({
-        student_id: student.id,
-        subject: subjectExam || subject,
-        term,
-        year,
-        class_score,
-        exam_score: scaled
-      });
+    const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
+    if (isNaN(scaled) || scaled < 0 || scaled > 50) {
+  alert(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
+      continue;
     }
+    // Fetch existing SBA score for this student/subject/term/year
+    let class_score = 0;
+    try {
+      const { data: existing } = await supabaseClient
+        .from('results')
+        .select('class_score')
+        .eq('student_id', student.id)
+        .eq('subject', subject)
+        .eq('term', term)
+        .eq('year', year)
+        .single();
+      if (existing && typeof existing.class_score === 'number') {
+        class_score = existing.class_score;
+      }
+    } catch (e) {}
+    submissions.push({
+      student_id: student.id,
+      subject,
+      term,
+      year,
+      class_score,
+      exam_score: scaled
+    });
   }
   if (submissions.length === 0) {
     alert('No valid exam scores to submit.');
@@ -895,15 +937,82 @@ async function loadStudentSubmissions() {
   });
 }
 
-// Toggle collapsible panel (SBA/Exam)
-function togglePanel(panelId) {
-  const panel = document.getElementById(panelId);
-  if (panel) {
-    panel.classList.toggle('open');
-    panel.style.display = panel.classList.contains('open') ? 'block' : 'none';
+// Load students for Student List tab (read-only)
+async function loadStudentList() {
+  const classFilter = document.getElementById('studentClassFilter');
+  const tbody = document.getElementById('studentListTableBody');
+  if (!teacher || !teacher.classes || teacher.classes.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7">No assigned classes.</td></tr>';
+    return;
   }
+  // Get selected class
+  const selectedClass = classFilter ? classFilter.value : '';
+  let studentsData = [];
+  let error = null;
+  if (selectedClass) {
+    // Only fetch students for the selected class
+    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number').eq('class', selectedClass);
+    studentsData = data || [];
+    error = err;
+  } else {
+    // Fetch students for all assigned classes
+    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number').in('class', teacher.classes);
+    studentsData = data || [];
+    error = err;
+  }
+  tbody.innerHTML = '';
+  if (error || !Array.isArray(studentsData) || studentsData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7">${selectedClass ? 'No students found in this class.' : 'No students found.'}</td></tr>`;
+    return;
+  }
+  studentsData.forEach(student => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td>${student.class || ''}</td>
+      <td>${student.gender || ''}</td>
+      <td>${student.dob || ''}</td>
+      <td>${student.parent_name || ''}</td>
+      <td>${student.parent_contact || ''}</td>
+      <td>${student.nhis_number || ''}</td>
+    `;
+    tbody.appendChild(row);
+  });
 }
 
+// Show Student List tab and load students
+window.showStudentListSection = function() {
+  showTabSection('studentListSection');
+  // Always repopulate class filter with assigned classes
+  const classFilter = document.getElementById('studentClassFilter');
+  if (classFilter) {
+    classFilter.innerHTML = '<option value="">-- All Assigned Classes --</option>';
+    if (teacher && teacher.classes && teacher.classes.length > 0) {
+      teacher.classes.forEach(cls => {
+        const opt = document.createElement('option');
+        opt.value = cls;
+        opt.textContent = cls;
+        classFilter.appendChild(opt);
+      });
+    } else {
+      // If no assigned classes, show a disabled option
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'No assigned classes';
+      opt.disabled = true;
+      classFilter.appendChild(opt);
+    }
+  }
+  loadStudentList();
+}
+
+// Add event listener for class filter
+window.addEventListener('DOMContentLoaded', () => {
+  const classFilter = document.getElementById('studentClassFilter');
+  if (classFilter) {
+    classFilter.addEventListener('change', loadStudentList);
+  }
+});
 // On page load, load teacher dashboard if session exists
 window.addEventListener('DOMContentLoaded', function() {
   let staffId = sessionStorage.getItem('teacher_staff_id');
@@ -959,3 +1068,11 @@ window.addEventListener('DOMContentLoaded', function() {
   if (classSelectExam) classSelectExam.addEventListener('change', () => loadStudents('exam'));
   if (subjectSelectExam) subjectSelectExam.addEventListener('change', () => loadStudents('exam'));
 });
+
+function togglePanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (panel) {
+    panel.classList.toggle('open');
+    panel.style.display = panel.classList.contains('open') ? 'block' : 'none';
+  }
+}

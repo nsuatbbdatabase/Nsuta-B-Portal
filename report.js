@@ -230,29 +230,89 @@ async function loadReportForStudent() {
     "Social Studies", "Computing", "Career Tech",
     "Creative Arts", "Twi"
   ];
+  let careerTechScores = [];
+  // Fetch all results for this class, term, year for subject ranking
+  let subjectPositionsMap = {};
+  const { data: allClassResults, error: allClassError } = await supabaseClient
+    .from('results')
+    .select('student_id, subject, class_score, exam_score')
+    .eq('class', studentClass)
+    .eq('term', term)
+    .eq('year', year);
+  if (!allClassError && Array.isArray(allClassResults)) {
+    subjects.forEach(subject => {
+      // Get all students' total for this subject
+      const subjectResults = allClassResults.filter(r => r.subject === subject);
+      const scores = {};
+      subjectResults.forEach(r => {
+        scores[r.student_id] = (r.class_score || 0) + (r.exam_score || 0);
+      });
+      // Sort descending
+      const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      // Find position for current student
+      const found = sorted.findIndex(([id]) => id === studentId);
+      subjectPositionsMap[subject] = found >= 0 ? (found + 1) : '—';
+    });
+  }
   subjects.forEach(subject => {
-    const entry = results.find(r => r.subject === subject);
-    const classScore = entry?.class_score || 0;
-    const examScore = entry?.exam_score || 0;
-    const total = classScore + examScore;
-    const point = getGradePoint(total);
-    const remark = getSubjectRemark(point).toUpperCase();
-    totalScore += total;
-    const subjectPosition = subjectPositions[subject] || '—';
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${subject.toUpperCase()}</td>
-      <td>${String(classScore).toUpperCase()}</td>
-      <td>${String(examScore).toUpperCase()}</td>
-      <td>${String(total).toUpperCase()}</td>
-      <td>${String(point).toUpperCase()}</td>
-      <td>${remark}</td>
-      <td>${String(subjectPosition).toUpperCase()}</td>
-    `;
-    tbody.appendChild(row);
+    if (subject === "Career Tech") {
+      // Find all Career Tech results for this student (multiple teachers/areas)
+      const careerTechEntries = results.filter(r => r.subject === "Career Tech");
+      let sbaSum = 0;
+      let examSum = 0;
+      careerTechEntries.forEach(entry => {
+        sbaSum += entry?.class_score || 0;
+        examSum += entry?.exam_score || 0;
+      });
+      // Average and round to nearest whole number
+      const sbaAvg = careerTechEntries.length > 0 ? Math.round(sbaSum / careerTechEntries.length) : 0;
+      const examAvg = careerTechEntries.length > 0 ? Math.round(examSum / careerTechEntries.length) : 0;
+      const total = sbaAvg + examAvg;
+      const point = getGradePoint(total);
+      const remark = getSubjectRemark(point).toUpperCase();
+      const subjectPosition = subjectPositionsMap[subject] || '—';
+      // Show Career Tech row with averaged SBA and Exam
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>Career Tech</td>
+        <td>${sbaAvg}</td>
+        <td>${examAvg}</td>
+        <td><strong>${total}</strong></td>
+        <td>${String(point).toUpperCase()}</td>
+        <td>${remark}</td>
+        <td>${String(subjectPosition).toUpperCase()}</td>
+      `;
+      tbody.appendChild(row);
+      totalScore += total;
+    } else {
+      const entry = results.find(r => r.subject === subject);
+      const classScore = entry?.class_score || 0;
+      const examScore = entry?.exam_score || 0;
+      const total = classScore + examScore;
+      const point = getGradePoint(total);
+      const remark = getSubjectRemark(point).toUpperCase();
+      totalScore += total;
+      const subjectPosition = subjectPositionsMap[subject] || '—';
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${subject.toUpperCase()}</td>
+        <td>${String(classScore).toUpperCase()}</td>
+        <td>${String(examScore).toUpperCase()}</td>
+        <td>${String(total).toUpperCase()}</td>
+        <td>${String(point).toUpperCase()}</td>
+        <td>${remark}</td>
+        <td>${String(subjectPosition).toUpperCase()}</td>
+      `;
+      tbody.appendChild(row);
+    }
   });
 
-  const average = (totalScore / subjects.length).toFixed(2);
+  // Calculate average: if Career Tech has multiple scores, use average, else sum
+  let subjectCount = subjects.length;
+  if (careerTechScores.length > 1) {
+    subjectCount = subjects.length - 1 + 1; // Replace Career Tech with 1 average
+  }
+  const average = (totalScore / subjectCount).toFixed(2);
   const teacherRemark = getTeacherRemark(totalScore);
 
   document.getElementById("totalScore").textContent = totalScore;
@@ -266,6 +326,15 @@ async function loadReportForStudent() {
   // Fetch all results for this class, subject, term, year to calculate position
   // Declare position and totalInClass before use
   if (studentClass && term && year) {
+    // Get all students in the class for class size
+    const { data: studentsInClass, error: studentsError } = await supabaseClient
+      .from('students')
+      .select('id')
+      .eq('class', studentClass);
+    if (!studentsError && Array.isArray(studentsInClass)) {
+      totalInClass = studentsInClass.length;
+    }
+    // Get all results for position calculation
     const { data: classResults, error: classError } = await supabaseClient
       .from('results')
       .select('student_id, class_score, exam_score')
@@ -273,18 +342,17 @@ async function loadReportForStudent() {
       .eq('term', term)
       .eq('year', year);
     if (!classError && Array.isArray(classResults)) {
-      // Calculate total score for each student
+      // Calculate accumulated total score for each student
       const scores = {};
       classResults.forEach(r => {
-        const total = (r.class_score || 0) + (r.exam_score || 0);
-        scores[r.student_id] = total;
+        if (!scores[r.student_id]) scores[r.student_id] = 0;
+        scores[r.student_id] += (r.class_score || 0) + (r.exam_score || 0);
       });
-      // Sort scores descending
+      // Sort scores descending by accumulated total
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-      totalInClass = sorted.length;
       // Find position of current student
-      position = sorted.findIndex(([id]) => id === studentId) + 1;
-      if (position === 0) position = '—';
+      const found = sorted.findIndex(([id]) => id === studentId);
+      position = found >= 0 ? (found + 1) : '—';
     }
   }
   document.getElementById("position").textContent = position;

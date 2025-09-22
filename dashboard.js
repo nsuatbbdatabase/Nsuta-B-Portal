@@ -421,8 +421,6 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     contact: form.contact.value.trim(),
     rank: form.rank.value.trim(),
     qualification: form.qualification.value.trim(),
-    classes: getMultiSelectValues(form.classes),
-    subjects: getMultiSelectValues(form.subjects),
     first_appointment_date: form.first_appointment_date.value,
     date_placed_on_rank: form.date_placed_on_rank.value,
     salary_level: form.salary_level.value.trim(),
@@ -453,21 +451,49 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
 
   if (result.error) {
     alert('Error: ' + result.error.message);
-  } else {
+    return;
+  }
+
+  // Save teaching assignments
+  const teacherRowId = teacherId || (result.data && result.data[0] && result.data[0].id);
+  if (teacherRowId) {
+    // Gather assignments from modal
+    const assignments = [];
+    const rows = document.querySelectorAll('#assignmentRowsContainer .assignment-row');
+    rows.forEach(row => {
+      const classSelect = row.querySelector('select[name="assignment_class[]"]');
+      const subjectSelect = row.querySelector('select[name="assignment_subject[]"]');
+      const areaSelect = row.querySelector('select[name="assignment_career_area[]"]');
+      if (classSelect && subjectSelect && classSelect.value && subjectSelect.value) {
+        const assignment = {
+          teacher_id: teacherRowId,
+          class: classSelect.value,
+          subject: subjectSelect.value
+        };
+        if (subjectSelect.value === 'Career Tech' && areaSelect && areaSelect.value) {
+          assignment.area = areaSelect.value;
+        }
+        assignments.push(assignment);
+      }
+    });
     if (teacherId) {
-      alert('Teacher updated!');
-      // Re-fetch and reopen the edit modal with latest data
-      await loadTeachers();
-      setTimeout(() => editTeacher(teacherId), 300); // slight delay to ensure list is refreshed
-    } else {
-      alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
-      form.reset();
-      Array.from(form.classes.options).forEach(opt => opt.selected = false);
-      Array.from(form.subjects.options).forEach(opt => opt.selected = false);
-      closeModal('teacherModal');
-      loadTeachers();
+      // Remove old assignments first
+      await supabaseClient.from('teaching_assignments').delete().eq('teacher_id', teacherRowId);
+    }
+    if (assignments.length) {
+      await supabaseClient.from('teaching_assignments').insert(assignments);
     }
   }
+
+  if (teacherId) {
+    alert('Teacher updated!');
+  } else {
+    alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
+  }
+  form.reset();
+  document.getElementById('assignmentRowsContainer').innerHTML = '';
+  closeModal('teacherModal');
+  loadTeachers();
 });
 
 // 📝 Edit Teacher
@@ -487,14 +513,6 @@ async function editTeacher(id) {
   form.contact.value = data.contact || '';
   form.rank.value = data.rank || '';
   form.qualification.value = data.qualification || '';
-  // Multi-select: classes
-  Array.from(form.classes.options).forEach(opt => {
-    opt.selected = (data.classes || []).includes(opt.value);
-  });
-  // Multi-select: subjects
-  Array.from(form.subjects.options).forEach(opt => {
-    opt.selected = (data.subjects || []).includes(opt.value);
-  });
   form.first_appointment_date.value = data.first_appointment_date || '';
   form.date_placed_on_rank.value = data.date_placed_on_rank || '';
   form.salary_level.value = data.salary_level || '';
@@ -510,6 +528,25 @@ async function editTeacher(id) {
   form.responsibility.value = data.responsibility || '';
   form.denomination.value = data.denomination || '';
   form.home_town.value = data.home_town || '';
+
+  // Load teaching assignments
+  const container = document.getElementById('assignmentRowsContainer');
+  if (container) {
+    container.innerHTML = '';
+    const { data: assignments } = await supabaseClient.from('teaching_assignments').select('class,subject,area').eq('teacher_id', id);
+    if (assignments && assignments.length) {
+      assignments.forEach(a => {
+        // Pass area as third argument if subject is Career Tech
+        if (a.subject === 'Career Tech') {
+          container.appendChild(createAssignmentRow(a.class, a.subject, a.area));
+        } else {
+          container.appendChild(createAssignmentRow(a.class, a.subject));
+        }
+      });
+    } else {
+      container.appendChild(createAssignmentRow());
+    }
+  }
 
   openModal('teacherModal');
 }

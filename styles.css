@@ -1,3 +1,29 @@
+/* Hide promotion exam admin tab-section by default */
+#promotionExamAdminSection.tab-section {
+  display: none;
+}
+/* Modal Form Grid Styling for Teacher Modal */
+.modal-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 0.5rem;
+}
+.form-group.full-width {
+  grid-column: 1 / span 2;
+}
+#assignmentRowsContainer .assignment-row {
+  margin-bottom: 0.5rem;
+}
+#addAssignmentRowBtn {
+  margin-bottom: 1rem;
+  align-self: flex-start;
+}
 /* Enhanced Section Headers for Opened Dashboard Sections */
 .enhanced-section {
   background: rgba(255,255,255,0.98);

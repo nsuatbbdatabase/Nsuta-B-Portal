@@ -92,7 +92,6 @@
     </div>
   </div>
   <div class="dashboard-container">
-  <button id="backToAdminBtn" class="back-btn">Back to Admin Dashboard</button>
     <!-- Teacher Welcome and Roles -->
     <div class="teacher-header">
       <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
@@ -100,8 +99,9 @@
     </div>
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
-  <button id="backToDashboardBtn" class="back-btn">Back to Main Dashboard</button>
-      <div class="dashboard-card" data-section="profileSection">Profile</div>
+  <!-- Profile card removed -->
+  <div class="dashboard-card" data-section="promotionExamSection">Promotion Exam Entry</div>
+      <div class="dashboard-card" data-section="studentListSection">Student List</div>
       <div class="dashboard-card" data-section="attendanceSection">Attendance</div>
       <div class="dashboard-card" data-section="sbaSection">SBA Entry</div>
       <div class="dashboard-card" data-section="examSection">Exam Entry</div>
@@ -342,6 +342,65 @@
     </div>
   </div>
 
+  <!-- Student List Section -->
+  <!-- Promotion Exam Section -->
+  <div id="promotionExamSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
+    <h3>Promotion Exam Entry (JHS 2)</h3>
+    <div class="filters">
+      <label for="promotionClassSelect">Class:</label>
+      <select id="promotionClassSelect">
+        <option value="JHS 2">JHS 2</option>
+      </select>
+      <label for="promotionSubjectSelect">Subject:</label>
+      <select id="promotionSubjectSelect">
+        <option value="">-- Select Subject --</option>
+      </select>
+      <label for="promotionTermInput">Term:</label>
+      <select id="promotionTermInput">
+        <option value="">-- Select Term --</option>
+        <option value="Promotion">Promotion</option>
+      </select>
+      <label for="promotionYearInput">Academic Year:</label>
+      <input id="promotionYearInput" placeholder="Academic Year (e.g. 2025/2026)">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Score (100)</th>
+        </tr>
+      </thead>
+      <tbody id="promotionExamTableBody"></tbody>
+    </table>
+    <button onclick="submitPromotionExam()">Submit Promotion Exam</button>
+  </div>
+  <div id="studentListSection" class="tab-section">
+    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
+      <h3>Students in Your Assigned Classes</h3>
+      <div class="filters">
+        <label for="studentClassFilter">Class:</label>
+        <select id="studentClassFilter">
+          <option value="">-- All Assigned Classes --</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Class</th>
+            <th>Gender</th>
+            <th>DOB</th>
+            <th>Parent</th>
+            <th>Contact</th>
+            <th>NHIS</th>
+          </tr>
+        </thead>
+        <tbody id="studentListTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Supabase + Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="teacher-dashboard.js"></script>
@@ -362,8 +421,10 @@
       openAboutMeModal();
       return;
     }
-    const { data, error } = await supabaseClient
-      .from('teachers').select('*').eq('staff_id', staffId).single();
+    const { data, error } = await supabase.createClient(
+      'https://omhmahhfeduejykrxflx.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
+    ).from('teachers').select('*').eq('staff_id', staffId).single();
     if (error || !data) {
       document.getElementById('aboutMeContent').innerHTML = '<p style="color:red;">Could not load teacher info. Please log in again.</p>';
       openAboutMeModal();

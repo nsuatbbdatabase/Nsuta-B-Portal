@@ -363,50 +363,33 @@ async function loadReleasedResults() {
     .eq('year', year);
   const { data } = await query;
 
-  // Aggregate Career Tech
-  const subjectMap = {};
-  let careerTechClass = 0, careerTechExam = 0, hasCareerTech = false;
-  if (Array.isArray(data)) {
-    data.forEach(item => {
-      if (item.subject === 'Pre-Technical' || item.subject === 'Home Economics') {
-        hasCareerTech = true;
-        careerTechClass += item.class_score || 0;
-        careerTechExam += item.exam_score || 0;
-      } else {
-        if (!subjectMap[item.subject]) {
-          subjectMap[item.subject] = { class_score: 0, exam_score: 0 };
-        }
-        subjectMap[item.subject].class_score += item.class_score || 0;
-        subjectMap[item.subject].exam_score += item.exam_score || 0;
-      }
-    });
-  }
-  if (hasCareerTech) {
-    subjectMap['Career Tech'] = { class_score: careerTechClass, exam_score: careerTechExam };
-    delete subjectMap['Pre-Technical'];
-    delete subjectMap['Home Economics'];
-  }
-  const subjects = Object.keys(subjectMap);
-  const classScores = subjects.map(s => subjectMap[s].class_score);
-  const examScores = subjects.map(s => subjectMap[s].exam_score);
+  const subjects = [];
+  const classScores = [];
+  const examScores = [];
 
   if (table) {
     table.innerHTML = '';
     if (!data || data.length === 0) {
       table.innerHTML = '<tr><td colspan="4">No released results found.</td></tr>';
     } else {
-      subjects.forEach(subject => {
+      data.forEach(item => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td>${subject}</td>
-          <td>${subjectMap[subject].class_score}</td>
-          <td>${subjectMap[subject].exam_score}</td>
-          <td>${(subjectMap[subject].class_score || 0) + (subjectMap[subject].exam_score || 0)}</td>
+          <td>${item.subject}</td>
+          <td>${item.class_score}</td>
+          <td>${item.exam_score}</td>
+          <td>${(item.class_score || 0) + (item.exam_score || 0)}</td>
         `;
         table.appendChild(row);
       });
     }
   }
+
+  data.forEach(item => {
+    subjects.push(item.subject);
+    classScores.push(item.class_score);
+    examScores.push(item.exam_score);
+  });
 
   const ctx = document.getElementById('scoreChart').getContext('2d');
   if (scoreChartInstance) {
