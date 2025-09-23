@@ -423,12 +423,15 @@
 }
 
 /* Section transitions */
+/* Style tab sections for visibility */
 .tab-section {
   display: none;
   animation: fadeInTab 0.3s;
+  color: #fff !important;
 }
 .tab-section.open {
   display: block;
+  color: #fff !important;
 }
 @keyframes fadeInTab {
   from { opacity: 0; transform: translateY(10px); }

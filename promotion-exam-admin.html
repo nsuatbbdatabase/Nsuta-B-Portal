@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Promotion Exam Submissions | Admin Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+</head>
+<body>
+  <header class="dashboard-header">
+    <h1>Promotion Exam Submissions</h1>
+    <button onclick="window.location.href='admin.html'" class="logout-btn">Back to Admin Dashboard</button>
+  </header>
+  <main class="dashboard-main">
+    <section class="enhanced-section">
+      <h2>Submitted Promotion Exam Entries</h2>
+      <div class="filters">
+  <label for="passMarkInput">Pass Mark:</label>
+  <input id="passMarkInput" type="number" min="0" max="1000" value="300" style="width:100px;" />
+        <label for="promotionClassSelect">Class:</label>
+        <select id="promotionClassSelect">
+          <option value="JHS 2">JHS 2</option>
+        </select>
+        <label for="promotionSubjectSelect">Subject:</label>
+        <select id="promotionSubjectSelect">
+          <option value="">-- All Subjects --</option>
+          <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Science">Science</option>
+          <option value="Computing">Computing</option>
+          <option value="Social Studies">Social Studies</option>
+          <option value="RME">RME</option>
+          <option value="Creative Arts">Creative Arts</option>
+          <option value="Career Tech">Career Tech</option>
+          <option value="Twi">Twi</option>
+        </select>
+        <label for="promotionTermSelect">Term:</label>
+        <select id="promotionTermSelect">
+          <option value="Promotion">Promotion</option>
+        </select>
+        <label for="promotionYearInput">Academic Year:</label>
+        <input id="promotionYearInput" placeholder="Academic Year (e.g. 2025/2026)">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Score</th>
+            <th>Total Score</th>
+            <th>Status</th>
+            <th>Term</th>
+            <th>Year</th>
+            <th>Marked By</th>
+          </tr>
+        </thead>
+        <tbody id="promotionExamTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="promotion-exam-admin.js"></script>
+</body>
+</html>

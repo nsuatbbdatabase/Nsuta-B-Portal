@@ -446,6 +446,53 @@ async function loadPromotionExamStudents() {
     `;
     tbody.appendChild(row);
   });
+
+  // After loading students, show pass/fail summary if year and term are selected
+  const yearVal = document.getElementById('promotionYearInput').value;
+  const termVal = document.getElementById('promotionTermInput').value;
+  if (yearVal && termVal === 'Promotion') {
+    showPromotionPassFailSummary(yearVal);
+  }
+}
+
+// Show number of students who passed and failed
+async function showPromotionPassFailSummary(yearVal) {
+  const classVal = document.getElementById('promotionClassSelect').value;
+  const tbody = document.getElementById('promotionExamTableBody');
+  // Get all promotion exam entries for JHS 2, selected year, and term 'Promotion'
+  const { data, error } = await supabaseClient
+    .from('promotion_exams')
+    .select('student_id, score')
+    .eq('class', classVal)
+    .eq('term', 'Promotion')
+    .eq('year', yearVal)
+    .eq('submitted_to_admin', true);
+  if (error || !Array.isArray(data)) return;
+  // Calculate total scores per student
+  const totalScores = {};
+  data.forEach(entry => {
+    if (!totalScores[entry.student_id]) totalScores[entry.student_id] = 0;
+    totalScores[entry.student_id] += entry.score;
+  });
+  // Set pass mark (can be made configurable)
+  const passMark = 300;
+  let passed = 0, failed = 0;
+  Object.values(totalScores).forEach(score => {
+    if (score >= passMark) passed++;
+    else failed++;
+  });
+  let summaryDiv = document.getElementById('promotionPassFailSummary');
+  const table = tbody ? tbody.closest('table') : null;
+  if (!summaryDiv && table) {
+    summaryDiv = document.createElement('div');
+    summaryDiv.id = 'promotionPassFailSummary';
+    summaryDiv.style.margin = '1rem 0';
+    summaryDiv.style.fontWeight = 'bold';
+    table.parentElement.insertBefore(summaryDiv, table);
+  }
+  if (summaryDiv) {
+    summaryDiv.innerHTML = `<span style="color:green;">Passed: ${passed}</span> &nbsp; <span style="color:red;">Failed: ${failed}</span>`;
+  }
 }
 
 // Promotion Exam: Submit entries to Supabase
@@ -458,13 +505,19 @@ async function submitPromotionExam() {
     alert('Please fill all fields.');
     return;
   }
+  // Ensure term is valid
+  const allowedTerms = ['First', 'Second', 'Third', 'Promotion'];
+  if (!allowedTerms.includes(termVal)) {
+    alert('Invalid term value.');
+    return;
+  }
   const scoreInputs = document.querySelectorAll('.promotion-score');
   const records = Array.from(scoreInputs).map(input => ({
     student_id: input.getAttribute('data-student-id'),
     class: classVal,
     subject: subjectVal,
     term: termVal,
-    year: yearVal,
+    year: yearVal, // year is TEXT in schema
     score: parseInt(input.value, 10) || 0,
     marked_by: teacher.id,
     submitted_to_admin: true
@@ -473,14 +526,20 @@ async function submitPromotionExam() {
     alert('No students to mark.');
     return;
   }
-  const { error } = await supabaseClient
-    .from('promotion_exams')
-    .upsert(records, { onConflict: ['student_id', 'subject', 'term', 'year'] });
-  if (error) {
-    alert('Failed to submit promotion exam: ' + error.message);
-  } else {
-    alert('Promotion exam submitted to admin!');
-    document.getElementById('promotionExamTableBody').innerHTML = '';
+  try {
+    const { error, data } = await supabaseClient
+      .from('promotion_exams')
+      .upsert(records, { onConflict: ['student_id', 'class', 'subject', 'term', 'year'] });
+    if (error) {
+      console.error('Promotion exam upsert error:', error);
+      alert('Failed to submit promotion exam: ' + (error.message || JSON.stringify(error)));
+    } else {
+      alert('Promotion exam submitted to admin!');
+      document.getElementById('promotionExamTableBody').innerHTML = '';
+    }
+  } catch (err) {
+    console.error('Promotion exam upsert exception:', err);
+    alert('Unexpected error: ' + err.message);
   }
 }
 

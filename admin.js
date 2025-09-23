@@ -1,74 +1,18 @@
-// Promotion Exam Admin: Load submitted promotion exam entries
-async function loadPromotionExamAdminEntries() {
-  const classVal = document.getElementById('promotionAdminClassSelect').value;
-  const subjectVal = document.getElementById('promotionAdminSubjectSelect').value;
-  const yearVal = document.getElementById('promotionAdminYearInput').value;
-  const tbody = document.getElementById('promotionExamAdminTableBody');
-  tbody.innerHTML = '';
-  let query = supabaseClient.from('promotion_exams').select('student_id, class, subject, term, year, score, marked_by, students(first_name, surname), teachers(name)');
-  query = query.eq('class', classVal);
-  if (subjectVal) query = query.eq('subject', subjectVal);
-  if (yearVal) query = query.eq('year', yearVal);
-  query = query.eq('submitted_to_admin', true);
-  const { data, error } = await query;
-  if (error) {
-    console.error('Promotion exam query error:', error);
-    tbody.innerHTML = '<tr><td colspan="6" style="color:red;">Error loading promotion exam entries.</td></tr>';
-    return;
-  }
-  if (!Array.isArray(data) || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6">No promotion exam entries found.</td></tr>';
-    return;
-  }
-  data.forEach(entry => {
-    const studentName = entry.students ? `${entry.students.first_name || ''} ${entry.students.surname || ''}`.trim() : entry.student_id;
-    const teacherName = entry.teachers ? entry.teachers.name : entry.marked_by;
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${studentName}</td>
-      <td>${entry.subject}</td>
-      <td>${entry.score}</td>
-      <td>${entry.term}</td>
-      <td>${entry.year}</td>
-      <td>${teacherName}</td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-// Populate promotion subjects dropdown (all JHS 2 subjects submitted)
-async function populatePromotionAdminSubjects() {
-  const select = document.getElementById('promotionAdminSubjectSelect');
-  select.innerHTML = '<option value="">-- All Subjects --</option>';
-  const { data, error } = await supabaseClient
-    .from('promotion_exams')
-    .select('subject')
-    .eq('class', 'JHS 2');
-  if (!error && Array.isArray(data)) {
-    const subjects = [...new Set(data.map(e => e.subject))];
-    subjects.forEach(subj => {
-      const opt = document.createElement('option');
-      opt.value = subj;
-      opt.textContent = subj;
-      select.appendChild(opt);
-    });
-  }
-}
-
-// Add event listeners for admin promotion exam tab
 document.addEventListener('DOMContentLoaded', function() {
   const classSelect = document.getElementById('promotionAdminClassSelect');
   const subjectSelect = document.getElementById('promotionAdminSubjectSelect');
+  const termSelect = document.getElementById('promotionAdminTermSelect');
   const yearInput = document.getElementById('promotionAdminYearInput');
-  if (classSelect && subjectSelect && yearInput) {
+  if (classSelect && subjectSelect && termSelect && yearInput) {
     classSelect.addEventListener('change', () => {
       populatePromotionAdminSubjects();
       setTimeout(() => {
-        loadPromotionExamAdminEntries();
+  loadPromotionExamEntries();
       }, 50);
     });
-    subjectSelect.addEventListener('change', loadPromotionExamAdminEntries);
-    yearInput.addEventListener('input', loadPromotionExamAdminEntries);
+  subjectSelect.addEventListener('change', loadPromotionExamEntries);
+  termSelect.addEventListener('change', loadPromotionExamEntries);
+  yearInput.addEventListener('input', loadPromotionExamEntries);
   }
   // If tab is opened, always reset and reload
   const promoCard = document.querySelector('.dashboard-card[data-section="promotionExamAdminSection"]');
@@ -80,11 +24,16 @@ document.addEventListener('DOMContentLoaded', function() {
         section.style.display = 'none';
       });
       var tabSection = document.getElementById('promotionExamAdminSection');
-      if (tabSection) tabSection.style.display = 'block';
+      if (tabSection) {
+        tabSection.style.display = '';
+        tabSection.classList.remove('tab-section');
+        tabSection.hidden = false;
+      }
       if (classSelect) classSelect.value = 'JHS 2';
+      if (termSelect) termSelect.value = 'Promotion';
       populatePromotionAdminSubjects();
       setTimeout(() => {
-        loadPromotionExamAdminEntries();
+  loadPromotionExamEntries();
       }, 50);
     });
   }

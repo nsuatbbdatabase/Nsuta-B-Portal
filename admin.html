@@ -1,4 +1,4 @@
-  <!-- Admin Modal -->
+<!-- Admin Modal -->
   <div id="adminModal" class="modal hidden">
     <div class="modal-content">
       <h3>Register Admin</h3>
@@ -39,71 +39,89 @@
   <main class="dashboard-main">
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
-  <div class="dashboard-card" data-section="promotionExamAdminSection">Promotion Exam Submissions</div>
+  <a href="promotion-exam-admin.html" style="text-decoration:none;">
+    <div class="dashboard-card accent-blue" data-section="promotionExamAdminSection" style="color:#fff;"><span class="card-emoji">📋</span> Promotion Exam Submissions</div>
+  </a>
   <!-- Promotion Exam Admin Section -->
-  <div id="promotionExamAdminSection" class="tab-section">
-    <button class="back-to-dashboard" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
-    <h3>Submitted Promotion Exam Entries (JHS 2)</h3>
-    <div class="filters">
-      <label for="promotionAdminClassSelect">Class:</label>
-      <select id="promotionAdminClassSelect">
-        <option value="JHS 2">JHS 2</option>
-      </select>
-      <label for="promotionAdminSubjectSelect">Subject:</label>
-      <select id="promotionAdminSubjectSelect">
-        <option value="">-- All Subjects --</option>
-      </select>
-      <label for="promotionAdminYearInput">Academic Year:</label>
-      <input id="promotionAdminYearInput" placeholder="Academic Year (e.g. 2025/2026)">
+  <div id="promotionExamAdminSection" class="tab-section" style="display:none;">
+    <div class="promotion-exam-admin-tab" style="background: #004080; color: #fff; border-radius: 18px; padding: 2rem 1rem; margin-bottom: 2rem;">
+      <button class="back-to-dashboard" style="margin-bottom:1rem;" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
+      <h2 style="margin-bottom:1.2rem;">Submitted Promotion Exam Entries</h2>
+      <div class="filters" style="margin-bottom:1.2rem;">
+        <label for="promotionAdminClassSelect">Class:</label>
+        <select id="promotionAdminClassSelect">
+          <option value="JHS 1">JHS 1</option>
+          <option value="JHS 2">JHS 2</option>
+          <option value="JHS 3">JHS 3</option>
+        </select>
+        <label for="promotionAdminSubjectSelect">Subject:</label>
+        <select id="promotionAdminSubjectSelect">
+          <option value="">-- All Subjects --</option>
+          <option value="Maths">Maths</option>
+          <option value="English">English</option>
+          <option value="Science">Science</option>
+          <option value="Computing">Computing</option>
+          <option value="Social Studies">Social Studies</option>
+          <option value="RME">RME</option>
+          <option value="Creative Arts">Creative Arts</option>
+          <option value="Career Tech">Career Tech</option>
+          <option value="Twi">Twi</option>
+        </select>
+        <label for="promotionAdminTermSelect">Term:</label>
+        <select id="promotionAdminTermSelect">
+          <option value="">-- All Terms --</option>
+          <option value="Promotion">Promotion</option>
+          <option value="First">First</option>
+          <option value="Second">Second</option>
+          <option value="Third">Third</option>
+        </select>
+        <label for="promotionAdminYearInput">Academic Year:</label>
+        <input id="promotionAdminYearInput" placeholder="Academic Year (e.g. 2025/2026)">
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;background:#003366;color:#fff;border-radius:10px;">
+          <thead>
+            <tr style="background:#002244;">
+              <th>Student</th>
+              <th>Class</th>
+              <th>Subject</th>
+              <th>Score</th>
+              <th>Term</th>
+              <th>Year</th>
+              <th>Marked By</th>
+            </tr>
+          </thead>
+          <tbody id="promotionExamAdminTableBody"></tbody>
+        </table>
+      </div>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th>Student</th>
-          <th>Subject</th>
-          <th>Score</th>
-          <th>Term</th>
-          <th>Year</th>
-          <th>Marked By</th>
-        </tr>
-      </thead>
-      <tbody id="promotionExamAdminTableBody"></tbody>
-    </table>
   </div>
       <div class="dashboard-card" data-section="reports">
-        <img src="icons/reports.svg" alt="Reports" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Reports</span>
-        <span class="dashboard-card-desc">View and manage school reports</span>
+        
       </div>
       <div class="dashboard-card" data-section="schoolDatesSection">
-        <img src="icons/school-dates.svg" alt="School Dates" class="dashboard-card-icon" />
         <span class="dashboard-card-title">School Dates</span>
-        <span class="dashboard-card-desc">Set and view vacation/reopening</span>
+      
       </div>
       <div class="dashboard-card" data-section="students">
-        <img src="icons/students.svg" alt="Students" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Students</span>
-        <span class="dashboard-card-desc">Register and manage students</span>
+        
       </div>
       <div class="dashboard-card" data-section="teachers">
-        <img src="icons/teachers.svg" alt="Teachers" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Teachers</span>
-        <span class="dashboard-card-desc">Register and manage teachers</span>
+        
       </div>
       <div class="dashboard-card" data-section="admins">
-        <img src="icons/admins.svg" alt="Admins" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Admins</span>
-        <span class="dashboard-card-desc">Manage admin accounts</span>
-      </div>
+            </div>
       <div class="dashboard-card" data-section="interestConduct">
-        <img src="icons/interest-conduct.svg" alt="Interest & Conduct" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Interest & Conduct</span>
-        <span class="dashboard-card-desc">Student interest & conduct</span>
+
       </div>
       <div class="dashboard-card" data-section="interestUpdate">
-        <img src="icons/interest-update.svg" alt="Interest Update" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Interest Update</span>
-        <span class="dashboard-card-desc">Update student interests</span>
+  
       </div>
     </div>
     <!-- Student Interest & Conduct Subdashboard -->
@@ -590,6 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <button type="submit">Save</button>
           <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="promotion-exam-admin.js"></script>
 <script src="admin.js"></script>
 <script src="dashboard.js"></script>
 <script src="router.js"></script>
