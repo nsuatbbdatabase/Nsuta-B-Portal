@@ -7,11 +7,19 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
 async function loadPromotionExamEntries() {
-  const classVal = document.getElementById('promotionClassSelect').value;
-  const subjectVal = document.getElementById('promotionSubjectSelect').value;
-  const termVal = document.getElementById('promotionTermSelect').value;
-  const yearVal = document.getElementById('promotionYearInput').value.trim();
+  const classElem = document.getElementById('promotionClassSelect');
+  const subjectElem = document.getElementById('promotionSubjectSelect');
+  const termElem = document.getElementById('promotionTermSelect');
+  const yearElem = document.getElementById('promotionYearInput');
   const tbody = document.getElementById('promotionExamTableBody');
+  if (!classElem || !subjectElem || !termElem || !yearElem || !tbody) {
+    // If any element is missing, do nothing
+    return;
+  }
+  const classVal = classElem.value;
+  const subjectVal = subjectElem.value;
+  const termVal = termElem.value;
+  const yearVal = yearElem.value.trim();
   tbody.innerHTML = '';
   if (!yearVal) {
     tbody.innerHTML = '<tr><td colspan="9" style="color:red;">Please select academic year to view scores.</td></tr>';
@@ -65,10 +73,15 @@ async function loadPromotionExamEntries() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('promotionClassSelect').addEventListener('change', loadPromotionExamEntries);
-  document.getElementById('promotionSubjectSelect').addEventListener('change', loadPromotionExamEntries);
-  document.getElementById('promotionTermSelect').addEventListener('change', loadPromotionExamEntries);
-  document.getElementById('promotionYearInput').addEventListener('input', loadPromotionExamEntries);
-  document.getElementById('passMarkInput').addEventListener('input', loadPromotionExamEntries);
+  const classSelect = document.getElementById('promotionClassSelect');
+  if (classSelect) classSelect.addEventListener('change', loadPromotionExamEntries);
+  const subjectSelect = document.getElementById('promotionSubjectSelect');
+  if (subjectSelect) subjectSelect.addEventListener('change', loadPromotionExamEntries);
+  const termSelect = document.getElementById('promotionTermSelect');
+  if (termSelect) termSelect.addEventListener('change', loadPromotionExamEntries);
+  const yearInput = document.getElementById('promotionYearInput');
+  if (yearInput) yearInput.addEventListener('input', loadPromotionExamEntries);
+  const passMarkInput = document.getElementById('passMarkInput');
+  if (passMarkInput) passMarkInput.addEventListener('input', loadPromotionExamEntries);
   loadPromotionExamEntries();
 });

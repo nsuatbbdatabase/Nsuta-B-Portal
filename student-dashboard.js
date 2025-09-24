@@ -249,6 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.textContent = 'Show Extra Classes';
     }
   };
+  // Fetch and display upcoming events
+  fetchAndDisplayUpcomingEvents();
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.onclick = function() {
@@ -479,32 +481,71 @@ async function submitAssignment() {
 
 // 📬 Load motivational messages
 async function loadMotivations() {
-  const { data, error } = await supabaseClient
-    .from('motivations')
-    .select('id, message, created_at, teacher_id')
-    .eq('student_id', student.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
-
-  const list = document.getElementById('motivationList');
-  list.innerHTML = '';
-
-  if (error || !Array.isArray(data) || data.length === 0) {
-    const li = document.createElement('li');
-    li.textContent = 'No motivational messages found.';
-    list.appendChild(li);
+  // Fetch school events from Supabase
+  const { data: schoolEvents, error: schoolError } = await supabaseClient
+    .from('events')
+    .select('*')
+    .order('event_date', { ascending: true });
+  // Fetch Ghana public holidays from public API
+  let holidays = [];
+  try {
+    const year = new Date().getFullYear();
+    const res = await fetch(`https://date.nager.at/api/v3/PublicHolidays/${year}/GH`);
+    if (res.ok) {
+      holidays = await res.json();
+    }
+  } catch (e) {
+    // If API fails, just show school events
+    holidays = [];
+  }
+  const slideshow = document.getElementById('eventsSlideshow');
+  if (!slideshow) return;
+  slideshow.innerHTML = '';
+  // Only show national holidays and admin-set events
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  let allEvents = [];
+  if (Array.isArray(schoolEvents)) {
+    allEvents = schoolEvents
+      .filter(ev => new Date(ev.event_date) >= today)
+      .map(ev => ({
+        date: new Date(ev.event_date),
+        title: ev.event_title,
+        desc: ev.event_desc,
+        type: 'school'
+      }));
+  }
+  if (Array.isArray(holidays)) {
+    allEvents = allEvents.concat(
+      holidays
+        .filter(h => new Date(h.date) >= today && h.types && h.types.includes('National'))
+        .map(h => ({
+          date: new Date(h.date),
+          title: h.localName,
+          desc: h.name,
+          type: 'holiday',
+          holidayType: h.types || []
+        }))
+    );
+  }
+  // Sort by date ascending
+  allEvents.sort((a, b) => a.date - b.date);
+  if (allEvents.length === 0) {
+    slideshow.innerHTML = '<div class="event-slide">No upcoming events.</div>';
     return;
   }
-
-  data.forEach(msg => {
-    const li = document.createElement('li');
-    let date = msg.created_at ? new Date(msg.created_at).toLocaleString() : '';
-    let display = msg.message;
-    if (date) {
-      display += `\n(${date})`;
-    }
-    li.textContent = display;
-    list.appendChild(li);
+  // Format date in Ghana local format (dd/mm/yyyy)
+  allEvents.forEach(ev => {
+    const ghanaDate = `${ev.date.getDate().toString().padStart(2, '0')}/${(ev.date.getMonth()+1).toString().padStart(2, '0')}/${ev.date.getFullYear()}`;
+    const slide = document.createElement('div');
+    slide.className = 'event-slide';
+    slide.innerHTML = `
+      <div class="event-date">${ghanaDate}</div>
+      <div class="event-title">${ev.title}</div>
+      <div class="event-desc">${ev.desc}</div>
+      ${ev.type === 'holiday' ? '<div class="event-type">National Holiday</div>' : ''}
+    `;
+    slideshow.appendChild(slide);
   });
 }
 

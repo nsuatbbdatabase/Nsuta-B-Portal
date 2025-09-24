@@ -556,10 +556,12 @@ button, .tab-btn {
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #f8fafc 0%, #e3e9f7 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border-radius: 8px;
+  overflow: hidden;
 }
-@media (max-width: 900px) {
-  table, thead, tbody, th, td, tr {
     display: block;
   }
   thead tr {
@@ -976,13 +978,14 @@ table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 20px;
-  background: #fff;
-  border-radius: 6px;
-  box-shadow: 0 1px 4px rgba(0,64,128,0.05);
+  background: linear-gradient(135deg, #f8fafc 0%, #e3e9f7 100%);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  overflow: hidden;
 }
 thead th {
-  background: #004080;
-  color: #fff;
+  background: #dbeafe;
+  color: #222e3c;
   font-weight: bold;
   padding: 10px;
   border-bottom: 2px solid #ffa500;
@@ -990,6 +993,8 @@ thead th {
 tbody td {
   padding: 8px;
   border-bottom: 1px solid #ddd;
+  color: #222e3c;
+  background: rgba(255,255,255,0.85);
 }
 tbody tr:hover {
   background: #f7faff;
@@ -1131,10 +1136,12 @@ button:hover {
   background: #ffa500;
   color: #fff;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.95rem;
-  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #eaeaea;
+  text-align: left;
+  color: #222e3c;
+  background: rgba(255,255,255,0.85);
+}
   margin-left: 0.5rem;
 }
 #studentMessagesSection button:hover, #resourceRequestsSection button:hover, #motivationalMessagesSection button:hover {

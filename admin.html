@@ -1,4 +1,4 @@
-<!-- Admin Modal -->
+  <!-- Admin Modal -->
   <div id="adminModal" class="modal hidden">
     <div class="modal-content">
       <h3>Register Admin</h3>
@@ -39,89 +39,44 @@
   <main class="dashboard-main">
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
-  <a href="promotion-exam-admin.html" style="text-decoration:none;">
-    <div class="dashboard-card accent-blue" data-section="promotionExamAdminSection" style="color:#fff;"><span class="card-emoji">📋</span> Promotion Exam Submissions</div>
-  </a>
-  <!-- Promotion Exam Admin Section -->
-  <div id="promotionExamAdminSection" class="tab-section" style="display:none;">
-    <div class="promotion-exam-admin-tab" style="background: #004080; color: #fff; border-radius: 18px; padding: 2rem 1rem; margin-bottom: 2rem;">
-      <button class="back-to-dashboard" style="margin-bottom:1rem;" onclick="showDashboardOverview()">&larr; Back to Dashboard</button>
-      <h2 style="margin-bottom:1.2rem;">Submitted Promotion Exam Entries</h2>
-      <div class="filters" style="margin-bottom:1.2rem;">
-        <label for="promotionAdminClassSelect">Class:</label>
-        <select id="promotionAdminClassSelect">
-          <option value="JHS 1">JHS 1</option>
-          <option value="JHS 2">JHS 2</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
-        <label for="promotionAdminSubjectSelect">Subject:</label>
-        <select id="promotionAdminSubjectSelect">
-          <option value="">-- All Subjects --</option>
-          <option value="Maths">Maths</option>
-          <option value="English">English</option>
-          <option value="Science">Science</option>
-          <option value="Computing">Computing</option>
-          <option value="Social Studies">Social Studies</option>
-          <option value="RME">RME</option>
-          <option value="Creative Arts">Creative Arts</option>
-          <option value="Career Tech">Career Tech</option>
-          <option value="Twi">Twi</option>
-        </select>
-        <label for="promotionAdminTermSelect">Term:</label>
-        <select id="promotionAdminTermSelect">
-          <option value="">-- All Terms --</option>
-          <option value="Promotion">Promotion</option>
-          <option value="First">First</option>
-          <option value="Second">Second</option>
-          <option value="Third">Third</option>
-        </select>
-        <label for="promotionAdminYearInput">Academic Year:</label>
-        <input id="promotionAdminYearInput" placeholder="Academic Year (e.g. 2025/2026)">
-      </div>
-      <div style="overflow-x:auto;">
-        <table style="width:100%;background:#003366;color:#fff;border-radius:10px;">
-          <thead>
-            <tr style="background:#002244;">
-              <th>Student</th>
-              <th>Class</th>
-              <th>Subject</th>
-              <th>Score</th>
-              <th>Term</th>
-              <th>Year</th>
-              <th>Marked By</th>
-            </tr>
-          </thead>
-          <tbody id="promotionExamAdminTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+      <a href="promotion-exam-admin.html" style="text-decoration:none;">
+        <div class="dashboard-card" data-section="promotionExamAdminLink">
+          <img src="icons/exam.svg" alt="Promotion Exams" class="dashboard-card-icon" />
+          <span class="dashboard-card-title">Promotion Exams</span>
+        </div>
+      </a>
       <div class="dashboard-card" data-section="reports">
+        <img src="icons/reports.svg" alt="Reports" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Reports</span>
-        
+      </div>
+      <div class="dashboard-card" data-section="events">
+  <img src="icons/events.svg" alt="Events" class="dashboard-card-icon" />
+  <span class="dashboard-card-title">Events</span>
+  <button class="dashboard-card-action" onclick="openModal('eventsModal')">Add Event</button>
       </div>
       <div class="dashboard-card" data-section="schoolDatesSection">
+        <img src="icons/school-dates.svg" alt="School Dates" class="dashboard-card-icon" />
         <span class="dashboard-card-title">School Dates</span>
-      
       </div>
       <div class="dashboard-card" data-section="students">
+        <img src="icons/students.svg" alt="Students" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Students</span>
-        
       </div>
       <div class="dashboard-card" data-section="teachers">
+        <img src="icons/teachers.svg" alt="Teachers" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Teachers</span>
-        
       </div>
       <div class="dashboard-card" data-section="admins">
+        <img src="icons/admins.svg" alt="Admins" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Admins</span>
-            </div>
+      </div>
       <div class="dashboard-card" data-section="interestConduct">
+        <img src="icons/interest-conduct.svg" alt="Interest & Conduct" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Interest & Conduct</span>
-
       </div>
       <div class="dashboard-card" data-section="interestUpdate">
+        <img src="icons/interest-update.svg" alt="Interest Update" class="dashboard-card-icon" />
         <span class="dashboard-card-title">Interest Update</span>
-  
       </div>
     </div>
     <!-- Student Interest & Conduct Subdashboard -->
@@ -176,6 +131,25 @@
           <div class="form-actions">
             <button type="submit">Save</button>
             <button type="button" onclick="closeModal('schoolDatesModal')">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Events Modal -->
+    <div id="eventsModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Add School Event</h3>
+        <form id="eventsForm">
+          <label for="event_date">Event Date</label>
+          <input type="date" id="event_date" name="event_date" required />
+          <label for="event_title">Title</label>
+          <input type="text" id="event_title" name="event_title" placeholder="Event Title" required />
+          <label for="event_desc">Description</label>
+          <textarea id="event_desc" name="event_desc" placeholder="Event Description" required></textarea>
+          <div class="form-actions">
+            <button type="submit">Save</button>
+            <button type="button" onclick="closeModal('eventsModal')">Cancel</button>
           </div>
         </form>
       </div>
@@ -608,9 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
           <button type="submit">Save</button>
           <button type="button" onclick="closeModal('teacherModal')">Cancel</button>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="promotion-exam-admin.js"></script>
-<script src="admin.js"></script>
 <script src="dashboard.js"></script>
+<script src="admin.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof loadStudents === 'function') loadStudents();
+    if (typeof loadTeachers === 'function') loadTeachers();
+    if (typeof loadAdmins === 'function') loadAdmins();
+  });
+</script>
 <script src="router.js"></script>
 <script>
   document.getElementById('logoutBtn').onclick = function() {

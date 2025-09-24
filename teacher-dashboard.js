@@ -1,3 +1,17 @@
+// Logout function for teacher dashboard
+function logout() {
+  sessionStorage.clear();
+  sessionStorage.removeItem('teacher_staff_id');
+  localStorage.removeItem('teacherId');
+  window.location.href = 'index.html';
+}
+
+window.addEventListener('DOMContentLoaded', function() {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.onclick = logout;
+  }
+});
 // Dashboard Overview Back Button Logic
 window.addEventListener('DOMContentLoaded', () => {
   const backBtn = document.getElementById('backToDashboardBtn');
@@ -334,6 +348,7 @@ async function loadTeacherDashboard(staffId) {
     if (classSelectExam && subjectSelectExam && teacher.assignments) {
       subjectSelectExam.addEventListener('change', function() {
         const subjectVal = subjectSelectExam.value;
+        const prevClass = classSelectExam.value;
         const allowedClasses = teacher.assignments.filter(a => a.subject === subjectVal).map(a => a.class);
         classSelectExam.innerHTML = `<option value="">-- Select Class --</option>`;
         [...new Set(allowedClasses)].forEach(cls => {
@@ -342,9 +357,14 @@ async function loadTeacherDashboard(staffId) {
           opt.textContent = cls;
           classSelectExam.appendChild(opt);
         });
+        // Restore previous selection if still valid
+        if (allowedClasses.includes(prevClass)) {
+          classSelectExam.value = prevClass;
+        }
       });
       classSelectExam.addEventListener('change', function() {
         const classVal = classSelectExam.value;
+        const prevSubject = subjectSelectExam.value;
         const allowedSubjects = teacher.assignments.filter(a => a.class === classVal).map(a => a.subject);
         subjectSelectExam.innerHTML = `<option value="">-- Select Subject --</option>`;
         [...new Set(allowedSubjects)].forEach(subj => {
@@ -353,6 +373,10 @@ async function loadTeacherDashboard(staffId) {
           opt.textContent = subj;
           subjectSelectExam.appendChild(opt);
         });
+        // Restore previous selection if still valid
+        if (allowedSubjects.includes(prevSubject)) {
+          subjectSelectExam.value = prevSubject;
+        }
       });
     }
   }
@@ -778,8 +802,9 @@ function renderExamForm() {
 
 // ✅ Submit Exam scores
 async function submitExams() {
-  const subject = document.getElementById('subjectSelect').value;
-  const { term, year } = getTermYear();
+  const subject = document.getElementById('subjectSelectExam').value;
+  const term = document.getElementById('termInputExam').value;
+  const year = document.getElementById('yearInputExam').value;
   if (!subject || !term || !year) {
     alert('Please select subject, term, and year.');
     return;
@@ -1073,6 +1098,50 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 // On page load, load teacher dashboard if session exists
+// Change PIN modal logic
+window.addEventListener('DOMContentLoaded', function() {
+  const changePinBtn = document.getElementById('changePinBtn');
+  const changePinModal = document.getElementById('changePinModal');
+  const changePinForm = document.getElementById('changePinForm');
+  if (changePinBtn && changePinModal) {
+    changePinBtn.onclick = function() {
+      changePinModal.classList.remove('hidden');
+    };
+  }
+  window.closeChangePinModal = function() {
+    changePinModal.classList.add('hidden');
+    changePinForm.reset();
+  };
+  if (changePinForm) {
+    changePinForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const currentPin = document.getElementById('currentPin').value.trim();
+      const newPin = document.getElementById('newPin').value.trim();
+      if (!teacher || !teacher.id) {
+        alert('Teacher session not found.');
+        return;
+      }
+      // Fetch teacher record to verify current PIN
+      const { data, error } = await supabaseClient.from('teachers').select('pin').eq('id', teacher.id).single();
+      if (error || !data) {
+        alert('Failed to verify current PIN.');
+        return;
+      }
+      if (data.pin !== currentPin) {
+        alert('Current PIN is incorrect.');
+        return;
+      }
+      // Update PIN
+      const { error: updateError } = await supabaseClient.from('teachers').update({ pin: newPin }).eq('id', teacher.id);
+      if (updateError) {
+        alert('Failed to update PIN.');
+        return;
+      }
+      alert('PIN changed successfully!');
+      closeChangePinModal();
+    };
+  }
+});
 window.addEventListener('DOMContentLoaded', function() {
   let staffId = sessionStorage.getItem('teacher_staff_id');
   if (!staffId) {

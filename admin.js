@@ -1,51 +1,132 @@
-document.addEventListener('DOMContentLoaded', function() {
-  const classSelect = document.getElementById('promotionAdminClassSelect');
-  const subjectSelect = document.getElementById('promotionAdminSubjectSelect');
-  const termSelect = document.getElementById('promotionAdminTermSelect');
-  const yearInput = document.getElementById('promotionAdminYearInput');
-  if (classSelect && subjectSelect && termSelect && yearInput) {
-    classSelect.addEventListener('change', () => {
-      populatePromotionAdminSubjects();
-      setTimeout(() => {
-  loadPromotionExamEntries();
-      }, 50);
-    });
-  subjectSelect.addEventListener('change', loadPromotionExamEntries);
-  termSelect.addEventListener('change', loadPromotionExamEntries);
-  yearInput.addEventListener('input', loadPromotionExamEntries);
+// Modal open/close logic
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = '';
   }
-  // If tab is opened, always reset and reload
-  const promoCard = document.querySelector('.dashboard-card[data-section="promotionExamAdminSection"]');
-  if (promoCard) {
-    promoCard.addEventListener('click', () => {
-      // Show the tab-section explicitly
-      document.getElementById('dashboardOverview').style.display = 'none';
-      document.querySelectorAll('.tab-section').forEach(section => {
-        section.style.display = 'none';
-      });
-      var tabSection = document.getElementById('promotionExamAdminSection');
-      if (tabSection) {
-        tabSection.style.display = '';
-        tabSection.classList.remove('tab-section');
-        tabSection.hidden = false;
-      }
-      if (classSelect) classSelect.value = 'JHS 2';
-      if (termSelect) termSelect.value = 'Promotion';
-      populatePromotionAdminSubjects();
-      setTimeout(() => {
-  loadPromotionExamEntries();
-      }, 50);
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // CSV Import Handler
+  const importInput = document.getElementById('csvInput');
+  if (importInput) {
+    importInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const text = evt.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) {
+          alert('CSV file is empty or missing data.');
+          return;
+        }
+  const headers = lines[0].split(/\t|,/).map(h => h.trim());
+  // Normalize headers for case-insensitive matching
+  const normalizedHeaders = headers.map(h => h.toLowerCase());
+        let successCount = 0, failCount = 0, failRows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = lines[i].split(/\t|,/);
+          if (row.length < 5) continue;
+          const rowObj = {};
+          headers.forEach((h, idx) => rowObj[h] = row[idx] ? row[idx].trim() : '');
+          // Support uppercase 'FULL NAME' header
+          const fullNameValue = rowObj['Full Name'] || rowObj['FULL NAME'] || rowObj['full name'] || '';
+          const { first_name, surname } = splitFullName(fullNameValue);
+          // Split full name (case-insensitive)
+          // Prepare student data
+          const studentData = {
+            first_name,
+            surname,
+            full_name: rowObj['Full Name'] || '',
+            area: rowObj['Area'] || '',
+            dob: rowObj['DOB'] || '',
+            nhis_number: rowObj['NHIS Number'] || '',
+            gender: rowObj['Gender'] || '',
+            class: rowObj['Class'] || '',
+            parent_name: rowObj['Parent'] || '',
+            parent_contact: rowObj['Contact'] || '',
+            username: rowObj['Username'] || generateUsername(first_name, surname),
+            pin: rowObj['PIN'] || generatePin(),
+          };
+          // Prevent duplicate by username/class
+          const { data: existing, error: existErr } = await supabaseClient.from('students').select('id').eq('username', studentData.username).eq('class', studentData.class);
+          if (existing && existing.length) {
+            failCount++;
+            failRows.push(i+1);
+            continue;
+          }
+          const { error } = await supabaseClient.from('students').insert([studentData]);
+          if (error) {
+            failCount++;
+            failRows.push(i+1);
+          } else {
+            successCount++;
+          }
+        }
+        alert(`Import complete. Success: ${successCount}, Failed: ${failCount}${failRows.length ? '\nFailed rows: ' + failRows.join(', ') : ''}`);
+      };
+      reader.readAsText(file);
     });
   }
 });
 // Export students as CSV
+// Split full name into first name and surname
+// Generate username and pin
+function splitFullName(fullName) {
+  const parts = fullName.trim().split(' ');
+  const surname = parts.length > 1 ? parts.pop() : '';
+  const firstName = parts.join(' ');
+  return { first_name: firstName, surname: surname };
+}
+  // Intercept student form submission to support full name splitting
+  const studentForm = document.getElementById('studentForm');
+  if (studentForm) {
+    studentForm.addEventListener('submit', function(e) {
+      const fullNameInput = studentForm.querySelector('[name="full_name"]');
+      if (fullNameInput) {
+        e.preventDefault();
+        const { first_name, surname } = splitFullName(fullNameInput.value);
+        studentForm.querySelector('[name="first_name"]').value = first_name;
+        studentForm.querySelector('[name="surname"]').value = surname;
+        // Auto-generate username and pin if missing
+        const usernameInput = studentForm.querySelector('[name="username"]');
+        const pinInput = studentForm.querySelector('[name="pin"]');
+        if (usernameInput && !usernameInput.value) {
+          usernameInput.value = generateUsername(first_name, surname);
+        }
+        if (pinInput && !pinInput.value) {
+          pinInput.value = generatePin();
+        }
+        // Prevent duplicate student by name and class
+        const classInput = studentForm.querySelector('[name="class"]');
+        const nameClass = (first_name + ' ' + surname + '|' + (classInput ? classInput.value : ''));
+        window._studentNameClassSet = window._studentNameClassSet || new Set();
+        if (window._studentNameClassSet.has(nameClass)) {
+          alert('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''));
+          return;
+        }
+        window._studentNameClassSet.add(nameClass);
+        studentForm.submit();
+      }
+    });
+  }
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
     alert('No student data to export.');
     return;
   }
   const headers = [
-    'Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent', 'Contact', 'Username', 'PIN'
+    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent', 'Contact', 'Username', 'PIN'
   ];
   const rows = allStudents.map(s => [
     ((s.first_name || '') + ' ' + (s.surname || '')).trim(),
@@ -90,6 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Use the supabaseClient already declared in dashboard.js
+// (Do not redeclare supabaseClient or createClient here)
 
 // Show only the selected student's details in the table
 function showSelectedStudent() {
@@ -173,7 +255,66 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchAndDisplaySchoolDates();
     };
   }
+
+  // Events modal logic
+  fetchAndRenderEvents();
+  const eventsForm = document.getElementById('eventsForm');
+  if (eventsForm) {
+    eventsForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const title = document.getElementById('event_title').value;
+      const date = document.getElementById('event_date').value;
+      const details = document.getElementById('event_desc').value;
+      const type = 'event';
+      const { error } = await supabaseClient.from('events').insert([
+        { title, date, details, type }
+      ]);
+      if (error) {
+        alert('Failed to save event');
+        return;
+      }
+      closeModal('eventsModal');
+      eventsForm.reset();
+      fetchAndRenderEvents();
+    };
+  }
 });
+// Fetch and render events for admin
+async function fetchAndRenderEvents() {
+  const { data, error } = await supabaseClient
+    .from('events')
+    .select('*')
+    .order('date', { ascending: true });
+  const eventsSection = document.getElementById('eventsSection');
+  if (!eventsSection) return;
+  eventsSection.innerHTML = '';
+  if (error || !data || data.length === 0) {
+    eventsSection.innerHTML = '<p>No events found.</p>';
+    return;
+  }
+  data.forEach(event => {
+    const div = document.createElement('div');
+    div.className = 'event-item';
+    div.innerHTML = `
+      <div class="event-date">${new Date(event.date).toLocaleDateString()}</div>
+      <div class="event-title">${event.title}</div>
+      <div class="event-desc">${event.details}</div>
+      <button class="delete-event-btn" onclick="deleteEvent('${event.id}')">Delete</button>
+    `;
+    eventsSection.appendChild(div);
+  });
+}
+
+// Delete event by id
+async function deleteEvent(eventId) {
+  if (!confirm('Delete this event?')) return;
+  const { error } = await supabaseClient.from('events').delete().eq('id', eventId);
+  if (error) {
+    alert('Failed to delete event');
+    return;
+  }
+  fetchAndRenderEvents();
+}
 
 // Fetch all students on page load
 window.addEventListener('DOMContentLoaded', async () => {

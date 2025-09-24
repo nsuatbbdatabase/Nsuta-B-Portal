@@ -70,9 +70,6 @@
       .school-header h1 {
         font-size: 1.1rem;
       }
-      .dashboard-main {
-        margin-top: 110px !important;
-      }
     }
   </style>
 </head>
@@ -95,10 +92,25 @@
     </div>
   </div>
   <div class="dashboard-container">
+    <!-- Change PIN Modal -->
+    <div id="changePinModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" onclick="closeChangePinModal()">&times;</span>
+        <h2>Change Login PIN</h2>
+        <form id="changePinForm">
+          <label for="currentPin">Current PIN:</label>
+          <input type="password" id="currentPin" name="currentPin" required />
+          <label for="newPin">New PIN:</label>
+          <input type="password" id="newPin" name="newPin" required minlength="4" maxlength="8" />
+          <button type="submit">Change PIN</button>
+        </form>
+      </div>
+    </div>
     <!-- Teacher Welcome and Roles -->
     <div class="teacher-header">
-      <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
-      <div id="assignedRoles" class="floating-roles"></div>
+  <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
+  <div id="assignedRoles" class="floating-roles"></div>
+  <button id="changePinBtn" style="margin-left:1rem;">Change Login PIN</button>
     </div>
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
@@ -494,7 +506,7 @@
       localStorage.clear();
       sessionStorage.removeItem('teacher_staff_id');
       localStorage.removeItem('teacherId');
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
     }
   };
 </script>
