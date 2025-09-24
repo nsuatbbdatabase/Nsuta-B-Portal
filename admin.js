@@ -202,7 +202,10 @@ function showSelectedStudent() {
     <td>${student.parent_contact || ''}</td>
     <td>${student.username || ''}</td>
     <td>${student.pin || ''}</td>
-    <td><!-- Actions here --></td>
+    <td>
+      <button class="edit-btn" onclick="editStudent('${student.id}')">Edit</button>
+      <button class="delete-btn" onclick="deleteStudent('${student.id}')">Delete</button>
+    </td>
   `;
   tbody.appendChild(row);
 }
