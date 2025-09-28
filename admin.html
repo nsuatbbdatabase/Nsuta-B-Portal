@@ -22,81 +22,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | School Management</title>
   <link rel="stylesheet" href="styles.css" />
-  <style>
-  body {
-    background: url('admin dashboard background.jpg') center center/cover no-repeat fixed;
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-  }
-  .admin-bg-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    width: 100vw; height: 100vh;
-    background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
-    z-index: 0;
-    pointer-events: none;
-  }
-  .dashboard-main {
-    position: relative;
-    z-index: 1;
-    max-width: 900px;
-    margin: 3rem auto 2rem auto;
-    background: rgba(255,255,255,0.97);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
-    border-radius: 18px;
-    padding: 2.5rem 2rem 2rem 2rem;
-  }
-  .dashboard-cards-bg {
-    background: rgba(255,255,255,0.97);
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
-    padding: 2.5rem 2rem 2rem 2rem;
-    margin: 0 auto 2rem auto;
-    max-width: 900px;
-  }
-  .dashboard-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 1.5rem;
-  }
-  .school-logo {
-    height: 70px;
-    margin-right: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  }
-  .school-title {
-    margin: 0;
-    font-size: 2rem;
-    color: #003366;
-    font-weight: 700;
-  }
-  .motto {
-    margin: 0.2rem 0 0 0;
-    font-size: 1.1rem;
-    color: #0074d9;
-    font-style: italic;
-  }
-  .logout-btn {
-    float: right;
-    margin: 1rem;
-    position: relative;
-    z-index: 2;
-    background: #e3e8f0;
-    color: #003366;
-    border: none;
-    border-radius: 8px;
-    padding: 0.7rem 1.2rem;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .logout-btn:hover {
-    background: #cdd6e6;
-  }
-</style>
 </head>
 <body>
 
@@ -117,11 +42,11 @@
       <div class="modal-content">
         <h3>Report Card Promotion Pass Mark</h3>
         <p class="section-desc">Set the total marks required for promotion on the report card (used for annual promotion, not promotion exam).</p>
-        <form id="promotionPassMarkForm" style="margin-bottom:1em;">
+  <form id="promotionPassMarkForm">
           <label for="promotionPassMarkInput">Promotion Pass Mark:</label>
-          <input id="promotionPassMarkInput" type="number" min="0" max="10000" step="1" style="width:120px;" required />
+          <input id="promotionPassMarkInput" type="number" min="0" max="10000" step="1" class="promotion-passmark-input" required />
           <button type="submit">Save</button>
-          <span id="promotionPassMarkStatus" style="margin-left:1em;color:green;"></span>
+          <span id="promotionPassMarkStatus" class="promotion-passmark-status"></span>
         </form>
         <button type="button" onclick="closeModal('promotionPassMarkModal')">Back to Dashboard</button>
       </div>
@@ -132,7 +57,7 @@
         <div class="dashboard-card" data-section="promotionPassMarkSection" onclick="openModal('promotionPassMarkModal')">
           <span class="dashboard-card-title">Report Card Promotion Pass Mark</span>
         </div>
-        <a href="promotion-exam-admin.html" style="text-decoration:none;">
+  <a href="promotion-exam-admin.html" class="no-underline-link">
           <div class="dashboard-card" data-section="promotionExamAdminLink">
             <span class="dashboard-card-title">Promotion Exams</span>
           </div>
@@ -535,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <option value="Career Tech Teacher">Career Tech Teacher</option>
     <option value="Other">Other</option>
   </select>
-  <div id="attendanceNote" style="display:none; color:green; font-weight:bold; margin-bottom:8px;">Attendance will be enabled for Class Teachers only.</div>
+  <div id="attendanceNote" class="attendance-note">Attendance will be enabled for Class Teachers only.</div>
   <label for="denomination">Denomination</label>
   <select name="denomination" id="denomination" required>
     <option value="">Select Denomination</option>

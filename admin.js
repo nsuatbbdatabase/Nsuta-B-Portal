@@ -47,6 +47,14 @@ function closeModal(modalId) {
     modal.classList.add('hidden');
     modal.style.display = 'none';
   }
+  // Always show dashboard overview after closing key modals
+  if (modalId === 'promotionPassMarkModal' || modalId === 'eventsModal') {
+    const overview = document.getElementById('dashboardOverview');
+    if (overview) {
+      overview.classList.remove('hidden');
+      overview.style.display = '';
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
