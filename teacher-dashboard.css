@@ -1,3 +1,20 @@
+@media (max-width: 500px) {
+  .dashboard-overview {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-card {
+    font-size: 0.97rem;
+    padding: 0.7rem 0.3rem;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+body {
+  background: url('Teacher dashboard background.jpg') center center/cover no-repeat fixed;
+  min-height: 100vh;
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
 .back-btn {
   margin-bottom: 1.5rem;
 }

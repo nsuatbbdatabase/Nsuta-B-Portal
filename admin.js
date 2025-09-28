@@ -1,3 +1,37 @@
+// Filter student dropdown by search box
+window.filterStudentDropdown = function filterStudentDropdown() {
+  const search = document.getElementById('studentSearch').value.trim().toLowerCase();
+  const classValue = document.getElementById('classFilter').value.trim().toUpperCase();
+  let filtered = classValue
+    ? allStudents.filter(s => (s.class || '').trim().toUpperCase() === classValue)
+    : allStudents;
+  if (search) {
+    filtered = filtered.filter(s => {
+      const name = ((s.first_name || '') + ' ' + (s.surname || '')).toLowerCase();
+      return name.includes(search);
+    });
+  }
+  const studentSelect = document.getElementById('studentSelect');
+  studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+  filtered.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    let name = '';
+    if (s.first_name && s.surname) {
+      name = s.first_name + ' ' + s.surname;
+    } else if (s.first_name) {
+      name = s.first_name;
+    } else if (s.surname) {
+      name = s.surname;
+    } else {
+      name = '[No Name]';
+    }
+    opt.textContent = name + (s.class ? ` (${s.class})` : '');
+    opt.dataset.class = s.class || '';
+    opt.dataset.picture = s.picture_url || '';
+    studentSelect.appendChild(opt);
+  });
+};
 // Modal open/close logic
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
@@ -16,7 +50,70 @@ function closeModal(modalId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  // CSV Import Handler
+  // --- Promotion Pass Mark UI Logic ---
+  // --- Promotion Pass Mark Modal Logic ---
+  const promotionPassMarkInput = document.getElementById('promotionPassMarkInput');
+  const promotionPassMarkForm = document.getElementById('promotionPassMarkForm');
+  const promotionPassMarkStatus = document.getElementById('promotionPassMarkStatus');
+  if (promotionPassMarkInput && promotionPassMarkForm) {
+    // Load current value from Supabase settings
+    (async function() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('settings')
+          .select('id, promotion_pass_mark')
+          .order('id', { ascending: true })
+          .limit(1);
+        if (!error && data && data.length && data[0].promotion_pass_mark) {
+          promotionPassMarkInput.value = data[0].promotion_pass_mark;
+        } else {
+          promotionPassMarkInput.value = 300;
+        }
+      } catch (e) {
+        promotionPassMarkInput.value = 300;
+      }
+    })();
+    // Save handler
+    promotionPassMarkForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const value = parseInt(promotionPassMarkInput.value, 10);
+      if (isNaN(value) || value < 0) {
+        promotionPassMarkStatus.textContent = 'Enter a valid number.';
+        promotionPassMarkStatus.style.color = 'red';
+        return;
+      }
+      // Get the first row's id if exists, else insert new
+      const { data, error: fetchError } = await supabaseClient
+        .from('settings')
+        .select('id')
+        .order('id', { ascending: true })
+        .limit(1);
+      let upsertData;
+      if (!fetchError && data && data.length) {
+        upsertData = { id: data[0].id, promotion_pass_mark: value };
+      } else {
+        upsertData = { promotion_pass_mark: value };
+      }
+      const { error } = await supabaseClient
+        .from('settings')
+        .upsert([upsertData]);
+      if (!error) {
+        promotionPassMarkStatus.textContent = 'Saved!';
+        promotionPassMarkStatus.style.color = 'green';
+      } else {
+        promotionPassMarkStatus.textContent = 'Error saving.';
+        promotionPassMarkStatus.style.color = 'red';
+      }
+      setTimeout(() => { promotionPassMarkStatus.textContent = ''; }, 2000);
+    };
+  }
+  // Prevent access if not logged in as admin
+  const adminId = localStorage.getItem('adminId');
+  if (!adminId) {
+    window.location.href = 'login.html';
+    return;
+  }
+  // CSV Import Handler (schema-aligned)
   const importInput = document.getElementById('csvInput');
   if (importInput) {
     importInput.addEventListener('change', function(e) {
@@ -30,50 +127,94 @@ document.addEventListener('DOMContentLoaded', function() {
           alert('CSV file is empty or missing data.');
           return;
         }
-  const headers = lines[0].split(/\t|,/).map(h => h.trim());
-  // Normalize headers for case-insensitive matching
-  const normalizedHeaders = headers.map(h => h.toLowerCase());
-        let successCount = 0, failCount = 0, failRows = [];
+        // Define allowed schema fields for Supabase students table
+        // Match new schema: no full_name, require first_name and surname, include area, dob, nhis_number
+        const allowedFields = [
+          'first_name', 'surname', 'area', 'dob', 'nhis_number',
+          'gender', 'class', 'parent_name', 'parent_contact', 'username', 'pin', 'picture_url'
+        ];
+        // Map CSV headers to schema fields (case-insensitive)
+        const headers = lines[0].split(/\t|,/).map(h => h.trim());
+        const normalizedHeaders = headers.map(h => h.toLowerCase());
+        // Build a mapping from CSV header to schema field
+        const headerToField = {};
+        headers.forEach((h, idx) => {
+          const norm = h.toLowerCase();
+          // Map common variations to schema fields
+          if (norm === 'full name') headerToField[h] = 'full_name';
+          else if (norm === 'parent') headerToField[h] = 'parent_name';
+          else if (norm === 'contact') headerToField[h] = 'parent_contact';
+          else if (norm === 'nhis number') headerToField[h] = 'nhis_number';
+          else if (norm === 'class') headerToField[h] = 'class';
+          else if (norm === 'gender') headerToField[h] = 'gender';
+          else if (norm === 'area') headerToField[h] = 'area';
+          else if (norm === 'dob') headerToField[h] = 'dob';
+          else if (norm === 'username') headerToField[h] = 'username';
+          else if (norm === 'pin') headerToField[h] = 'pin';
+          else if (norm === 'picture url') headerToField[h] = 'picture_url';
+          else if (norm === 'surname') headerToField[h] = 'surname';
+          else if (norm === 'first name') headerToField[h] = 'first_name';
+          else headerToField[h] = null; // ignore unknown columns
+        });
+  let successCount = 0, failCount = 0, duplicateRows = [], invalidRows = [];
         for (let i = 1; i < lines.length; i++) {
           const row = lines[i].split(/\t|,/);
           if (row.length < 5) continue;
-          const rowObj = {};
-          headers.forEach((h, idx) => rowObj[h] = row[idx] ? row[idx].trim() : '');
-          // Support uppercase 'FULL NAME' header
-          const fullNameValue = rowObj['Full Name'] || rowObj['FULL NAME'] || rowObj['full name'] || '';
-          const { first_name, surname } = splitFullName(fullNameValue);
-          // Split full name (case-insensitive)
-          // Prepare student data
-          const studentData = {
-            first_name,
-            surname,
-            full_name: rowObj['Full Name'] || '',
-            area: rowObj['Area'] || '',
-            dob: rowObj['DOB'] || '',
-            nhis_number: rowObj['NHIS Number'] || '',
-            gender: rowObj['Gender'] || '',
-            class: rowObj['Class'] || '',
-            parent_name: rowObj['Parent'] || '',
-            parent_contact: rowObj['Contact'] || '',
-            username: rowObj['Username'] || generateUsername(first_name, surname),
-            pin: rowObj['PIN'] || generatePin(),
-          };
+          // Build studentData with only allowed fields
+          const studentData = {};
+          let hasAllRequired = true;
+          // Required fields for import (username and pin are always generated)
+          const requiredFields = ['first_name', 'surname', 'gender', 'class', 'parent_name', 'parent_contact'];
+          // Fill studentData from CSV row (CSV uses Full Name, split to first_name/surname)
+          headers.forEach((h, idx) => {
+            const field = headerToField[h];
+            if (field === 'full_name') {
+              const { first_name, surname } = splitFullName(row[idx] ? row[idx].trim() : '');
+              studentData['first_name'] = first_name;
+              studentData['surname'] = surname;
+            } else if (field && allowedFields.includes(field)) {
+              studentData[field] = row[idx] ? row[idx].trim() : '';
+            }
+          });
+          // Always auto-generate username and pin
+          studentData['username'] = generateUsername(studentData['first_name'], studentData['surname']);
+          studentData['pin'] = generatePin();
+          // Check for required fields
+          for (const req of requiredFields) {
+            if (!studentData[req] || studentData[req].length === 0) {
+              hasAllRequired = false;
+              break;
+            }
+          }
+          if (!hasAllRequired) {
+            failCount++;
+            invalidRows.push(i+1);
+            continue;
+          }
           // Prevent duplicate by username/class
           const { data: existing, error: existErr } = await supabaseClient.from('students').select('id').eq('username', studentData.username).eq('class', studentData.class);
           if (existing && existing.length) {
             failCount++;
-            failRows.push(i+1);
+            duplicateRows.push(i+1);
             continue;
           }
-          const { error } = await supabaseClient.from('students').insert([studentData]);
+          // Only insert allowed fields
+          const insertData = {};
+          allowedFields.forEach(f => {
+            if (studentData[f] !== undefined) insertData[f] = studentData[f];
+          });
+          const { error } = await supabaseClient.from('students').insert([insertData]);
           if (error) {
             failCount++;
-            failRows.push(i+1);
+            invalidRows.push(i+1);
           } else {
             successCount++;
           }
         }
-        alert(`Import complete. Success: ${successCount}, Failed: ${failCount}${failRows.length ? '\nFailed rows: ' + failRows.join(', ') : ''}`);
+        let msg = `Import complete. Success: ${successCount}, Failed: ${failCount}`;
+        if (duplicateRows.length) msg += `\nDuplicate students (already exist in this class): ${duplicateRows.join(', ')}`;
+        if (invalidRows.length) msg += `\nRows with missing/invalid fields or other errors: ${invalidRows.join(', ')}`;
+        alert(msg);
       };
       reader.readAsText(file);
     });
@@ -125,8 +266,9 @@ function exportStudentsCSV() {
     alert('No student data to export.');
     return;
   }
+  // Match new schema: export as Full Name, Area, DOB, NHIS Number, Gender, Class, Parent, Contact
   const headers = [
-    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent', 'Contact', 'Username', 'PIN'
+    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent', 'Contact'
   ];
   const rows = allStudents.map(s => [
     ((s.first_name || '') + ' ' + (s.surname || '')).trim(),
@@ -136,9 +278,7 @@ function exportStudentsCSV() {
     s.gender || '',
     s.class || '',
     s.parent_name || '',
-    s.parent_contact || '',
-    s.username || '',
-    s.pin || ''
+    s.parent_contact || ''
   ]);
   let csvContent = '';
   csvContent += headers.join(',') + '\n';
@@ -249,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data, error } = await supabaseClient.rpc('upsert_school_dates', {
         vacation_date,
         reopen_date
-      });
+      }, { headers: { Accept: 'application/json' } });
       if (error) {
         alert('Failed to save dates');
         return;
@@ -336,32 +476,7 @@ async function fetchAndRenderStudents() {
 }
 
 function filterStudentsByClass() {
-  const classValue = document.getElementById('classFilter').value.trim().toUpperCase();
-  // Only show students in dropdown that match the selected class
-  const filtered = classValue
-    ? allStudents.filter(s => (s.class || '').trim().toUpperCase() === classValue)
-    : allStudents;
-  // Update student dropdown
-  const studentSelect = document.getElementById('studentSelect');
-  studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
-  filtered.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.id;
-    let name = '';
-    if (s.first_name && s.surname) {
-      name = s.first_name + ' ' + s.surname;
-    } else if (s.first_name) {
-      name = s.first_name;
-    } else if (s.surname) {
-      name = s.surname;
-    } else {
-      name = '[No Name]';
-    }
-    opt.textContent = name + (s.class ? ` (${s.class})` : '');
-    opt.dataset.class = s.class || '';
-    opt.dataset.picture = s.picture_url || '';
-    studentSelect.appendChild(opt);
-  });
+  window.filterStudentDropdown();
   // Clear student table and show message
   const tbody = document.querySelector('#studentTable tbody');
   tbody.innerHTML = '';

@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <style>
+    @media print {
+      #backToReportBtn {
+        display: none !important;
+      }
+    }
+  </style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Student Report Card</title>
@@ -33,6 +40,8 @@
       <select id="classSelect">
         <option value="">-- Select Class --</option>
       </select>
+      <label for="studentSearch">Search Student:</label>
+      <input type="text" id="studentSearch" placeholder="Type to search..." oninput="filterStudentDropdown()" />
       <label for="studentSelect">Select Student:</label>
       <select id="studentSelect" onchange="loadReportForStudent()">
         <option value="">-- Select --</option>

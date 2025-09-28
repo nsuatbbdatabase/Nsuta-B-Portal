@@ -1,17 +1,64 @@
 // Simple router/session guard for dashboard pages
 window.addEventListener('DOMContentLoaded', function() {
+  // Debug output for student session keys
+  if (window.location.pathname.endsWith('student-dashboard.html')) {
+    const debugDiv = document.createElement('div');
+    debugDiv.style = 'color:#b00;font-size:0.95em;margin:8px 0;';
+    debugDiv.innerText =
+  '';
+    document.body.prepend(debugDiv);
+  }
   const path = window.location.pathname;
   // Map dashboard pages to their required session keys
   const guards = [
-    { page: 'student-dashboard.html', key: 'studentId', storage: localStorage },
-    { page: 'teacher-dashboard.html', key: 'teacher_staff_id', storage: sessionStorage },
-    { page: 'admin.html', key: 'adminId', storage: sessionStorage },
-    { page: 'headteacher-dashboard.html', key: 'headteacherId', storage: sessionStorage }
+    {
+      page: 'student-dashboard.html',
+      keys: [
+        { key: 'studentId', storage: localStorage },
+        { key: 'studentId', storage: sessionStorage },
+        { key: 'student_username', storage: localStorage },
+        { key: 'student_username', storage: sessionStorage }
+      ]
+    },
+    {
+      page: 'teacher-dashboard.html',
+      keys: [
+        { key: 'teacher_staff_id', storage: sessionStorage },
+        { key: 'teacherId', storage: localStorage }
+      ]
+    },
+    {
+      page: 'admin.html',
+      keys: [
+        { key: 'adminId', storage: sessionStorage },
+        { key: 'adminId', storage: localStorage }
+      ]
+    },
+    {
+      page: 'headteacher-dashboard.html',
+      keys: [
+        { key: 'headteacherId', storage: sessionStorage },
+        { key: 'headteacherId', storage: localStorage }
+      ]
+    }
   ];
   for (const guard of guards) {
     if (path.endsWith(guard.page)) {
-      const id = guard.storage.getItem(guard.key);
-      if (!id) {
+      let found = false;
+      if (guard.page === 'student-dashboard.html') {
+        // Require both studentId and student_username in the same storage
+        const localOk = localStorage.getItem('studentId') && localStorage.getItem('student_username');
+        const sessionOk = sessionStorage.getItem('studentId') && sessionStorage.getItem('student_username');
+        found = localOk || sessionOk;
+      } else {
+        for (const k of guard.keys) {
+          if (k.storage.getItem(k.key)) {
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
         alert('Access denied. Please log in first.');
         window.location.href = 'index.html';
         return;

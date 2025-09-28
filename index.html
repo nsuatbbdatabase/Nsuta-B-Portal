@@ -8,79 +8,173 @@
   <link rel="stylesheet" href="login.css" />
 </head>
 <body class="index-dashboard-bg">
-  <div class="dashboard-bg-overlay"></div>
-  <div class="login-container">
-    <div class="login-box">
-      <!-- 🏫 School Branding -->
-      <div class="school-header">
-  <img src="Badge.png" alt="School Logo" class="school-logo" />
-        <div class="school-text">
-          <h1>Nkawkaw Nsuta M/A 'B' Basic School Portal</h1>
-          <p class="motto">"Knowledge is Power"</p>
+    <div class="dashboard-bg-overlay"></div>
+    <div class="homepage-container">
+      <div class="homepage-header">
+        <img src="Badge.png" alt="School Logo" class="homepage-logo" />
+        <div class="homepage-title-group">
+          <h1 class="homepage-title">Nkawkaw Nsuta M/A 'B' Basic School Portal</h1>
+          <p class="homepage-motto">"Knowledge is Power"</p>
         </div>
       </div>
-
-      <!-- 🎯 Role Selection -->
-      <label for="roleSelect">I am a:</label>
-      <select id="roleSelect">
-        <option value="">-- Select Role --</option>
-        <option value="student">Student</option>
-        <option value="teacher">Teacher</option>
-        <option value="admin">Admin</option>
-      </select>
-
-      <!-- 🔐 Credentials -->
-      <input type="text" id="username" placeholder="Username / Staff ID / Email" />
-      <input type="password" id="pin" placeholder="PIN" />
-      <button onclick="login()">Login</button>
-      <div id="loginMessage"></div>
-
-      <!-- 🌟 Motivation Slider -->
-      <div class="motivation">
-        <div id="motivationMessage">
-          <div>"Education is the passport to the future."</div>
-          <div>"Teachers plant seeds of knowledge that grow forever."</div>
-          <div>"Learning never exhausts the mind—it only ignites it."</div>
-          <div>"Success begins with self-belief and effort."</div>
+      <div class="homepage-intro">
+        <h2>Welcome!</h2>
+        <p>Select your role to access your dashboard.</p>
+      </div>
+      <div class="role-cards-container">
+        <div class="role-card" onclick="redirectToLogin('student')">
+          <img src="Badge.png" alt="Student" class="role-icon" />
+          <div class="role-title">Student</div>
         </div>
+        <div class="role-card" onclick="redirectToLogin('teacher')">
+          <img src="Badge.png" alt="Teacher" class="role-icon" />
+          <div class="role-title">Teacher</div>
+        </div>
+        <div class="role-card" onclick="redirectToLogin('admin')">
+          <img src="Badge.png" alt="Admin" class="role-icon" />
+          <div class="role-title">Admin</div>
+        </div>
+      </div>
+      <div class="homepage-footer">
+        <span>&copy; 2025 Nkawkaw Nsuta M/A 'B' Basic School. All rights reserved.</span>
       </div>
     </div>
-  </div>
-
-  <!-- Supabase + Logic -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="login.js"></script>
-</body>
-<script>
-  window.addEventListener('load', function () {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    const isMobile = /Mobi/i.test(navigator.userAgent);
-
-    if (isAndroid && isMobile) {
-      const prompt = document.createElement('div');
-      prompt.style.position = 'fixed';
-      prompt.style.bottom = '20px';
-      prompt.style.left = '20px';
-      prompt.style.right = '20px';
-      prompt.style.padding = '15px';
-      prompt.style.background = '#4CAF50';
-      prompt.style.color = '#fff';
-      prompt.style.fontSize = '16px';
-      prompt.style.borderRadius = '8px';
-      prompt.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-      prompt.style.zIndex = '9999';
-      prompt.innerHTML = `
-        📱 A faster experience is available in our mobile app.<br>
-        <a href="https://your-download-link.com/app.apk" style="color: #fff; text-decoration: underline;">Download Now</a>
-      `;
-
-      document.body.appendChild(prompt);
-
-      setTimeout(() => {
-        prompt.remove();
-      }, 15000); // auto-dismiss after 15 seconds
-    }
-  });
-</script>
-</body>
+    <style>
+      body.index-dashboard-bg {
+        background: linear-gradient(120deg, #e3e8f0 0%, #f7f9fc 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
+      }
+      .dashboard-bg-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100vw; height: 100vh;
+        background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
+        z-index: 0;
+        pointer-events: none;
+      }
+      .homepage-container {
+        position: relative;
+        z-index: 1;
+        max-width: 700px;
+        margin: 3rem auto 2rem auto;
+        background: rgba(255,255,255,0.97);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
+        border-radius: 18px;
+        padding: 2.5rem 2rem 2rem 2rem;
+      }
+      .homepage-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      .homepage-logo {
+        height: 70px;
+        margin-right: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      }
+      .homepage-title-group {
+        flex: 1;
+      }
+      .homepage-title {
+        margin: 0;
+        font-size: 2rem;
+        color: #003366;
+        font-weight: 700;
+      }
+      .homepage-motto {
+        margin: 0.2rem 0 0 0;
+        font-size: 1.1rem;
+        color: #0074d9;
+        font-style: italic;
+      }
+      .homepage-intro {
+        text-align: center;
+        margin-bottom: 2.2rem;
+      }
+      .homepage-intro h2 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.4rem;
+        color: #003366;
+      }
+      .homepage-intro p {
+        margin: 0;
+        color: #444;
+        font-size: 1.05rem;
+      }
+      .role-cards-container {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin: 2.5rem 0 1.5rem 0;
+      }
+      .role-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        padding: 2rem 1.5rem 1.2rem 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: box-shadow 0.2s, transform 0.2s;
+        width: 160px;
+        border: 2px solid #e3e8f0;
+      }
+      .role-card:hover {
+        box-shadow: 0 8px 32px rgba(0,32,64,0.18);
+        transform: translateY(-4px) scale(1.04);
+        border-color: #0074d9;
+      }
+      .role-icon {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 1rem;
+        border-radius: 50%;
+        background: #f7f9fc;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      }
+      .role-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #111;
+        margin-top: 0.5rem;
+      }
+      .homepage-footer {
+        text-align: center;
+        margin-top: 2.5rem;
+        color: #888;
+        font-size: 0.95rem;
+      }
+      @media (max-width: 700px) {
+        .homepage-container {
+          padding: 1rem 0.3rem;
+          border-radius: 10px;
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .homepage-logo {
+          height: 40px;
+          margin-right: 0.5rem;
+        }
+        .homepage-title {
+          font-size: 1.1rem;
+        }
+        .role-cards-container {
+          flex-direction: column;
+          gap: 1.2rem;
+          align-items: center;
+        }
+        .role-card {
+          width: 90vw;
+          min-width: 180px;
+        }
+      }
+    </style>
+    <script>
+      function redirectToLogin(role) {
+        window.location.href = `login.html?role=${encodeURIComponent(role)}`;
+      }
+    </script>
+  </body>
 </html>

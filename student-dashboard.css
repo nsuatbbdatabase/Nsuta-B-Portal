@@ -1,3 +1,19 @@
+@media (max-width: 500px) {
+  .dashboard-overview {
+    grid-template-columns: 1fr !important;
+  }
+  .dashboard-card {
+    font-size: 0.97rem;
+    padding: 0.7rem 0.3rem;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+/* Change PIN modal status message */
+#changePinStatus {
+  margin-top: 0.7em;
+  color: red;
+}
 .back-btn {
   margin-bottom: 1.5rem;
 }
@@ -84,6 +100,47 @@
   .dashboard-card {
     font-size: 1.05rem;
     padding: 1.2rem 0.5rem;
+  }
+  /* Mobile table styles: block layout for rows, hide thead, add data-labels */
+  .dashboard-container table,
+  table {
+    width: 100%;
+    font-size: 0.95rem;
+    border-collapse: collapse;
+    overflow-x: auto;
+    display: block;
+  }
+  .dashboard-container thead,
+  thead {
+    display: none;
+  }
+  .dashboard-container tbody tr,
+  tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    padding: 0.7rem;
+  }
+  .dashboard-container tbody td,
+  tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.5rem;
+    border: none;
+    font-size: 0.97rem;
+  }
+  .dashboard-container tbody td:before,
+  tbody td:before {
+    content: attr(data-label);
+    font-weight: bold;
+    color: #555;
+    margin-right: 0.7em;
+    min-width: 90px;
+    display: inline-block;
   }
 }
 
@@ -930,10 +987,5 @@ tbody td {
     flex-direction: column;
     align-items: center;
     text-align: center;
-  }
-
-  th, td {
-    font-size: 0.9rem;
-    padding: 0.5rem;
   }
 }

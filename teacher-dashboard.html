@@ -8,46 +8,96 @@
   <link rel="stylesheet" href="teacher-dashboard.css" />
   <style>
     body {
-      background: url('teacher dashboard background.jpg') no-repeat center center fixed;
-      background-size: cover;
-      position: relative;
+      background: linear-gradient(120deg, #e3e8f0 0%, #f7f9fc 100%);
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
     .dashboard-bg-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       width: 100vw; height: 100vh;
-      background: linear-gradient(120deg, rgba(0,32,64,0.55) 0%, rgba(0,32,64,0.25) 100%);
+      background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
       z-index: 0;
       pointer-events: none;
     }
     .dashboard-container {
       position: relative;
       z-index: 1;
-      background: rgba(255,255,255,0.93);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 8px rgba(0,32,64,0.08);
+      max-width: 900px;
+      margin: 3rem auto 2rem auto;
+      background: rgba(255,255,255,0.97);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
       border-radius: 18px;
       padding: 2.5rem 2rem 2rem 2rem;
-      margin-top: 2rem;
+    }
+    .school-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .school-logo {
+      height: 70px;
+      margin-right: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    }
+    .school-title {
+      margin: 0;
+      font-size: 2rem;
+      color: #003366;
+      font-weight: 700;
+    }
+    .motto {
+      margin: 0.2rem 0 0 0;
+      font-size: 1.1rem;
+      color: #0074d9;
+      font-style: italic;
+    }
+    .dashboard-overview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      justify-content: center;
       margin-bottom: 2rem;
+    }
+    .dashboard-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 1.2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s;
+      width: 180px;
+      border: 2px solid #e3e8f0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #003366;
+    }
+    .dashboard-card:hover {
+      box-shadow: 0 8px 32px rgba(0,32,64,0.18);
+      transform: translateY(-4px) scale(1.04);
+      border-color: #0074d9;
+      background: #f7f9fc;
     }
     .logout-btn {
       float: right;
       margin: 1rem;
       position: relative;
       z-index: 2;
+      background: #e3e8f0;
+      color: #003366;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem 1.2rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
     }
-    .school-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-    .school-logo {
-      height: 60px;
-      margin-right: 1rem;
-    }
-    .school-header h1 {
-      margin: 0;
-      font-size: 1.5rem;
+    .logout-btn:hover {
+      background: #cdd6e6;
     }
     /* #aboutMeBtn style moved to teacher-dashboard.css for consistency */
     .tab-section {
@@ -67,18 +117,38 @@
         height: 40px;
         margin-right: 0.5rem;
       }
-      .school-header h1 {
+      .school-title {
         font-size: 1.1rem;
+      }
+      .dashboard-overview {
+        flex-direction: column;
+        gap: 1.2rem;
+        align-items: center;
+      }
+      .dashboard-card {
+        width: 90vw;
+        min-width: 180px;
       }
     }
   </style>
 </head>
 <body>
+  <!-- Session Expired Modal -->
+  <div id="sessionExpiredModal" class="modal hidden" style="z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div class="modal-content" style="max-width:350px;text-align:center;">
+      <h3>Session Expired</h3>
+      <p>Your session has expired due to inactivity.<br>Please log in again.</p>
+      <button onclick="window.location.href='login.html'">Go to Login</button>
+    </div>
+  </div>
   <div class="dashboard-bg-overlay"></div>
   <button id="logoutBtn" class="logout-btn">Logout</button>
   <div class="school-header">
     <img src="Badge.png" alt="School Logo" class="school-logo" />
-    <h1>Nkawkaw Nsuta M/A 'B' Basic School</h1>
+    <div>
+      <h1 class="school-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+      <p class="motto">Empowering the Future</p>
+    </div>
   </div>
   <button id="aboutMeBtn">About Me</button>
   <!-- About Me Modal -->
@@ -172,14 +242,14 @@
               <option value="">-- Select Subject --</option>
             </select>
             <label for="termInput">Term:</label>
-            <select id="termInput">
+            <select id="termInput" onchange="loadStudents()">
               <option value="">-- Select Term --</option>
               <option value="1st Term">1st Term</option>
               <option value="2nd Term">2nd Term</option>
               <option value="3rd Term">3rd Term</option>
             </select>
             <label for="yearInput">Academic Year:</label>
-            <input id="yearInput" placeholder="Academic Year (e.g. 2025/2026)">
+            <input id="yearInput" placeholder="Academic Year (e.g. 2025/2026)" oninput="loadStudents()">
           </div>
           <table>
             <thead>
@@ -420,6 +490,38 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="teacher-dashboard.js"></script>
   <script src="router.js"></script>
+<script>
+// --- Session Timeout Logic ---
+const SESSION_TIMEOUT_MINUTES = 30; // Change as needed
+let sessionTimeoutHandle;
+let lastActivity = Date.now();
+function resetSessionTimer() {
+  lastActivity = Date.now();
+  if (sessionTimeoutHandle) clearTimeout(sessionTimeoutHandle);
+  sessionTimeoutHandle = setTimeout(checkSessionTimeout, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+}
+function checkSessionTimeout() {
+  const now = Date.now();
+  if (now - lastActivity >= SESSION_TIMEOUT_MINUTES * 60 * 1000) {
+    sessionStorage.clear();
+    localStorage.clear();
+    showSessionExpiredModal();
+  } else {
+    resetSessionTimer();
+  }
+}
+function showSessionExpiredModal() {
+  const modal = document.getElementById('sessionExpiredModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+}
+['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+  window.addEventListener(evt, resetSessionTimer, true);
+});
+resetSessionTimer();
+</script>
 </body>
 <script>
   // Modal controls

@@ -1,4 +1,4 @@
-  <!-- Admin Modal -->
+<!-- Admin Modal -->
   <div id="adminModal" class="modal hidden">
     <div class="modal-content">
       <h3>Register Admin</h3>
@@ -22,10 +22,94 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | School Management</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+  body {
+    background: url('admin dashboard background.jpg') center center/cover no-repeat fixed;
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .admin-bg-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw; height: 100vh;
+    background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .dashboard-main {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 3rem auto 2rem auto;
+    background: rgba(255,255,255,0.97);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
+    border-radius: 18px;
+    padding: 2.5rem 2rem 2rem 2rem;
+  }
+  .dashboard-cards-bg {
+    background: rgba(255,255,255,0.97);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
+    padding: 2.5rem 2rem 2rem 2rem;
+    margin: 0 auto 2rem auto;
+    max-width: 900px;
+  }
+  .dashboard-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+  .school-logo {
+    height: 70px;
+    margin-right: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .school-title {
+    margin: 0;
+    font-size: 2rem;
+    color: #003366;
+    font-weight: 700;
+  }
+  .motto {
+    margin: 0.2rem 0 0 0;
+    font-size: 1.1rem;
+    color: #0074d9;
+    font-style: italic;
+  }
+  .logout-btn {
+    float: right;
+    margin: 1rem;
+    position: relative;
+    z-index: 2;
+    background: #e3e8f0;
+    color: #003366;
+    border: none;
+    border-radius: 8px;
+    padding: 0.7rem 1.2rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .logout-btn:hover {
+    background: #cdd6e6;
+  }
+</style>
 </head>
 <body>
 
+
   <div class="admin-bg-overlay"></div>
+  <!-- Session Expired Modal -->
+  <div id="sessionExpiredModal" class="modal hidden" style="z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div class="modal-content" style="max-width:350px;text-align:center;">
+      <h3>Session Expired</h3>
+      <p>Your session has expired due to inactivity.<br>Please log in again.</p>
+      <button onclick="window.location.href='login.html'">Go to Login</button>
+    </div>
+  </div>
 
   <header class="dashboard-header">
   <img src="Badge.png" alt="School Logo" class="school-logo" />
@@ -37,46 +121,56 @@
 
 
   <main class="dashboard-main">
+    <!-- Report Card Promotion Pass Mark Modal -->
+    <div id="promotionPassMarkModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Report Card Promotion Pass Mark</h3>
+        <p class="section-desc">Set the total marks required for promotion on the report card (used for annual promotion, not promotion exam).</p>
+        <form id="promotionPassMarkForm" style="margin-bottom:1em;">
+          <label for="promotionPassMarkInput">Promotion Pass Mark:</label>
+          <input id="promotionPassMarkInput" type="number" min="0" max="10000" step="1" style="width:120px;" required />
+          <button type="submit">Save</button>
+          <span id="promotionPassMarkStatus" style="margin-left:1em;color:green;"></span>
+        </form>
+        <button type="button" onclick="closeModal('promotionPassMarkModal')">Back to Dashboard</button>
+      </div>
+    </div>
     <!-- Dashboard Overview Cards -->
-    <div id="dashboardOverview" class="dashboard-overview">
-      <a href="promotion-exam-admin.html" style="text-decoration:none;">
-        <div class="dashboard-card" data-section="promotionExamAdminLink">
-          <img src="icons/exam.svg" alt="Promotion Exams" class="dashboard-card-icon" />
-          <span class="dashboard-card-title">Promotion Exams</span>
+    <div class="dashboard-cards-bg">
+      <div id="dashboardOverview" class="dashboard-overview">
+        <div class="dashboard-card" data-section="promotionPassMarkSection" onclick="openModal('promotionPassMarkModal')">
+          <span class="dashboard-card-title">Report Card Promotion Pass Mark</span>
         </div>
-      </a>
-      <div class="dashboard-card" data-section="reports">
-        <img src="icons/reports.svg" alt="Reports" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Reports</span>
-      </div>
-      <div class="dashboard-card" data-section="events">
-  <img src="icons/events.svg" alt="Events" class="dashboard-card-icon" />
-  <span class="dashboard-card-title">Events</span>
-  <button class="dashboard-card-action" onclick="openModal('eventsModal')">Add Event</button>
-      </div>
-      <div class="dashboard-card" data-section="schoolDatesSection">
-        <img src="icons/school-dates.svg" alt="School Dates" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">School Dates</span>
-      </div>
-      <div class="dashboard-card" data-section="students">
-        <img src="icons/students.svg" alt="Students" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Students</span>
-      </div>
-      <div class="dashboard-card" data-section="teachers">
-        <img src="icons/teachers.svg" alt="Teachers" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Teachers</span>
-      </div>
-      <div class="dashboard-card" data-section="admins">
-        <img src="icons/admins.svg" alt="Admins" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Admins</span>
-      </div>
-      <div class="dashboard-card" data-section="interestConduct">
-        <img src="icons/interest-conduct.svg" alt="Interest & Conduct" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Interest & Conduct</span>
-      </div>
-      <div class="dashboard-card" data-section="interestUpdate">
-        <img src="icons/interest-update.svg" alt="Interest Update" class="dashboard-card-icon" />
-        <span class="dashboard-card-title">Interest Update</span>
+        <a href="promotion-exam-admin.html" style="text-decoration:none;">
+          <div class="dashboard-card" data-section="promotionExamAdminLink">
+            <span class="dashboard-card-title">Promotion Exams</span>
+          </div>
+        </a>
+        <div class="dashboard-card" data-section="reports">
+          <span class="dashboard-card-title">Reports</span>
+        </div>
+        <div class="dashboard-card" data-section="events">
+    <span class="dashboard-card-title">Events</span>
+    <button class="dashboard-card-action" onclick="openModal('eventsModal')">Add Event</button>
+        </div>
+        <div class="dashboard-card" data-section="schoolDatesSection">
+          <span class="dashboard-card-title">School Dates</span>
+        </div>
+        <div class="dashboard-card" data-section="students">
+          <span class="dashboard-card-title">Students</span>
+        </div>
+        <div class="dashboard-card" data-section="teachers">
+          <span class="dashboard-card-title">Teachers</span>
+        </div>
+        <div class="dashboard-card" data-section="admins">
+          <span class="dashboard-card-title">Admins</span>
+        </div>
+        <div class="dashboard-card" data-section="interestConduct">
+          <span class="dashboard-card-title">Interest & Conduct</span>
+        </div>
+        <div class="dashboard-card" data-section="interestUpdate">
+          <span class="dashboard-card-title">Interest Update</span>
+        </div>
       </div>
     </div>
     <!-- Student Interest & Conduct Subdashboard -->
@@ -94,7 +188,6 @@
     <!-- Reports Section -->
     <section id="reports" class="dashboard-section enhanced-section">
       <div class="section-header">
-        <img src="icons/reports.svg" alt="Reports" class="section-header-icon" />
         <div>
           <h2>Reports</h2>
           <p class="section-desc">View and manage all school reports</p>
@@ -106,7 +199,7 @@
     <!-- School Dates Section -->
   <section id="schoolDatesSection" class="dashboard-section enhanced-section">
       <div class="section-header">
-        <img src="icons/school-dates.svg" alt="School Dates" class="section-header-icon" />
+        
         <div>
           <h2>School Dates</h2>
           <p class="section-desc">Set and view vacation and reopening dates</p>
@@ -158,7 +251,7 @@
     <!-- Students Section -->
     <section id="students" class="enhanced-section">
       <div class="section-header">
-        <img src="icons/students.svg" alt="Students" class="section-header-icon" />
+    
         <div>
           <h2>Register Students</h2>
           <p class="section-desc">Add, import, and manage student records</p>
@@ -176,6 +269,8 @@
           <option value="JHS 2">JHS 2</option>
           <option value="JHS 3">JHS 3</option>
         </select>
+        <label for="studentSearch">Search Student:</label>
+        <input type="text" id="studentSearch" placeholder="Type to search..." oninput="filterStudentDropdown()" />
         <label for="studentSelect">Select Student:</label>
         <select id="studentSelect" onchange="showSelectedStudent()">
           <option value="">-- Select Student --</option>
@@ -205,7 +300,6 @@
     <!-- Teachers Section -->
     <section id="teachers" class="enhanced-section">
       <div class="section-header">
-        <img src="icons/teachers.svg" alt="Teachers" class="section-header-icon" />
         <div>
           <h2>Register Teachers</h2>
           <p class="section-desc">Add and manage teacher records</p>
@@ -231,7 +325,7 @@
     <!-- Admins Section -->
     <section id="admins" class="enhanced-section">
       <div class="section-header">
-        <img src="icons/admins.svg" alt="Admins" class="section-header-icon" />
+
         <div>
           <h2>Manage Admins</h2>
           <p class="section-desc">Add and manage admin accounts</p>
@@ -593,11 +687,53 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="router.js"></script>
 <script>
-  document.getElementById('logoutBtn').onclick = function() {
+// --- Session Timeout Logic ---
+// Set session timeout here (in minutes)
+const SESSION_TIMEOUT_MINUTES = 30; // Change as needed (e.g. 0.5 for 30 seconds, 1 for 1 min, 60 for 1 hour)
+let sessionTimeoutHandle;
+let lastActivity = Date.now();
+
+function resetSessionTimer() {
+  lastActivity = Date.now();
+  if (sessionTimeoutHandle) clearTimeout(sessionTimeoutHandle);
+  sessionTimeoutHandle = setTimeout(checkSessionTimeout, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+}
+
+function checkSessionTimeout() {
+  const now = Date.now();
+  if (now - lastActivity >= SESSION_TIMEOUT_MINUTES * 60 * 1000) {
+    // Session expired
     sessionStorage.clear();
     localStorage.clear();
-    window.location.href = 'index.html';
-  };
+    showSessionExpiredModal();
+  } else {
+    // Still active, set next check
+    resetSessionTimer();
+  }
+}
+
+function showSessionExpiredModal() {
+  const modal = document.getElementById('sessionExpiredModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+}
+
+// Listen for user activity
+['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+  window.addEventListener(evt, resetSessionTimer, true);
+});
+
+// Start timer on page load
+resetSessionTimer();
+
+// Logout button
+document.getElementById('logoutBtn').onclick = function() {
+  sessionStorage.clear();
+  localStorage.clear();
+  window.location.href = 'login.html';
+};
 </script>
 </body>
 </html>

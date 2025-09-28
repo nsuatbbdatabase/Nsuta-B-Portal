@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="student-dashboard.css" />
 </head>
 <body>
+  <!-- Session Expired Modal -->
+  <div id="sessionExpiredModal" class="modal hidden" style="z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div class="modal-content" style="max-width:350px;text-align:center;">
+      <h3>Session Expired</h3>
+      <p>Your session has expired due to inactivity.<br>Please log in again.</p>
+      <button onclick="window.location.href='login.html'">Go to Login</button>
+    </div>
+  </div>
   <div class="student-dashboard-bg"></div>
   <div class="dashboard-bg-overlay"></div>
   <button id="logoutBtn" class="logout-btn">Logout</button>
@@ -26,7 +34,7 @@
     <!-- Timetable Show/Hide Section -->
     <div class="collapsible-section">
       <button class="collapsible-btn" onclick="toggleStudentTimetable()">Show Timetable</button>
-      <div id="studentTimetableWrapper" class="collapsible-content" style="display:none;">
+  <div id="studentTimetableWrapper" class="collapsible-content">
         <h3>Your Timetable</h3>
         <table id="studentTimetableTable">
           <thead>
@@ -39,7 +47,7 @@
     <!-- Extra Classes Show/Hide Section -->
     <div class="collapsible-section">
       <button class="collapsible-btn" onclick="toggleStudentExtraClasses()">Show Extra Classes</button>
-      <div id="studentExtraClassesWrapper" class="collapsible-content" style="display:none;">
+  <div id="studentExtraClassesWrapper" class="collapsible-content">
         <h3>Your Extra Classes</h3>
         <table id="studentExtraClassesTable">
           <thead>
@@ -58,6 +66,24 @@
     <!-- 📂 Profile Section (Always Visible) -->
   <div id="profileSection" class="tab-section profile-section">
       <div id="studentInfo">
+  <button id="openChangePinModalBtn" class="change-pin-btn" type="button">Change PIN</button>
+<!-- Change PIN Modal -->
+<div id="changePinModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>Change PIN</h3>
+    <form id="changePinForm">
+      <label for="oldPinInput">Current PIN:</label>
+      <input type="password" id="oldPinInput" required minlength="4" maxlength="8" />
+      <label for="newPinInput">New PIN:</label>
+      <input type="password" id="newPinInput" required minlength="4" maxlength="8" />
+      <label for="confirmPinInput">Confirm New PIN:</label>
+      <input type="password" id="confirmPinInput" required minlength="4" maxlength="8" />
+      <button type="submit">Save</button>
+      <button type="button" onclick="closeChangePinModal()">Cancel</button>
+  <div id="changePinStatus"></div>
+    </form>
+  </div>
+</div>
         <h3 id="studentName">[Student Name]</h3>
         <p id="studentClass">Class: [Class]</p>
         <p id="studentGender">Gender: [Gender]</p>
@@ -243,6 +269,38 @@
   <script src="student-dashboard.js"></script>
     <script src="router.js"></script>
 <script>
+// --- Session Timeout Logic ---
+const SESSION_TIMEOUT_MINUTES = 30; // Change as needed
+let sessionTimeoutHandle;
+let lastActivity = Date.now();
+function resetSessionTimer() {
+  lastActivity = Date.now();
+  if (sessionTimeoutHandle) clearTimeout(sessionTimeoutHandle);
+  sessionTimeoutHandle = setTimeout(checkSessionTimeout, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+}
+function checkSessionTimeout() {
+  const now = Date.now();
+  if (now - lastActivity >= SESSION_TIMEOUT_MINUTES * 60 * 1000) {
+    sessionStorage.clear();
+    localStorage.clear();
+    showSessionExpiredModal();
+  } else {
+    resetSessionTimer();
+  }
+}
+function showSessionExpiredModal() {
+  const modal = document.getElementById('sessionExpiredModal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+  }
+}
+['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
+  window.addEventListener(evt, resetSessionTimer, true);
+});
+resetSessionTimer();
+</script>
+<script>
   // Show dashboard overview by default
   function showDashboardOverview() {
     document.getElementById('dashboardOverview').style.display = 'grid';
@@ -272,6 +330,17 @@
     });
     showDashboardOverview();
   });
+</script>
+<script>
+  // Add logout logic to redirect to login.html
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.onclick = function() {
+      sessionStorage.clear();
+      localStorage.clear();
+      window.location.href = 'login.html';
+    };
+  }
 </script>
 </body>
 </html>

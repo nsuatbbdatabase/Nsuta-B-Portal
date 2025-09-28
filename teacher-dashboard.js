@@ -3,10 +3,16 @@ function logout() {
   sessionStorage.clear();
   sessionStorage.removeItem('teacher_staff_id');
   localStorage.removeItem('teacherId');
-  window.location.href = 'index.html';
+  window.location.href = 'login.html';
 }
 
 window.addEventListener('DOMContentLoaded', function() {
+  // Prevent access if not logged in as teacher
+  const teacherId = localStorage.getItem('teacherId');
+  if (!teacherId) {
+    window.location.href = 'login.html';
+    return;
+  }
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.onclick = logout;
@@ -56,7 +62,7 @@ async function loadAttendanceStudents() {
   if (!classVal) return;
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, first_name, surname')
+    .select('id, first_name, surname', { head: true })
     .eq('class', classVal);
   if (error || !Array.isArray(data) || data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="2">No students found for this class.</td></tr>';
@@ -154,7 +160,7 @@ async function populateMotivationStudentDropdown() {
   // Fetch students in any of the teacher's classes
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, first_name, surname, class')
+    .select('id, first_name, surname, class', { head: true })
     .in('class', teacher.classes);
   select.innerHTML = '<option value="">-- Select Student --</option>';
   if (!error && Array.isArray(data)) {
@@ -181,7 +187,7 @@ async function loadResourceRequests() {
   tbody.innerHTML = '';
   const { data, error } = await supabaseClient
     .from('resource_requests')
-    .select('id, student_id, resource, reason, response, created_at, students(first_name, surname)')
+    .select('id, student_id, resource, reason, response, created_at, students(first_name, surname)', { head: true })
     .eq('teacher_id', teacher.id)
     .order('created_at', { ascending: false });
   if (error || !Array.isArray(data)) {
@@ -262,6 +268,26 @@ let students = [];
 
 // 🔐 Load teacher profile and dashboard
 async function loadTeacherDashboard(staffId) {
+  // Try to get staffId from all possible sources if not provided
+  if (!staffId) {
+    staffId = sessionStorage.getItem('teacher_staff_id') || localStorage.getItem('teacher_staff_id') || localStorage.getItem('teacherId') || sessionStorage.getItem('teacherId');
+    if (!staffId && window.teacher && window.teacher.staff_id) {
+      staffId = window.teacher.staff_id;
+    }
+  }
+  // If still no staffId, show error and return
+  if (!staffId) {
+    document.getElementById('welcomeMessage').textContent = 'Access denied or teacher not found. Please log in with your Staff ID.';
+    setTimeout(() => {
+      window.location.href = 'login.html?role=teacher';
+    }, 2000);
+    return;
+  }
+  // Debug: Show staffId being used, type, and trimmed value
+  const debugDiv = document.getElementById('debugStaffId');
+  let originalStaffId = staffId;
+  staffId = staffId.trim();
+  if (debugDiv) debugDiv.textContent = `Querying teacher with staff ID: '${staffId}' (type: ${typeof staffId}, original: '${originalStaffId}')`;
   // Load teacher basic info
   const { data: teacherData, error: teacherError } = await supabaseClient
     .from('teachers')
@@ -269,7 +295,19 @@ async function loadTeacherDashboard(staffId) {
     .eq('staff_id', staffId)
     .single();
   if (teacherError || !teacherData) {
-    document.getElementById('welcomeMessage').textContent = 'Access denied or teacher not found.';
+    document.getElementById('welcomeMessage').textContent = 'Teacher not found for staff ID: ' + staffId + '.\nError: ' + (teacherError ? teacherError.message : 'No data returned.');
+    if (debugDiv) debugDiv.textContent += `\nSupabase error: ${teacherError ? teacherError.message : 'No data'}\nFetching all staff_id values for debug...`;
+    // Fetch all staff_id values for debug
+    const { data: allTeachers, error: allTeachersError } = await supabaseClient
+      .from('teachers')
+      .select('staff_id');
+    if (debugDiv) {
+      if (allTeachersError) {
+        debugDiv.textContent += `\nError fetching all staff_id: ${allTeachersError.message}`;
+      } else if (Array.isArray(allTeachers)) {
+        debugDiv.textContent += `\nAll staff_id values in DB: [${allTeachers.map(t => `'${t.staff_id}' (${typeof t.staff_id})`).join(', ')}]`;
+      }
+    }
     return;
   }
   teacher = teacherData;
@@ -453,7 +491,10 @@ async function loadPromotionExamStudents() {
   const subjectVal = document.getElementById('promotionSubjectSelect').value;
   const tbody = document.getElementById('promotionExamTableBody');
   tbody.innerHTML = '';
-  if (!classVal || !subjectVal) return;
+  if (!classVal) {
+    tbody.innerHTML = '<tr><td colspan="2">No JHS 2 students found.</td></tr>';
+    return;
+  }
   const { data, error } = await supabaseClient
     .from('students')
     .select('id, first_name, surname')
@@ -462,20 +503,36 @@ async function loadPromotionExamStudents() {
     tbody.innerHTML = '<tr><td colspan="2">No JHS 2 students found.</td></tr>';
     return;
   }
+  // Only load marks if subject, term, and year are selected
+  let promoMarksMap = {};
+  const promoYear = document.getElementById('promotionYearInput').value;
+  const promoTerm = document.getElementById('promotionTermInput').value;
+  if (subjectVal && promoTerm && promoYear) {
+    const { data: promoMarksData, error: promoMarksError } = await supabaseClient
+      .from('promotion_exams')
+      .select('student_id, score')
+      .eq('class', classVal)
+      .eq('subject', subjectVal)
+      .eq('term', promoTerm)
+      .eq('year', promoYear);
+    if (!promoMarksError && Array.isArray(promoMarksData)) {
+      promoMarksData.forEach(m => { promoMarksMap[m.student_id] = m.score; });
+    }
+  }
   data.forEach(student => {
+    // Pre-fill score if available
+    const scorePrefill = promoMarksMap[student.id] !== undefined ? promoMarksMap[student.id] : '';
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td><input type="number" min="0" max="100" class="promotion-score" data-student-id="${student.id}" /></td>
+      <td><input type="number" min="0" max="100" class="promotion-score" data-student-id="${student.id}" value="${scorePrefill}" /></td>
     `;
     tbody.appendChild(row);
   });
 
   // After loading students, show pass/fail summary if year and term are selected
-  const yearVal = document.getElementById('promotionYearInput').value;
-  const termVal = document.getElementById('promotionTermInput').value;
-  if (yearVal && termVal === 'Promotion') {
-    showPromotionPassFailSummary(yearVal);
+  if (promoYear && promoTerm === 'Promotion') {
+    showPromotionPassFailSummary(promoYear);
   }
 }
 
@@ -526,7 +583,7 @@ async function submitPromotionExam() {
   const termVal = document.getElementById('promotionTermInput').value;
   const yearVal = document.getElementById('promotionYearInput').value;
   if (!classVal || !subjectVal || !termVal || !yearVal) {
-    alert('Please fill all fields.');
+      alert('Please select class, subject, term, and year.');
     return;
   }
   // Ensure term is valid
@@ -560,6 +617,8 @@ async function submitPromotionExam() {
     } else {
       alert('Promotion exam submitted to admin!');
       document.getElementById('promotionExamTableBody').innerHTML = '';
+      // Optionally reload students to repopulate form with latest marks
+      loadPromotionExamStudents();
     }
   } catch (err) {
     console.error('Promotion exam upsert exception:', err);
@@ -624,10 +683,16 @@ async function loadStudents(section = 'sba') {
     selectedClass = document.getElementById('classSelect').value;
     selectedSubject = document.getElementById('subjectSelect').value;
   }
-  if (!selectedClass || !selectedSubject) return;
+  // Load students as soon as class is selected
+  if (!selectedClass) {
+    students = [];
+    if (section === 'sba') renderSBAForm({});
+    else if (section === 'exam') renderExamForm({});
+    return;
+  }
   const { data, error } = await supabaseClient
     .from('students')
-  .select('id, first_name, surname')
+    .select('id, first_name, surname')
     .eq('class', selectedClass);
   if (error) {
     console.error('Failed to load students:', error.message);
@@ -635,38 +700,78 @@ async function loadStudents(section = 'sba') {
   } else {
     students = data;
   }
-  if (section === 'exam') {
-    renderExamForm();
-  } else {
-    renderSBAForm();
+  // Only load marks if subject, term, and year are selected
+  let marksMap = {};
+  if (section === 'sba') {
+    const { term, year } = getTermYear();
+    if (selectedSubject && term && year) {
+      try {
+        const result = await supabaseClient
+          .from('results')
+          .select('student_id, class_score')
+          .eq('subject', selectedSubject)
+          .eq('term', term)
+          .eq('year', year);
+        const marksData = result.data;
+        if (Array.isArray(marksData)) {
+          marksData.forEach(m => {
+            if (m.class_score !== undefined && m.class_score !== null) {
+              marksMap[m.student_id] = m.class_score;
+            }
+          });
+        }
+      } catch (err) {
+        console.error('SBA marks query failed:', err);
+        alert('Failed to load SBA marks. Please check your database columns.');
+      }
+    }
+    renderSBAForm(marksMap);
+  } else if (section === 'exam') {
+    const term = document.getElementById('termInputExam')?.value || '';
+    const year = document.getElementById('yearInputExam')?.value || '';
+    if (selectedSubject && term && year) {
+      const { data: examMarksData, error: examMarksError } = await supabaseClient
+        .from('results')
+        .select('student_id, exam_score')
+        .eq('subject', selectedSubject)
+        .eq('term', term)
+        .eq('year', year);
+      if (!examMarksError && Array.isArray(examMarksData)) {
+        examMarksData.forEach(m => { marksMap[m.student_id] = m.exam_score; });
+      }
+    }
+    renderExamForm(marksMap);
   }
 }
 
 // 📝 Render SBA form
-function renderSBAForm() {
-  const tbody = document.getElementById('sbaTableBody');
+function renderExamForm(examMarksMap = {}) {
+  const tbody = document.getElementById('examTableBody');
   tbody.innerHTML = '';
   if (!students || students.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="7">No students found for this class.</td>';
+    row.innerHTML = '<td colspan="3">No students found for this class.</td>';
     tbody.appendChild(row);
     return;
   }
   students.forEach(student => {
+    // Pre-fill exam score if available
+    const examPrefill = examMarksMap[student.id] !== undefined ? examMarksMap[student.id] : 0;
+    const scaledPrefill = Math.round((examPrefill / 100) * 50);
     const row = document.createElement('tr');
     row.innerHTML = `
-  <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" /></td>
-      <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" /></td>
-      <td><span id="total-${student.id}">0</span></td>
-      <td><span id="scaled-${student.id}">0</span></td>
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" value="${examPrefill}" /></td>
+      <td><span id="examScaled-${student.id}">${scaledPrefill}</span></td>
     `;
     tbody.appendChild(row);
   });
-  document.querySelectorAll('#sbaTableBody input').forEach(input => {
-    input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
+  document.querySelectorAll('#examTableBody input').forEach(input => {
+    input.addEventListener('input', () => {
+      const raw = Math.min(parseInt(input.value) || 0, 100);
+      const scaled = Math.round((raw / 100) * 50);
+      document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
+    });
   });
 }
 
@@ -719,9 +824,10 @@ async function submitSBA() {
   const subject = document.getElementById('subjectSelect').value;
   const { term, year } = getTermYear();
   if (!subject || !term || !year) {
-    alert('Please select subject, term, and year.');
+      alert('Please select class, subject, term, and year.');
     return;
   }
+    const classVal = document.getElementById('classSelect').value;
   const submissions = [];
   for (const student of students) {
     const scaled = parseInt(document.getElementById(`scaled-${student.id}`).textContent);
@@ -773,30 +879,37 @@ async function submitSBA() {
 }
 
 // 🧪 Render Exam form
-function renderExamForm() {
-  const tbody = document.getElementById('examTableBody');
+function renderSBAForm(marksMap = {}) {
+  const tbody = document.getElementById('sbaTableBody');
   tbody.innerHTML = '';
   if (!students || students.length === 0) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="3">No students found for this class.</td>';
+    row.innerHTML = '<td colspan="7">No students found for this class.</td>';
     tbody.appendChild(row);
     return;
   }
   students.forEach(student => {
+    // Pre-fill all SBA components if available
+    let individual = 0, group = 0, classTest = 0, project = 0, scaledPrefill = 0, totalPrefill = 0;
+    if (typeof marksMap[student.id] === 'number') {
+      // Only class_score available
+      scaledPrefill = marksMap[student.id];
+      totalPrefill = Math.round((scaledPrefill / 50) * 60);
+    }
     const row = document.createElement('tr');
     row.innerHTML = `
-  <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" /></td>
-      <td><span id="examScaled-${student.id}">0</span></td>
+      <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" value="${individual}" /></td>
+      <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" value="${group}" /></td>
+      <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" value="${classTest}" /></td>
+      <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" value="${project}" /></td>
+      <td><span id="total-${student.id}">${totalPrefill}</span></td>
+      <td><span id="scaled-${student.id}">${scaledPrefill}</span></td>
     `;
     tbody.appendChild(row);
   });
-  document.querySelectorAll('#examTableBody input').forEach(input => {
-    input.addEventListener('input', () => {
-      const raw = Math.min(parseInt(input.value) || 0, 100);
-      const scaled = Math.round((raw / 100) * 50);
-      document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
-    });
+  document.querySelectorAll('#sbaTableBody input').forEach(input => {
+    input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
   });
 }
 
@@ -806,9 +919,10 @@ async function submitExams() {
   const term = document.getElementById('termInputExam').value;
   const year = document.getElementById('yearInputExam').value;
   if (!subject || !term || !year) {
-    alert('Please select subject, term, and year.');
+      alert('Please select class, subject, term, and year.');
     return;
   }
+    const classVal = document.getElementById('classSelectExam').value;
   const submissions = [];
   for (const student of students) {
     const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
@@ -856,6 +970,10 @@ async function submitExams() {
   } else {
     console.log('Exam upserted:', data);
     alert('Exam scores submitted successfully.');
+    // Clear Exam form fields after submit
+    document.getElementById('examTableBody').innerHTML = '';
+    // Optionally reload students to repopulate form with latest marks
+    loadStudents('exam');
   }
 }
 // 📤 Send assignment to students
@@ -1195,6 +1313,12 @@ window.addEventListener('DOMContentLoaded', function() {
   const subjectSelectExam = document.getElementById('subjectSelectExam');
   if (classSelectExam) classSelectExam.addEventListener('change', () => loadStudents('exam'));
   if (subjectSelectExam) subjectSelectExam.addEventListener('change', () => loadStudents('exam'));
+
+    // Add event listeners to term and year fields for Exam section
+    const termInputExam = document.getElementById('termInputExam');
+    const yearInputExam = document.getElementById('yearInputExam');
+    if (termInputExam) termInputExam.addEventListener('change', () => loadStudents('exam'));
+    if (yearInputExam) yearInputExam.addEventListener('input', () => loadStudents('exam'));
 });
 
 function togglePanel(panelId) {

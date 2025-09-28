@@ -1,5 +1,84 @@
 // Dashboard Overview Back Button Logic
 window.addEventListener('DOMContentLoaded', () => {
+  // Change PIN form logic
+  const changePinForm = document.getElementById('changePinForm');
+  if (changePinForm) {
+    changePinForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const oldPin = document.getElementById('oldPinInput').value.trim();
+      const newPin = document.getElementById('newPinInput').value.trim();
+      const confirmPin = document.getElementById('confirmPinInput').value.trim();
+      const statusDiv = document.getElementById('changePinStatus');
+      statusDiv.style.color = 'red';
+      if (!oldPin || !newPin || !confirmPin) {
+        statusDiv.textContent = 'All fields are required.';
+        return;
+      }
+      if (newPin !== confirmPin) {
+        statusDiv.textContent = 'New PIN and confirmation do not match.';
+        return;
+      }
+      if (newPin.length < 4 || newPin.length > 8) {
+        statusDiv.textContent = 'PIN must be 4-8 digits.';
+        return;
+      }
+      // Get current student info from session/localStorage
+      const student = JSON.parse(localStorage.getItem('studentSession'));
+      if (!student) {
+        statusDiv.textContent = 'Session expired. Please log in again.';
+        return;
+      }
+      // Validate old PIN
+      if (oldPin !== student.pin) {
+        statusDiv.textContent = 'Current PIN is incorrect.';
+        return;
+      }
+      // Update PIN in Supabase
+      try {
+        const { data, error } = await supabase
+          .from('students')
+          .update({ pin: newPin })
+          .eq('id', student.id);
+        if (error) {
+          statusDiv.textContent = 'Failed to update PIN. Please try again.';
+          return;
+        }
+        // Update local session
+        student.pin = newPin;
+        localStorage.setItem('studentSession', JSON.stringify(student));
+        statusDiv.style.color = 'green';
+        statusDiv.textContent = 'PIN changed successfully!';
+        setTimeout(() => {
+          window.closeChangePinModal();
+        }, 1200);
+      } catch (err) {
+        statusDiv.textContent = 'An error occurred. Please try again.';
+      }
+    });
+  }
+  // Change PIN modal logic
+  const openChangePinModalBtn = document.getElementById('openChangePinModalBtn');
+  const changePinModal = document.getElementById('changePinModal');
+  if (openChangePinModalBtn && changePinModal) {
+    openChangePinModalBtn.onclick = function() {
+      changePinModal.classList.remove('hidden');
+      changePinModal.style.display = '';
+    };
+  }
+  window.closeChangePinModal = function() {
+    if (changePinModal) {
+      changePinModal.classList.add('hidden');
+      changePinModal.style.display = 'none';
+      document.getElementById('changePinForm').reset();
+      document.getElementById('changePinStatus').textContent = '';
+    }
+  };
+  // Prevent access if not logged in as student
+  const studentId = localStorage.getItem('studentId');
+  if (!studentId) {
+    window.location.href = 'login.html';
+    return;
+  }
   const backBtn = document.getElementById('backToDashboardBtn');
   if (backBtn) {
     backBtn.addEventListener('click', () => {
@@ -209,7 +288,6 @@ function loadProfile() {
       .order('updated_at', { ascending: false })
       .limit(1)
       .single()
-      .accept('application/json')
       .then(({ data }) => {
         if (data) {
           if (data.interest && interestElem) interestElem.textContent = 'Interest: ' + data.interest;
@@ -249,8 +327,7 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.textContent = 'Show Extra Classes';
     }
   };
-  // Fetch and display upcoming events
-  fetchAndDisplayUpcomingEvents();
+  // (fetchAndDisplayUpcomingEvents removed: function not defined)
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.onclick = function() {
@@ -284,6 +361,33 @@ document.addEventListener('DOMContentLoaded', function() {
   window.showTab('profileSection');
   // Optionally, load teacher dropdowns once on page load
   if (typeof populateTeacherDropdown === 'function') populateTeacherDropdown();
+
+  // --- Student session debug and Supabase fetch ---
+  // Add a debug div if not present
+  let debugDiv = document.getElementById('debugStudentUsername');
+  if (!debugDiv) {
+  // debugDiv removed
+  }
+  // Try to get username from all possible sources
+  let username = sessionStorage.getItem('student_username') || localStorage.getItem('student_username') || (window.student && window.student.username);
+  let originalUsername = username;
+  if (username) username = username.trim();
+  // debugDiv output removed
+  // Only fetch if window.student is not set
+  if (!window.student && username) {
+    supabaseClient
+      .from('students')
+      .select('*')
+      .eq('username', username)
+      .single()
+      .then(async ({ data, error }) => {
+        if (!error && data) {
+          window.student = data;
+          renderStudentHeader();
+        }
+        // Debug output removed
+      });
+  }
 });
 // --- AI Quiz Generator ---
 async function generateQuiz() {
@@ -851,12 +955,13 @@ async function sendResourceRequest() {
 window.addEventListener('DOMContentLoaded', async () => {
   await populateTeacherDropdown();
   const studentId = localStorage.getItem('studentId');
-  if (studentId) {
+  const studentUsername = localStorage.getItem('student_username');
+  if (studentId && studentUsername) {
     (async () => {
       const { data, error } = await supabaseClient
         .from('students')
         .select('*')
-        .eq('id', studentId)
+        .eq('username', studentUsername)
         .single();
       if (error || !data) {
         alert('Session expired. Please log in again.');

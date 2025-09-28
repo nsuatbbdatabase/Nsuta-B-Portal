@@ -1,0 +1,254 @@
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script>
+    // Initialize Supabase client globally
+    const supabaseClient = supabase.createClient(
+      'https://omhmahhfeduejykrxflx.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
+    );
+  </script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      background: linear-gradient(120deg, #e3e8f0 0%, #f7f9fc 100%);
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .login-container {
+      max-width: 400px;
+      margin: 60px auto;
+      background: rgba(255,255,255,0.97);
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
+      padding: 2.5rem 2rem 2rem 2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .login-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .login-header h2 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.5rem;
+      color: #003366;
+      font-weight: 700;
+    }
+    .login-header p {
+      margin: 0;
+      color: #0074d9;
+      font-size: 1.05rem;
+      font-style: italic;
+    }
+    #roleDisplay {
+      margin-bottom: 1rem;
+      font-weight: bold;
+      color: #003366;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+    #loginForm label {
+      display: block;
+      margin-top: 1.1rem;
+      margin-bottom: 0.3rem;
+      color: #003366;
+      font-weight: 500;
+      font-size: 1rem;
+    }
+    #loginForm input[type="text"],
+    #loginForm input[type="password"] {
+      width: 100%;
+      padding: 0.7rem;
+      border-radius: 8px;
+      border: 1.5px solid #e3e8f0;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+      background: #f7f9fc;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    #loginForm input:focus {
+      border-color: #0074d9;
+      outline: none;
+    }
+    #loginForm button[type="submit"] {
+      width: 100%;
+      background: #0074d9;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.8rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+      transition: background 0.2s;
+    }
+    #loginForm button[type="submit"]:hover {
+      background: #005fa3;
+    }
+    .go-home-btn {
+      margin-top: 1.5rem;
+      display: block;
+      width: 100%;
+      background: #e3e8f0;
+      color: #003366;
+      border: none;
+      border-radius: 8px;
+      padding: 0.7rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .go-home-btn:hover {
+      background: #cdd6e6;
+    }
+    #loginError {
+      color: #d8000c;
+      margin-top: 1rem;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    @media (max-width: 500px) {
+      .login-container {
+        padding: 1rem 0.3rem;
+        border-radius: 10px;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .login-header h2 {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-header">
+      <h2>Login</h2>
+      <p>Select your role and enter your credentials.</p>
+    </div>
+    <form id="loginForm">
+      <div id="roleDisplay" style="margin-bottom:1rem;font-weight:bold;"></div>
+      <label for="username">Username/ID:</label>
+      <input type="text" id="username" required />
+      <label for="password">PIN/Password:</label>
+      <div style="position:relative;">
+        <input type="password" id="password" required style="padding-right:2.5rem;" />
+        <span id="togglePassword" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:1.2rem;color:#888;" title="Show/Hide PIN">👁️</span>
+      </div>
+  <script>
+    // Eye icon toggle for PIN visibility
+    document.addEventListener('DOMContentLoaded', function() {
+      const pwd = document.getElementById('password');
+      const toggle = document.getElementById('togglePassword');
+      if (pwd && toggle) {
+        toggle.addEventListener('click', function() {
+          if (pwd.type === 'password') {
+            pwd.type = 'text';
+            toggle.textContent = '🙈';
+          } else {
+            pwd.type = 'password';
+            toggle.textContent = '👁️';
+          }
+        });
+      }
+    });
+  </script>
+      <button type="submit">Login</button>
+    </form>
+    <button class="go-home-btn" onclick="window.location.href='index.html'">Go to Homepage</button>
+    <div id="loginError" style="color:red;margin-top:1rem;"></div>
+  </div>
+  <script>
+    // Get role from query parameter
+    function getRoleFromQuery() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('role');
+    }
+    const role = getRoleFromQuery();
+    const roleDisplay = document.getElementById('roleDisplay');
+    if (role) {
+      roleDisplay.textContent = `Role: ${role.charAt(0).toUpperCase() + role.slice(1)}`;
+    } else {
+      roleDisplay.textContent = 'No role selected. Please go to homepage.';
+      document.getElementById('loginForm').style.display = 'none';
+    }
+    document.getElementById('loginForm').onsubmit = function(e) {
+      e.preventDefault();
+      if (!role) {
+        document.getElementById('loginError').textContent = 'No role selected.';
+        return;
+      }
+      // Get credentials from form
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!username || !password) {
+        document.getElementById('loginError').textContent = 'Please enter your credentials.';
+        return;
+      }
+      // Use Supabase for real credential validation
+      let table = '', query = {};
+      if (role === 'teacher') {
+        table = 'teachers';
+        query = { staff_id: username, pin: password };
+      } else if (role === 'student') {
+        table = 'students';
+        query = { username: username, pin: password };
+      } else if (role === 'admin') {
+        table = 'admins';
+        query = { email: username, pin: password };
+      } else {
+        document.getElementById('loginError').textContent = 'Invalid role.';
+        return;
+      }
+      // Supabase client must be available globally
+      if (typeof supabaseClient === 'undefined') {
+        document.getElementById('loginError').textContent = 'Supabase client not found.';
+        return;
+      }
+      supabaseClient
+        .from(table)
+        .select('*')
+        .match(query)
+        .single()
+        .then(({ data, error }) => {
+          if (error || !data) {
+            document.getElementById('loginError').textContent = 'Login failed. Please check your credentials.';
+            return;
+          }
+          // Store ID and redirect
+          if (role === 'teacher') {
+            sessionStorage.setItem('teacher_staff_id', data.staff_id);
+            localStorage.setItem('teacher_staff_id', data.staff_id);
+            localStorage.setItem('teacherId', data.id);
+            sessionStorage.setItem('teacherId', data.id);
+            window.location.href = 'teacher-dashboard.html';
+          } else if (role === 'student') {
+            sessionStorage.setItem('studentId', data.id);
+            localStorage.setItem('studentId', data.id);
+            sessionStorage.setItem('studentObj', JSON.stringify(data));
+            localStorage.setItem('studentObj', JSON.stringify(data));
+            sessionStorage.setItem('student_username', data.username);
+            localStorage.setItem('student_username', data.username);
+            window.location.href = 'student-dashboard.html';
+          } else if (role === 'admin') {
+            sessionStorage.setItem('adminId', data.id);
+            localStorage.setItem('adminId', data.id);
+            window.location.href = 'admin.html';
+          }
+        });
+    };
+  </script>
+</body>
+</html>

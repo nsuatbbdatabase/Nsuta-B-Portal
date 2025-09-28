@@ -1,11 +1,15 @@
-/* --- Unified Dashboard Backgrounds & Overlay (Index Style) --- */
-body.dashboard-bg, body.index-dashboard-bg, body.admin-dashboard-bg, body.student-dashboard-bg, body.teacher-dashboard-bg {
-  min-height: 100vh;
-  min-width: 100vw;
-  background: #f4f6f8;
-  position: relative;
-  overflow-x: hidden;
+/* --- Dashboard Card Hover Effect (Desktop Only) --- */
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-card:hover {
+    box-shadow: 0 8px 32px rgba(0,32,64,0.18);
+    transform: translateY(-4px) scale(1.04);
+    border-color: #0074d9;
+    background: #f7f9fc;
+    transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s, background 0.2s;
+  }
 }
+/* --- Unified Dashboard Backgrounds & Overlay (Index Style) --- */
+
 body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard-bg::before, body.student-dashboard-bg::before, body.teacher-dashboard-bg::before {
   content: '';
   position: fixed;
@@ -26,23 +30,6 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
   pointer-events: none;
 }
 
-/* --- Unified Dashboard Card Styles --- */
-.dashboard-card {
-  background: linear-gradient(120deg, #004080 60%, #ffa500 100%);
-  color: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0,64,128,0.10);
-  padding: 2.2rem 1.2rem;
-  font-size: 1.25rem;
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
-  position: relative;
-  outline: none;
-  border: none;
-  user-select: none;
-}
 
 /* Events Card Action Button */
 .dashboard-card-action {
@@ -67,7 +54,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
 #eventsModal .modal-content {
   background: #fffbe8;
   border-radius: 14px;
-  box-shadow: 0 4px 18px rgba(0,64,128,0.10);
+  box-shadow: 0 4px 18px rgba(238, 235, 235, 0.1);
   padding: 2rem 1.5rem;
 }
 #eventsModal label {
@@ -123,17 +110,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
 #eventsList li strong {
   color: #ffa500;
 }
-}
-.dashboard-card:hover, .dashboard-card:focus {
-  background: linear-gradient(120deg, #ffa500 40%, #004080 100%);
-  color: #fff;
-  transform: translateY(-6px) scale(1.04);
-  box-shadow: 0 8px 32px rgba(0,64,128,0.18);
-}
-.dashboard-card, .dashboard-card * {
-  color: #fff !important;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.13);
-}
+
 
 /* --- Unified Dashboard Header (Branding) --- */
 .dashboard-header, .school-header {
@@ -178,6 +155,38 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
   border-radius: 18px;
   box-shadow: 0 4px 24px rgba(0,64,128,0.08);
   z-index: 2;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .dashboard-overview {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    padding: 0.7rem 0.2rem;
+    border-radius: 10px;
+    margin: 1rem 0 1rem 0;
+    width: 100%;
+  }
+  .dashboard-card {
+    font-size: 1rem;
+    padding: 1rem 0.5rem;
+    border-radius: 8px;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+@media (max-width: 500px) {
+  .dashboard-overview {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-card {
+    font-size: 0.97rem;
+    padding: 0.7rem 0.3rem;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
 }
 @media (max-width: 700px) {
   .dashboard-overview {
@@ -313,7 +322,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
     margin-top: 70px;
   }
 }
-}
+
 .school-logo {
   height: 70px !important;
   margin-right: 1.5rem !important;
@@ -340,7 +349,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
   float: none !important;
   margin-top: 0 !important;
   margin-left: 2.5rem;
-  background: #ffa500 !important;
+  background: #004080 !important;
   color: #fff !important;
   font-weight: 700;
   font-size: 1.1rem;
@@ -355,21 +364,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
   color: #ffa500 !important;
   transform: translateY(-2px) scale(1.03);
 }
-/* Admin Dashboard Overview Cards */
-.dashboard-overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 2rem;
-  margin: 2.5rem 0 2.5rem 0;
-  padding: 2rem 1rem;
-  background: linear-gradient(120deg, #004080 60%, #ffa500 100%);
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0,64,128,0.13);
-  z-index: 1;
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-}
+
 @media (max-width: 700px) {
   .dashboard-overview {
     grid-template-columns: 1fr;
@@ -385,33 +380,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
     border-radius: 8px;
   }
 }
-}
-.dashboard-card {
-  background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
-  color: #f3f4f6 !important;
-  border-radius: 18px;
-  box-shadow: 0 8px 32px rgba(30,41,59,0.13);
-  padding: 2.5rem 1.5rem 2rem 1.5rem;
-  font-size: 1.15rem;
-  font-weight: 500;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
-  position: relative;
-  outline: none;
-  border: none;
-  -webkit-user-select: none;
-  user-select: none;
-  margin-bottom: 0.7rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  min-height: 180px;
-  box-sizing: border-box;
-  opacity: 0.98;
-}
+
 
 .dashboard-card-icon {
   width: 48px;
@@ -422,7 +391,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
 .dashboard-card-title {
   font-size: 1.25rem;
   font-weight: 700;
-  color: #fff !important;
+  color: #004080 !important;
   letter-spacing: 0.01em;
   margin-bottom: 0.1rem;
   text-shadow: 0 2px 8px rgba(0,0,0,0.10);
@@ -470,12 +439,6 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
 .logout-btn {
   float: right;
   margin-top: -3.5rem;
-}
-.dashboard-card:hover, .dashboard-card:focus {
-  background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
-  color: #fff;
-  transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 12px 36px rgba(30,41,59,0.18);
 }
 @media (max-width: 700px) {
   .dashboard-overview {
@@ -594,7 +557,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
     gap: 0.5em;
   }
 }
-}
+
 .dashboard-container thead, .dashboard-container tbody, .dashboard-container tr {
   display: table;
   width: 100%;
@@ -994,6 +957,16 @@ td img {
 
 .form-actions button {
   width: 48%;
+}
+
+/* --- White Rectangular Background for Dashboard Cards --- */
+.dashboard-cards-bg {
+  background: rgba(255,255,255,0.97);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
+  padding: 2.5rem 2rem 2rem 2rem;
+  margin: 0 auto 2rem auto;
+  max-width: 900px;
 }
 
 /* Responsive Enhancements */
