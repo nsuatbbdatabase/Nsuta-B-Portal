@@ -133,14 +133,6 @@
   </style>
 </head>
 <body>
-  <!-- Session Expired Modal -->
-  <div id="sessionExpiredModal" class="modal hidden" style="z-index:9999;display:flex;align-items:center;justify-content:center;">
-    <div class="modal-content" style="max-width:350px;text-align:center;">
-      <h3>Session Expired</h3>
-      <p>Your session has expired due to inactivity.<br>Please log in again.</p>
-      <button onclick="window.location.href='login.html'">Go to Login</button>
-    </div>
-  </div>
   <div class="dashboard-bg-overlay"></div>
   <button id="logoutBtn" class="logout-btn">Logout</button>
   <div class="school-header">
@@ -490,38 +482,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="teacher-dashboard.js"></script>
   <script src="router.js"></script>
-<script>
-// --- Session Timeout Logic ---
-const SESSION_TIMEOUT_MINUTES = 30; // Change as needed
-let sessionTimeoutHandle;
-let lastActivity = Date.now();
-function resetSessionTimer() {
-  lastActivity = Date.now();
-  if (sessionTimeoutHandle) clearTimeout(sessionTimeoutHandle);
-  sessionTimeoutHandle = setTimeout(checkSessionTimeout, SESSION_TIMEOUT_MINUTES * 60 * 1000);
-}
-function checkSessionTimeout() {
-  const now = Date.now();
-  if (now - lastActivity >= SESSION_TIMEOUT_MINUTES * 60 * 1000) {
-    sessionStorage.clear();
-    localStorage.clear();
-    showSessionExpiredModal();
-  } else {
-    resetSessionTimer();
-  }
-}
-function showSessionExpiredModal() {
-  const modal = document.getElementById('sessionExpiredModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-}
-['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
-  window.addEventListener(evt, resetSessionTimer, true);
-});
-resetSessionTimer();
-</script>
 </body>
 <script>
   // Modal controls

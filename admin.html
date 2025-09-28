@@ -100,16 +100,7 @@
 </head>
 <body>
 
-
   <div class="admin-bg-overlay"></div>
-  <!-- Session Expired Modal -->
-  <div id="sessionExpiredModal" class="modal hidden" style="z-index:9999;display:flex;align-items:center;justify-content:center;">
-    <div class="modal-content" style="max-width:350px;text-align:center;">
-      <h3>Session Expired</h3>
-      <p>Your session has expired due to inactivity.<br>Please log in again.</p>
-      <button onclick="window.location.href='login.html'">Go to Login</button>
-    </div>
-  </div>
 
   <header class="dashboard-header">
   <img src="Badge.png" alt="School Logo" class="school-logo" />
@@ -687,53 +678,11 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script src="router.js"></script>
 <script>
-// --- Session Timeout Logic ---
-// Set session timeout here (in minutes)
-const SESSION_TIMEOUT_MINUTES = 30; // Change as needed (e.g. 0.5 for 30 seconds, 1 for 1 min, 60 for 1 hour)
-let sessionTimeoutHandle;
-let lastActivity = Date.now();
-
-function resetSessionTimer() {
-  lastActivity = Date.now();
-  if (sessionTimeoutHandle) clearTimeout(sessionTimeoutHandle);
-  sessionTimeoutHandle = setTimeout(checkSessionTimeout, SESSION_TIMEOUT_MINUTES * 60 * 1000);
-}
-
-function checkSessionTimeout() {
-  const now = Date.now();
-  if (now - lastActivity >= SESSION_TIMEOUT_MINUTES * 60 * 1000) {
-    // Session expired
+  document.getElementById('logoutBtn').onclick = function() {
     sessionStorage.clear();
     localStorage.clear();
-    showSessionExpiredModal();
-  } else {
-    // Still active, set next check
-    resetSessionTimer();
-  }
-}
-
-function showSessionExpiredModal() {
-  const modal = document.getElementById('sessionExpiredModal');
-  if (modal) {
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  }
-}
-
-// Listen for user activity
-['mousemove','keydown','mousedown','touchstart','scroll'].forEach(evt => {
-  window.addEventListener(evt, resetSessionTimer, true);
-});
-
-// Start timer on page load
-resetSessionTimer();
-
-// Logout button
-document.getElementById('logoutBtn').onclick = function() {
-  sessionStorage.clear();
-  localStorage.clear();
-  window.location.href = 'login.html';
-};
+    window.location.href = 'login.html';
+  };
 </script>
 </body>
 </html>
