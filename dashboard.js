@@ -303,9 +303,12 @@ function importCSV() {
       if (!first_name || !surname || !area || !dob || !gender || !studentClass || !parent_name || !parent_contact) continue;
       const username = (first_name + '.' + surname).toLowerCase();
       const pin = generatePin();
+      // Only include nhis_number if present
+      const studentPayload = { first_name, surname, area, dob, gender, class: studentClass, parent_name, parent_contact, username, pin };
+      if (nhis_number && nhis_number.trim()) studentPayload.nhis_number = nhis_number.trim();
       insertPromises.push(
         supabaseClient.from('students').insert([
-          { first_name, surname, area, dob, nhis_number, gender, class: studentClass, parent_name, parent_contact, username, pin }
+          studentPayload
         ])
       );
     }
