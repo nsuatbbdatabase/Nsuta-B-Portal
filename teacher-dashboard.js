@@ -1219,7 +1219,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // Change PIN modal logic
 window.addEventListener('DOMContentLoaded', function() {
   const changePinBtn = document.getElementById('changePinBtn');
-  const changePinModal = document.getElementById('changePinModal');
+  let changePinModal = document.getElementById('changePinModal');
   const changePinForm = document.getElementById('changePinForm');
   if (changePinBtn && changePinModal) {
     changePinBtn.onclick = function() {

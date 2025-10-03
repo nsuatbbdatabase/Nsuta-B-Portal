@@ -17,7 +17,7 @@
 }
 /* --- Dashboard Overview: Glassy, Index-like Background --- */
 .dashboard-overview {
-  background: rgba(255,255,255,0.78);
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%); /* multi-stop blue gradient */
   -webkit-backdrop-filter: blur(8px) saturate(1.2);
   backdrop-filter: blur(8px) saturate(1.2);
   border-radius: 24px;
@@ -62,7 +62,8 @@
 }
 /* --- Modern Glassy Dashboard Card Enhancement --- */
 .dashboard-card {
-  background: rgba(255, 255, 255, 0.72);
+  background: linear-gradient(120deg, #e3e8ee 0%, #ffffff 100%); /* blue-grey to white */
+  color: #263238;
   backdrop-filter: blur(6px) saturate(1.2);
   -webkit-backdrop-filter: blur(6px) saturate(1.2);
   border-radius: 18px;
@@ -90,7 +91,8 @@
     box-shadow: 0 16px 48px rgba(0,32,64,0.18), 0 2px 12px rgba(0,116,217,0.10);
     transform: translateY(-6px) scale(1.045);
     border-color: #0074d9;
-    background: rgba(255,255,255,0.88);
+  background: linear-gradient(120deg, #bbdefb 40%, #e3e8ee 100%); /* light blue to blue-grey */
+  color: #263238;
   }
 }
 @media (max-width: 700px) {
@@ -157,7 +159,7 @@ body.dashboard-bg::before, body.index-dashboard-bg::before, body.admin-dashboard
   top: 0; left: 0; right: 0; bottom: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(rgba(255,255,255,0.78), rgba(255,255,255,0.78)), url('admin\ dashboard\ background.jpg') center center / cover no-repeat fixed;
+  background: linear-gradient(135deg, rgba(33,150,243,0.55) 0%, rgba(21,101,192,0.55) 100%), url('admin dashboard background.jpg') center center / cover no-repeat fixed;
   background-blend-mode: lighten;
 }
 .dashboard-bg-overlay {
@@ -913,8 +915,8 @@ table {
 }
 
 body {
-  background: url('admin dashboard background.jpg') no-repeat center center fixed;
-  background-size: cover;
+  background: linear-gradient(135deg, rgba(33,150,243,0.55) 0%, rgba(21,101,192,0.55) 100%), url('admin\ dashboard\ background.jpg') no-repeat center center/cover;
+  background-size: fixed;
   color: #333;
   display: flex;
   min-height: 100vh;

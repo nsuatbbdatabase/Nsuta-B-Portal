@@ -17,85 +17,63 @@
   </div>
   <div class="dashboard-container">
 
-    <!-- 👋 Welcome -->
-    <h2 id="welcomeMessage">Welcome, [Student Name]</h2>
-
-    <!-- 🗓️ Floating Events Section -->
-    <div id="floatingEventsSection" class="floating-events-section">
-      <h3>🗓️ Events & Alerts</h3>
-      <div id="eventsSlideshow" class="events-slideshow">
-        <!-- Slides will be injected here -->
+    <!-- Welcome and Actions -->
+    <div class="student-header">
+      <h2 id="welcomeMessage">Welcome, [Student Name]</h2>
+      <div class="student-header-actions">
+        <button id="aboutMeBtn" class="about-me-btn">About Me</button>
+        <button id="changePinBtn" class="change-pin-btn">Change PIN</button>
       </div>
     </div>
-    <!-- Timetable Show/Hide Section -->
-    <div class="collapsible-section">
-      <button class="collapsible-btn" onclick="toggleStudentTimetable()">Show Timetable</button>
-  <div id="studentTimetableWrapper" class="collapsible-content">
-        <h3>Your Timetable</h3>
-        <table id="studentTimetableTable">
-          <thead>
-            <tr><th>Day</th><th>Time</th><th>Subject</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <!-- About Me Modal -->
+    <div id="aboutMeModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" id="closeAboutMe" onclick="closeAboutMeModal()">&times;</span>
+        <h2 class="modal-title">About Me</h2>
+        <div id="aboutMeContent">
+          <div class="student-details-readonly">
+            <p id="studentFirstName"><strong>First Name:</strong> </p>
+            <p id="studentSurname"><strong>Surname:</strong> </p>
+            <p id="studentLocation"><strong>Location:</strong> </p>
+            <p id="studentDob"><strong>Date of Birth:</strong> </p>
+            <p id="studentNhis"><strong>NHIS Number:</strong> </p>
+            <p id="studentGender"><strong>Gender:</strong> </p>
+            <p id="studentClass"><strong>Class:</strong> </p>
+            <p id="studentParentName"><strong>Parent/Guardian Name:</strong> </p>
+            <p id="studentParentContact"><strong>Parent/Guardian Number:</strong> </p>
+          </div>
+          <img id="studentPhoto" class="passport-photo" src="" alt="Student Photo" style="display:block;margin:1rem auto;max-width:120px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.07);" />
+        </div>
       </div>
     </div>
-    <!-- Extra Classes Show/Hide Section -->
-    <div class="collapsible-section">
-      <button class="collapsible-btn" onclick="toggleStudentExtraClasses()">Show Extra Classes</button>
-  <div id="studentExtraClassesWrapper" class="collapsible-content">
-        <h3>Your Extra Classes</h3>
-        <table id="studentExtraClassesTable">
-          <thead>
-            <tr><th>Day</th><th>Class</th><th>Morning Teacher</th><th>Extra Teacher</th><th>Extra Extra Teacher</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <div id="changePinModal" class="modal hidden">
+      <div class="modal-content">
+        <span class="close" id="closeChangePin" onclick="closeChangePinModal()">&times;</span>
+        <h3 class="modal-title">Change Login PIN</h3>
+        <form id="changePinForm">
+          <label for="oldPinInput">Current PIN:</label>
+          <input type="password" id="oldPinInput" required minlength="4" maxlength="8" />
+          <label for="newPinInput">New PIN:</label>
+          <input type="password" id="newPinInput" required minlength="4" maxlength="8" />
+          <label for="confirmPinInput">Confirm New PIN:</label>
+          <input type="password" id="confirmPinInput" required minlength="4" maxlength="8" />
+          <button type="submit" class="modal-btn primary">Change PIN</button>
+          <button type="button" onclick="closeChangePinModal()" class="modal-btn secondary">Cancel</button>
+          <div id="changePinStatus" class="modal-status"></div>
+        </form>
       </div>
-    </div>
-    <!-- �🌙 Dark Mode Toggle -->
-    <button id="darkModeToggle">Toggle Dark Mode</button>
-
-    <!-- 📂 Profile Section (Always Visible) -->
-  <div id="profileSection" class="tab-section profile-section">
-      <div id="studentInfo">
-  <button id="openChangePinModalBtn" class="change-pin-btn" type="button">Change PIN</button>
-<!-- Change PIN Modal -->
-<div id="changePinModal" class="modal hidden">
-  <div class="modal-content">
-    <h3>Change PIN</h3>
-    <form id="changePinForm">
-      <label for="oldPinInput">Current PIN:</label>
-      <input type="password" id="oldPinInput" required minlength="4" maxlength="8" />
-      <label for="newPinInput">New PIN:</label>
-      <input type="password" id="newPinInput" required minlength="4" maxlength="8" />
-      <label for="confirmPinInput">Confirm New PIN:</label>
-      <input type="password" id="confirmPinInput" required minlength="4" maxlength="8" />
-      <button type="submit">Save</button>
-      <button type="button" onclick="closeChangePinModal()">Cancel</button>
-  <div id="changePinStatus"></div>
-    </form>
-  </div>
-</div>
-        <h3 id="studentName">[Student Name]</h3>
-        <p id="studentClass">Class: [Class]</p>
-        <p id="studentGender">Gender: [Gender]</p>
-        <p id="studentInterest">Interest: [Interest]</p>
-        <p id="studentConduct">Conduct: [Conduct]</p>
-        <p id="studentAttendance">Attendance: [Actual/Total]</p>
-      </div>
-      <img id="studentPhoto" class="passport-photo" src="" alt="Student Photo" />
     </div>
 
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
-      <div class="dashboard-card" data-section="assignmentsSection">Assignments</div>
-      <div class="dashboard-card" data-section="resultsSection">Results</div>
-      <div class="dashboard-card" data-section="submissionsSection">Submissions</div>
-      <div class="dashboard-card" data-section="resourcesSection">Resources</div>
-      <div class="dashboard-card" data-section="contactTeacherSection">Contact Teacher</div>
-      <div class="dashboard-card" data-section="resourceRequestSection">Request Resource</div>
-      <div class="dashboard-card" data-section="motivationSection">Motivation</div>
+  <!-- Removed View My Details card -->
+  <div class="dashboard-card" data-section="assignmentsSection">Assignments</div>
+  <div class="dashboard-card" data-section="resultsSection">Results</div>
+  <div class="dashboard-card" data-section="submissionsSection">Submissions</div>
+  <div class="dashboard-card" data-section="resourcesSection">Resources</div>
+  <div class="dashboard-card" data-section="contactTeacherSection">Contact Teacher</div>
+  <div class="dashboard-card" data-section="resourceRequestSection">Request Resource</div>
+  <div class="dashboard-card" data-section="motivationSection">Motivation</div>
     </div>
 
     <!-- 📥 Assignments Section -->

@@ -1,5 +1,6 @@
 // Dashboard Overview Back Button Logic
 window.addEventListener('DOMContentLoaded', () => {
+  // Removed force PIN change modal logic from student dashboard. Now handled on login page only.
   // Change PIN form logic
   const changePinForm = document.getElementById('changePinForm');
   if (changePinForm) {
@@ -23,10 +24,31 @@ window.addEventListener('DOMContentLoaded', () => {
         return;
       }
       // Get current student info from session/localStorage
-      const student = JSON.parse(localStorage.getItem('studentSession'));
+      let student = JSON.parse(localStorage.getItem('studentSession'));
+      // If not found, fetch from Supabase using studentId
       if (!student) {
-        statusDiv.textContent = 'Session expired. Please log in again.';
-        return;
+        const studentId = localStorage.getItem('studentId');
+        if (!studentId) {
+          statusDiv.textContent = 'Session expired. Please log in again.';
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 2000);
+          return;
+        }
+        const { data, error } = await supabaseClient
+          .from('students')
+          .select('*')
+          .eq('id', studentId)
+          .single();
+        if (error || !data) {
+          statusDiv.textContent = 'Session expired. Please log in again.';
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 2000);
+          return;
+        }
+        student = data;
+        localStorage.setItem('studentSession', JSON.stringify(student));
       }
       // Validate old PIN
       if (oldPin !== student.pin) {
@@ -35,9 +57,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       // Update PIN in Supabase
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('students')
-          .update({ pin: newPin })
+          .update({ pin: newPin, forcepinchange: false })
           .eq('id', student.id);
         if (error) {
           statusDiv.textContent = 'Failed to update PIN. Please try again.';
@@ -45,11 +67,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         // Update local session
         student.pin = newPin;
+        student.forcepinchange = false;
         localStorage.setItem('studentSession', JSON.stringify(student));
         statusDiv.style.color = 'green';
         statusDiv.textContent = 'PIN changed successfully!';
         setTimeout(() => {
           window.closeChangePinModal();
+          document.body.classList.remove('force-pin-change');
         }, 1200);
       } catch (err) {
         statusDiv.textContent = 'An error occurred. Please try again.';
@@ -57,8 +81,49 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
   // Change PIN modal logic
-  const openChangePinModalBtn = document.getElementById('openChangePinModalBtn');
-  const changePinModal = document.getElementById('changePinModal');
+  const openChangePinModalBtn = document.getElementById('changePinBtn');
+    // About Me modal logic
+    const aboutMeBtn = document.getElementById('aboutMeBtn');
+    const aboutMeModal = document.getElementById('aboutMeModal');
+    const closeAboutMeBtn = document.getElementById('closeAboutMe');
+    window.openAboutMeModal = function() {
+      if (aboutMeModal) {
+        aboutMeModal.classList.remove('hidden');
+        aboutMeModal.style.display = '';
+      }
+    };
+    window.closeAboutMeModal = function() {
+      if (aboutMeModal) {
+        aboutMeModal.classList.add('hidden');
+        aboutMeModal.style.display = 'none';
+      }
+    };
+    if (aboutMeBtn) {
+      aboutMeBtn.onclick = function() {
+        window.openAboutMeModal();
+      };
+    }
+    if (closeAboutMeBtn) {
+      closeAboutMeBtn.onclick = function() {
+        window.closeAboutMeModal();
+      };
+    }
+  var changePinModal = document.getElementById('changePinModal');
+  const closeChangePinBtn = document.getElementById('closeChangePin');
+  window.closeChangePinModal = function() {
+    changePinModal.classList.add('hidden');
+  };
+  if (openChangePinModalBtn) {
+    openChangePinModalBtn.onclick = function() {
+      changePinModal.classList.remove('hidden');
+    };
+  }
+  if (closeChangePinBtn) {
+    closeChangePinBtn.onclick = function() {
+      changePinModal.classList.add('hidden');
+    };
+  }
+  // Removed duplicate declaration of changePinModal
   if (openChangePinModalBtn && changePinModal) {
     openChangePinModalBtn.onclick = function() {
       changePinModal.classList.remove('hidden');
@@ -194,31 +259,46 @@ async function renderStudentExtraClasses() {
 // --- Render Student Header ---
 function renderStudentHeader() {
   if (!window.student) return;
+  // Welcome message
   const studentName = `${window.student.first_name || ''} ${window.student.surname || ''}`.trim();
   document.getElementById('welcomeMessage').textContent = `Welcome, ${studentName}`;
-  document.getElementById('studentName').textContent = studentName;
-  document.getElementById('studentClass').textContent = 'Class: ' + (window.student.class || '');
-  document.getElementById('studentGender').textContent = 'Gender: ' + (window.student.gender || '');
-  document.getElementById('studentPhoto').src = window.student.picture_url || 'default-photo.png';
-  // Attendance fix
-  const attendanceElem = document.getElementById('studentAttendance');
-  if (attendanceElem) {
-    if (window.student.attendance_actual !== undefined && window.student.attendance_total !== undefined) {
-      attendanceElem.textContent = `Attendance: ${window.student.attendance_actual}/${window.student.attendance_total}`;
-    } else if (window.student.attendance !== undefined) {
-      attendanceElem.textContent = `Attendance: ${window.student.attendance}`;
-    } else {
-      attendanceElem.textContent = 'Attendance: N/A';
+  // About Me modal fields (show only if exist)
+  function setField(id, label, value) {
+    const el = document.getElementById(id);
+    if (el) {
+      if (value) {
+        el.style.display = '';
+        el.textContent = `${label}: ${value}`;
+      } else {
+        el.style.display = 'none';
+      }
     }
   }
+  setField('studentFirstName', 'First Name', window.student.first_name);
+  setField('studentSurname', 'Surname', window.student.surname);
+  setField('studentLocation', 'Location', window.student.area);
+  setField('studentDob', 'Date of Birth', window.student.dob);
+  setField('studentNhis', 'NHIS Number', window.student.nhis_number);
+  setField('studentGender', 'Gender', window.student.gender);
+  setField('studentClass', 'Class', window.student.class);
+  setField('studentParentName', 'Parent/Guardian Name', window.student.parent_name);
+  setField('studentParentContact', 'Parent/Guardian Number', window.student.parent_contact);
+  document.getElementById('studentPhoto').src = window.student.picture_url || 'default-photo.png';
 }
 // --- Load Assignments Section ---
 async function loadAssignments() {
-  if (!window.student || !window.student.class) return;
+  if (!window.student || !window.student.class) {
+    console.log('DEBUG: No student or student class found in window.student:', window.student);
+    return;
+  }
+  // Query assignments where class matches exactly the student's class (no section logic)
+  // Ensure class is used exactly as stored (no :1 or section letters)
+  const className = (window.student.class || '').replace(/:.*$/, '').replace(/\s+[A-Z]$/, '');
   const { data, error } = await supabaseClient
     .from('assignments')
-    .select('id, title, subject, term, year, file_url, instructions, class, teachers(name)')
-    .eq('class', window.student.class);
+    .select('id, title, subject, term, year, file_url, instructions, class, teacher_id')
+    .eq('class', className);
+  console.log('DEBUG: Supabase assignments query result:', { data, error, studentClass: window.student.class });
 
   const tbody = document.getElementById('assignmentTableBody');
   const select = document.getElementById('assignmentSelect');
@@ -239,7 +319,7 @@ async function loadAssignments() {
       : '<span style="color:gray;">No file</span>';
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${item.teachers?.name || 'Unknown'}</td>
+      <td>${item.teacher_id || '\u2014'}</td>
       <td>${item.subject}</td>
       <td>${item.title}</td>
       <td>${item.term}</td>
@@ -263,41 +343,6 @@ const supabaseClient = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
 );
 // --- Load Profile Section ---
-function loadProfile() {
-  if (!window.student) return;
-  const studentName = `${window.student.first_name || ''} ${window.student.surname || ''}`.trim();
-  document.getElementById('studentName').textContent = studentName;
-  document.getElementById('studentClass').textContent = 'Class: ' + (window.student.class || '');
-  document.getElementById('studentGender').textContent = 'Gender: ' + (window.student.gender || '');
-  document.getElementById('studentPhoto').src = window.student.picture_url || 'default-photo.png';
-  // Optionally add interest, conduct, attendance if available
-  // Try to fetch interest and conduct from 'profiles' table if not present
-  const interestElem = document.getElementById('studentInterest');
-  const conductElem = document.getElementById('studentConduct');
-  const attendanceElem = document.getElementById('studentAttendance');
-  if (window.student.interest) interestElem.textContent = 'Interest: ' + window.student.interest;
-  if (window.student.conduct) conductElem.textContent = 'Conduct: ' + window.student.conduct;
-  if (window.student.attendance_actual && window.student.attendance_total)
-    attendanceElem.textContent = `Attendance: ${window.student.attendance_actual}/${window.student.attendance_total}`;
-  // If missing, fetch from Supabase
-  if ((!window.student.interest || !window.student.conduct) && window.student.id) {
-    supabaseClient
-      .from('profiles')
-      .select('*')
-      .eq('student_id', window.student.id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          if (data.interest && interestElem) interestElem.textContent = 'Interest: ' + data.interest;
-          if (data.conduct && conductElem) conductElem.textContent = 'Conduct: ' + data.conduct;
-          if (data.attendance_actual && data.attendance_total && attendanceElem)
-            attendanceElem.textContent = `Attendance: ${data.attendance_actual}/${data.attendance_total}`;
-        }
-      });
-  }
-}
 // --- Dashboard UI Logic moved from HTML ---
 document.addEventListener('DOMContentLoaded', function() {
   // Timetable/Extra Classes toggles
@@ -336,29 +381,31 @@ document.addEventListener('DOMContentLoaded', function() {
       window.location.href = 'index.html';
     };
   }
-  window.showTab = function(tabId) {
-    document.querySelectorAll('.tab-section').forEach(sec => sec.style.display = 'none');
-    var tabSection = document.getElementById(tabId);
-    if (tabSection) {
-      tabSection.style.display = 'block';
-    } else {
-      console.warn('Tab section not found:', tabId);
-      return;
-    }
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    const tabBtn = Array.from(document.querySelectorAll('.tab-btn')).find(btn => btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tabId));
-    if (tabBtn) tabBtn.classList.add('active');
-    if (tabId === 'profileSection') loadProfile();
-    if (tabId === 'assignmentsSection') loadAssignments();
-    if (tabId === 'resultsSection') loadReleasedResults();
-    if (tabId === 'submissionsSection') loadSubmissions();
-    if (tabId === 'resourcesSection') loadResources();
-    if (tabId === 'motivationSection') loadMotivations();
-    // No need to reload teacher dropdowns every time, but you can if needed:
-    // if (tabId === 'contactTeacherSection' || tabId === 'resourceRequestSection') populateTeacherDropdown();
-  };
-  // Show profile tab by default
-  window.showTab('profileSection');
+  // Dashboard card click logic
+  document.querySelectorAll('.dashboard-card').forEach(card => {
+    card.onclick = function() {
+      const section = card.getAttribute('data-section');
+      if (section === 'profileSection') {
+        window.openAboutMeModal();
+      } else if (section) {
+        // Show tab section for other cards
+        document.getElementById('dashboardOverview').style.display = 'none';
+        document.querySelectorAll('.tab-section').forEach(sec => sec.style.display = 'none');
+        var tabSection = document.getElementById(section);
+        if (tabSection) {
+          tabSection.style.display = 'block';
+          // Optionally load data for each section
+          if (section === 'assignmentsSection') loadAssignments();
+          if (section === 'resultsSection') loadReleasedResults();
+          if (section === 'submissionsSection') loadSubmissions();
+          if (section === 'resourcesSection') loadResources();
+          if (section === 'motivationSection') loadMotivations();
+        } else {
+          console.warn('Tab section not found:', section);
+        }
+      }
+    };
+  });
   // Optionally, load teacher dropdowns once on page load
   if (typeof populateTeacherDropdown === 'function') populateTeacherDropdown();
 
@@ -849,7 +896,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Expose GPT bot functions globally for HTML onclick (must be outside DOMContentLoaded)
 window.sendGptMessage = sendGptMessage;
 window.renderGptChat = renderGptChat;
-window.loadProfile = loadProfile;
 window.loadAssignments = loadAssignments;
 window.loadReleasedResults = loadReleasedResults;
 window.loadSubmissions = loadSubmissions;
@@ -969,13 +1015,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       student = data;
-      renderStudentHeader();
-      await loadProfile();
-      await loadAssignments();
-      await loadSubmissions();
-      await loadReleasedResults();
-      await loadResources();
-      await loadFloatingEventsSection();
+  renderStudentHeader();
+  await loadAssignments();
+  await loadSubmissions();
+  await loadReleasedResults();
+  await loadResources();
+  await loadFloatingEventsSection();
     })();
   } else {
     window.location.href = 'index.html';

@@ -8,7 +8,9 @@
   <link rel="stylesheet" href="teacher-dashboard.css" />
   <style>
     body {
-      background: linear-gradient(120deg, #e3e8f0 0%, #f7f9fc 100%);
+      background:
+        linear-gradient(135deg, rgba(33,150,243,0.55) 0%, rgba(21,101,192,0.55) 100%),
+        url('20250515_073527.jpg') no-repeat center center/cover;
       min-height: 100vh;
       margin: 0;
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -51,7 +53,7 @@
     .motto {
       margin: 0.2rem 0 0 0;
       font-size: 1.1rem;
-      color: #0074d9;
+      color: #ffffff;
       font-style: italic;
     }
     .dashboard-overview {
@@ -60,26 +62,11 @@
       gap: 1.5rem;
       justify-content: center;
       margin-bottom: 2rem;
-    }
-    .dashboard-card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-      padding: 1.2rem 1.5rem;
-      text-align: center;
-      cursor: pointer;
-      transition: box-shadow 0.2s, transform 0.2s;
-      width: 180px;
-      border: 2px solid #e3e8f0;
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: #003366;
-    }
-    .dashboard-card:hover {
-      box-shadow: 0 8px 32px rgba(0,32,64,0.18);
-      transform: translateY(-4px) scale(1.04);
-      border-color: #0074d9;
-      background: #f7f9fc;
+          /* Legacy card styles removed */
+          .dashboard-card-icon {
+            margin-right: 0.5rem;
+            font-size: 1.5rem;
+          }
     }
     .logout-btn {
       float: right;
@@ -108,26 +95,41 @@
     }
     @media (max-width: 700px) {
       .dashboard-container {
-        padding: 1rem 0.3rem;
-        border-radius: 10px;
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
+        padding: 0.7rem 0.1rem;
+        border-radius: 8px;
+        margin-top: 0.2rem;
+        margin-bottom: 0.2rem;
+        box-shadow: 0 1px 6px rgba(0,64,128,0.08);
       }
       .school-logo {
-        height: 40px;
-        margin-right: 0.5rem;
+        height: 36px;
+        margin-right: 0.3rem;
       }
       .school-title {
-        font-size: 1.1rem;
+        font-size: 1rem;
+        font-weight: 600;
       }
       .dashboard-overview {
         flex-direction: column;
-        gap: 1.2rem;
-        align-items: center;
+        gap: 0.8rem;
+        align-items: stretch;
+        width: 100%;
       }
       .dashboard-card {
-        width: 90vw;
-        min-width: 180px;
+        width: 100%;
+        min-width: unset;
+        max-width: unset;
+        font-size: 0.97rem;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        box-shadow: 0 1px 6px rgba(0,64,128,0.08);
+      }
+      .teacher-header h2 {
+        font-size: 1.1rem;
+        margin-bottom: 0.3rem;
+      }
+      .floating-roles {
+        font-size: 0.95rem;
       }
     }
   </style>
@@ -139,7 +141,7 @@
     <img src="Badge.png" alt="School Logo" class="school-logo" />
     <div>
       <h1 class="school-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
-      <p class="motto">Empowering the Future</p>
+      <p class="motto">Knowledge is Power</p>
     </div>
   </div>
   <button id="aboutMeBtn">About Me</button>
@@ -172,7 +174,7 @@
     <div class="teacher-header">
   <h2 id="welcomeMessage">Welcome, [Teacher Name]</h2>
   <div id="assignedRoles" class="floating-roles"></div>
-  <button id="changePinBtn" style="margin-left:1rem;">Change Login PIN</button>
+  <button id="changePinBtn">Change Login PIN</button>
     </div>
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">

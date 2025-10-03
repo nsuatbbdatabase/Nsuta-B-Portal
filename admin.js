@@ -353,6 +353,7 @@ function showSelectedStudent() {
     <td>
       <button class="edit-btn" onclick="editStudent('${student.id}')">Edit</button>
       <button class="delete-btn" onclick="deleteStudent('${student.id}')">Delete</button>
+        <button class="reset-pin-btn" onclick="resetStudentPin('${student.id}')">Reset PIN</button>
     </td>
   `;
   tbody.appendChild(row);
@@ -361,6 +362,51 @@ function showSelectedStudent() {
 let allStudents = [];
 
 // --- School Dates Logic ---
+// Securely reset student PIN to default and set forcePinChange flag
+async function resetStudentPin(studentId) {
+  if (!studentId) return;
+  if (!window.supabaseClient) {
+    alert('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.');
+    // Optionally disable the button to prevent further attempts
+    const btn = document.querySelector(`button.reset-pin-btn[onclick*="${studentId}"]`);
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Supabase Error';
+      btn.style.background = '#ccc';
+      btn.style.cursor = 'not-allowed';
+    }
+    return;
+  }
+  // Update student PIN to default and set forcepinchange flag (all lowercase)
+  const { error } = await window.supabaseClient
+    .from('students')
+    .update({ pin: '1234', forcepinchange: true })
+    .eq('id', studentId);
+  if (error) {
+    alert('Failed to reset PIN. Please check your Supabase connection and schema.');
+    return;
+  }
+  // Log out student if currently logged in
+  try {
+    // If the logged-in student matches the reset student, clear session
+    const loggedInStudentId = localStorage.getItem('studentId');
+    if (loggedInStudentId && loggedInStudentId === studentId) {
+      localStorage.removeItem('studentId');
+      localStorage.removeItem('studentSession');
+      localStorage.removeItem('studentUsername');
+      localStorage.removeItem('studentPin');
+      // Optionally, redirect if on student dashboard
+      if (window.location.pathname.includes('student-dashboard')) {
+        window.location.href = 'student-login.html';
+      }
+    }
+  } catch (e) {
+    // Ignore errors
+  }
+  alert('Student PIN has been reset. The student will be required to change their PIN on next login.');
+  // Optionally refresh student view
+  if (typeof showSelectedStudent === 'function') showSelectedStudent();
+}
 async function fetchAndDisplaySchoolDates() {
   const { data, error } = await supabaseClient
     .from('school_dates')

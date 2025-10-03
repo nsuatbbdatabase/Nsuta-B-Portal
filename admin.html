@@ -22,6 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | School Management</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="dashboard-cards.css" />
 </head>
 <body>
 
@@ -54,38 +55,45 @@
     <!-- Dashboard Overview Cards -->
     <div class="dashboard-cards-bg">
       <div id="dashboardOverview" class="dashboard-overview">
-        <div class="dashboard-card" data-section="promotionPassMarkSection" onclick="openModal('promotionPassMarkModal')">
-          <span class="dashboard-card-title">Report Card Promotion Pass Mark</span>
+        <div class="dashboard-card" data-section="promotionPassMarkSection" tabindex="0" title="Report Card Promotion Pass Mark" onclick="openModal('promotionPassMarkModal')">
+          <span class="dashboard-card-icon">🏆</span>
+          Report Card Promotion Pass Mark
         </div>
-  <a href="promotion-exam-admin.html" class="no-underline-link">
-          <div class="dashboard-card" data-section="promotionExamAdminLink">
-            <span class="dashboard-card-title">Promotion Exams</span>
-          </div>
-        </a>
-        <div class="dashboard-card" data-section="reports">
-          <span class="dashboard-card-title">Reports</span>
+        <div class="dashboard-card" data-section="promotionExamAdminLink" tabindex="0" title="Promotion Exams" onclick="window.location.href='promotion-exam-admin.html'">
+          <span class="dashboard-card-icon">🎓</span>
+          Promotion Exams
         </div>
-        <div class="dashboard-card" data-section="events">
-    <span class="dashboard-card-title">Events</span>
-    <button class="dashboard-card-action" onclick="openModal('eventsModal')">Add Event</button>
+        <div class="dashboard-card" data-section="reports" tabindex="0" title="Reports">
+          <span class="dashboard-card-icon">📈</span>
+          Reports
         </div>
-        <div class="dashboard-card" data-section="schoolDatesSection">
-          <span class="dashboard-card-title">School Dates</span>
+        <div class="dashboard-card" data-section="events" tabindex="0" title="Events" onclick="openModal('eventsModal')">
+          <span class="dashboard-card-icon">📅</span>
+          Events
         </div>
-        <div class="dashboard-card" data-section="students">
-          <span class="dashboard-card-title">Students</span>
+        <div class="dashboard-card" data-section="schoolDatesSection" tabindex="0" title="School Dates">
+          <span class="dashboard-card-icon">📆</span>
+          School Dates
         </div>
-        <div class="dashboard-card" data-section="teachers">
-          <span class="dashboard-card-title">Teachers</span>
+        <div class="dashboard-card" data-section="students" tabindex="0" title="Students">
+          <span class="dashboard-card-icon">👨‍🎓</span>
+          Students
         </div>
-        <div class="dashboard-card" data-section="admins">
-          <span class="dashboard-card-title">Admins</span>
+        <div class="dashboard-card" data-section="teachers" tabindex="0" title="Teachers">
+          <span class="dashboard-card-icon">👩‍🏫</span>
+          Teachers
         </div>
-        <div class="dashboard-card" data-section="interestConduct">
-          <span class="dashboard-card-title">Interest & Conduct</span>
+        <div class="dashboard-card" data-section="admins" tabindex="0" title="Admins">
+          <span class="dashboard-card-icon">🛡️</span>
+          Admins
         </div>
-        <div class="dashboard-card" data-section="interestUpdate">
-          <span class="dashboard-card-title">Interest Update</span>
+        <div class="dashboard-card" data-section="interestConduct" tabindex="0" title="Interest & Conduct">
+          <span class="dashboard-card-icon">⭐</span>
+          Interest & Conduct
+        </div>
+        <div class="dashboard-card" data-section="interestUpdate" tabindex="0" title="Interest Update">
+          <span class="dashboard-card-icon">🔄</span>
+          Interest Update
         </div>
       </div>
     </div>
