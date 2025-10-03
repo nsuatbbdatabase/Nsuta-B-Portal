@@ -255,8 +255,12 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-      const username = (firstName + '.' + surname).toLowerCase();
+  // Username: take only the first word from first and surname, even if they have spaces
+  const firstPart = firstName.trim().split(/\s+/)[0] || '';
+  const secondPart = surname.trim().split(/\s+/)[0] || '';
+  const username = (firstPart + '.' + secondPart).toLowerCase();
       const pin = generatePin();
+      // Only set pin on insert, not on update
       const payload = {
         first_name: firstName,
         surname: surname,
@@ -268,13 +272,17 @@ window.addEventListener('DOMContentLoaded', function() {
         parent_name: parentName,
         parent_contact: parentContact,
         username,
-        pin,
         picture_url: pictureUrl
       };
-
-      const result = studentId
-        ? await supabaseClient.from('students').update(payload).eq('id', studentId)
-        : await supabaseClient.from('students').insert([payload]);
+      let result;
+      if (studentId) {
+        // Do not update pin when editing
+        result = await supabaseClient.from('students').update(payload).eq('id', studentId);
+      } else {
+        // Set pin only on insert
+        payload.pin = pin;
+        result = await supabaseClient.from('students').insert([payload]);
+      }
 
       if (result.error) {
         alert('Error: ' + result.error.message);
@@ -301,7 +309,10 @@ function importCSV() {
     for (let line of lines.slice(1)) {
       const [first_name, surname, area, dob, nhis_number, gender, studentClass, parent_name, parent_contact] = line.split(',');
       if (!first_name || !surname || !area || !dob || !gender || !studentClass || !parent_name || !parent_contact) continue;
-      const username = (first_name + '.' + surname).toLowerCase();
+  // Username: take only the first word from first and surname, even if they have spaces
+  const firstPart = (first_name || '').trim().split(/\s+/)[0] || '';
+  const secondPart = (surname || '').trim().split(/\s+/)[0] || '';
+  const username = (firstPart + '.' + secondPart).toLowerCase();
       const pin = generatePin();
       // Only include nhis_number if present
       const studentPayload = { first_name, surname, area, dob, gender, class: studentClass, parent_name, parent_contact, username, pin };

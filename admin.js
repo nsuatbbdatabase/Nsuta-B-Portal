@@ -377,10 +377,10 @@ async function resetStudentPin(studentId) {
     }
     return;
   }
-  // Update student PIN to default and set forcepinchange flag (all lowercase)
+  // Update student PIN to default and set forcePinChange flag (camelCase)
   const { error } = await window.supabaseClient
     .from('students')
-    .update({ pin: '1234', forcepinchange: true })
+    .update({ pin: '1234', forcePinChange: true })
     .eq('id', studentId);
   if (error) {
     alert('Failed to reset PIN. Please check your Supabase connection and schema.');

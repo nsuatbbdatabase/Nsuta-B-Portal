@@ -23,10 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if (isStudent && username) {
         const { data, error } = await supabaseClient
           .from('students')
-          .select('id, forcepinchange')
+          .select('id, forcePinChange')
           .eq('username', username)
           .single();
-        if (data && data.forcepinchange) {
+        if (data && data.forcePinChange) {
           showChangePinModal(data.id, username);
         }
       }
@@ -84,10 +84,10 @@ function showChangePinModal(studentId, username) {
       statusDiv.textContent = 'PIN must be 4-8 digits.';
       return;
     }
-    // Update PIN and clear forcepinchange
+    // Update PIN and clear forcePinChange
     const { error } = await supabaseClient
       .from('students')
-      .update({ pin: newPin, forcepinchange: false })
+      .update({ pin: newPin, forcePinChange: false })
       .eq('id', studentId);
     if (error) {
       statusDiv.textContent = 'Failed to change PIN.';
