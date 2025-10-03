@@ -19,8 +19,8 @@ async function createTestTeacher() {
     contact: '0244000000',
     rank: 'Senior',
     qualification: 'B.Ed',
-    classes: ['JHS 1'],
-    subjects: ['Maths'],
+    classes: '{"JHS 1"}',
+    subjects: '{"Maths"}',
     first_appointment_date: '2015-09-01',
     date_placed_on_rank: '2018-09-01',
     salary_level: 'GL15',
@@ -410,6 +410,22 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   // Generate pin for new teachers
   const name = form.name.value.trim();
   const pin = generatePin();
+  // Get classes and subjects from the assignment rows (collect all unique values)
+  const assignmentRows = document.querySelectorAll('#assignmentRowsContainer .assignment-row');
+  const classesSet = new Set();
+  const subjectsSet = new Set();
+  assignmentRows.forEach(row => {
+    const classSelect = row.querySelector('select[name="assignment_class[]"]');
+    const subjectSelect = row.querySelector('select[name="assignment_subject[]"]');
+    if (classSelect && classSelect.value) classesSet.add(classSelect.value);
+    if (subjectSelect && subjectSelect.value) subjectsSet.add(subjectSelect.value);
+  });
+  // If no assignments, fallback to empty string to avoid null
+  const classesArray = Array.from(classesSet);
+  const subjectsArray = Array.from(subjectsSet);
+  // For Postgres array columns, use JSON string format: '{"val1","val2"}'
+  const classesValue = classesArray.length ? '{"' + classesArray.join('","') + '"}' : '{""}';
+  const subjectsValue = subjectsArray.length ? '{"' + subjectsArray.join('","') + '"}' : '{""}';
   const teacherData = {
     name,
     gender: form.gender.value,
@@ -437,6 +453,8 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     responsibility: form.responsibility.value.trim(),
     denomination: form.denomination.value.trim(),
     home_town: form.home_town.value.trim(),
+    classes: classesValue,
+    subjects: subjectsValue,
     pin
   };
 
