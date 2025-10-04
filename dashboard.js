@@ -222,7 +222,7 @@ window.addEventListener('DOMContentLoaded', function() {
       const parentContact = form.parent_contact.value.trim();
       const pictureFile = form.picture.files[0];
 
-      if (!firstName || !surname || !area || !dob || !gender || !studentClass || !parentName || !parentContact) {
+      if (!firstName || !surname || !gender || !studentClass) {
         alert('Please fill in all required fields.');
         return;
       }
@@ -304,27 +304,95 @@ function importCSV() {
 
   const reader = new FileReader();
   reader.onload = async (e) => {
-    const lines = e.target.result.split('\n');
-    const insertPromises = [];
-    for (let line of lines.slice(1)) {
-      const [first_name, surname, area, dob, nhis_number, gender, studentClass, parent_name, parent_contact] = line.split(',');
-      if (!first_name || !surname || !area || !dob || !gender || !studentClass || !parent_name || !parent_contact) continue;
-  // Username: take only the first word from first and surname, even if they have spaces
-  const firstPart = (first_name || '').trim().split(/\s+/)[0] || '';
-  const secondPart = (surname || '').trim().split(/\s+/)[0] || '';
-  const username = (firstPart + '.' + secondPart).toLowerCase();
+    // Robust CSV parse: handle quoted fields, trim whitespace, ignore empty lines
+    const raw = e.target.result;
+    const lines = raw.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return alert('CSV file is empty or missing data.');
+    // Expect header: Full Name,Area,DOB,NHIS Number,Gender,Class,Parent Name,Parent Contact
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    let successCount = 0, failCount = 0, errorRows = [];
+    for (let i = 1; i < lines.length; i++) {
+      let row = [];
+      let inQuotes = false, field = '';
+      for (let c = 0; c < lines[i].length; c++) {
+        const char = lines[i][c];
+        if (char === '"') {
+          if (inQuotes && lines[i][c+1] === '"') { field += '"'; c++; }
+          else inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          row.push(field); field = '';
+        } else {
+          field += char;
+        }
+      }
+      row.push(field);
+      // Map columns by header
+      let fullName = '', area = '', dob = '', nhis_number = '', gender = '', studentClass = '', parent_name = '', parent_contact = '';
+      headers.forEach((h, idx) => {
+        const val = row[idx] ? row[idx].trim().replace(/^"|"$/g, '') : '';
+        if (/^full ?name$/i.test(h)) fullName = val;
+        else if (/^area$/i.test(h)) area = val;
+        else if (/^dob$/i.test(h)) dob = val;
+        else if (/^nhis ?number$/i.test(h)) nhis_number = val;
+        else if (/^gender$/i.test(h)) gender = val;
+        else if (/^class$/i.test(h)) studentClass = val;
+        else if (/^parent ?name$/i.test(h)) parent_name = val;
+        else if (/^parent ?contact$/i.test(h)) parent_contact = val;
+      });
+      // Split full name into first_name and surname (allow single word)
+      let first_name = '', surname = '';
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        if (parts.length > 1) {
+          first_name = parts.slice(0, -1).join(' ');
+          surname = parts[parts.length - 1];
+        } else {
+          first_name = fullName;
+          surname = '';
+        }
+      }
+      // Only require first_name, gender, and class
+      if (!first_name || !gender || !studentClass) {
+        failCount++;
+        errorRows.push(i+1); // CSV is 1-based
+        continue;
+      }
+      // Username: take only the first word from first and surname
+      const firstPart = (first_name || '').trim().split(/\s+/)[0] || '';
+      const secondPart = (surname || '').trim().split(/\s+/)[0] || '';
+      const username = (firstPart + '.' + secondPart).toLowerCase();
       const pin = generatePin();
-      // Only include nhis_number if present
-      const studentPayload = { first_name, surname, area, dob, gender, class: studentClass, parent_name, parent_contact, username, pin };
-      if (nhis_number && nhis_number.trim()) studentPayload.nhis_number = nhis_number.trim();
-      insertPromises.push(
-        supabaseClient.from('students').insert([
-          studentPayload
-        ])
-      );
+      const studentPayload = {
+        first_name,
+        surname,
+        area: area || '',
+        dob: dob && dob.trim() !== '' ? dob : null,
+        nhis_number: nhis_number || '',
+        gender,
+        class: studentClass,
+        parent_name: parent_name || '',
+        parent_contact: parent_contact || '',
+        username,
+        pin
+      };
+      try {
+        const { error } = await supabaseClient.from('students').insert([studentPayload]);
+        if (error) {
+          failCount++;
+          errorRows.push(i+1);
+          console.error('Supabase insert error (row ' + (i+1) + '):', error.message);
+        } else {
+          successCount++;
+        }
+      } catch (err) {
+        failCount++;
+        errorRows.push(i+1);
+        console.error('Unexpected JS error (row ' + (i+1) + '):', err.message);
+      }
     }
-    await Promise.all(insertPromises);
-    alert('CSV import complete.');
+    let msg = `CSV import complete. Success: ${successCount}, Failed: ${failCount}`;
+    if (errorRows.length) msg += `\nRows with errors: ${errorRows.join(', ')}`;
+    alert(msg);
     loadStudents();
   };
   reader.readAsText(file);

@@ -274,12 +274,12 @@ function exportStudentsCSV() {
     alert('No student data to export.');
     return;
   }
-  // Match new schema: export as Full Name, Area, DOB, NHIS Number, Gender, Class, Parent, Contact
+  // Export as: Full Name, Area, DOB, NHIS Number, Gender, Class, Parent Name, Parent Contact
   const headers = [
-    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent', 'Contact'
+    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent Name', 'Parent Contact'
   ];
   const rows = allStudents.map(s => [
-    ((s.first_name || '') + ' ' + (s.surname || '')).trim(),
+    ((s.first_name || '') + (s.surname ? ' ' + s.surname : '')).trim(),
     s.area || '',
     s.dob || '',
     s.nhis_number || '',

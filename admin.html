@@ -23,6 +23,8 @@
   <title>Admin Dashboard | School Management</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="dashboard-cards.css" />
+  <link rel="stylesheet" href="student-breakdown.css" />
+  <link rel="stylesheet" href="student-breakdown-table.css" />
 </head>
 <body>
 
@@ -38,6 +40,24 @@
 
 
   <main class="dashboard-main">
+    <!-- Student Breakdown Summary -->
+    <section id="studentBreakdown" class="dashboard-section enhanced-section">
+      <div class="section-header">
+        <h2>Student Breakdown</h2>
+        <p class="section-desc">Gender and Class Distribution</p>
+      </div>
+      <div id="studentBreakdownSummary"></div>
+    </section>
+    <!-- Population Chart Overview -->
+    <section id="populationOverview" class="dashboard-section enhanced-section">
+      <div class="section-header">
+        <h2>Population Overview</h2>
+        <p class="section-desc">Students vs Teachers</p>
+      </div>
+      <div style="max-width:400px;margin:auto;width:100%;height:260px;min-height:180px;">
+        <canvas id="populationChart" style="width:100%;height:100%;max-width:400px;max-height:260px;"></canvas>
+      </div>
+    </section>
     <!-- Report Card Promotion Pass Mark Modal -->
     <div id="promotionPassMarkModal" class="modal hidden">
       <div class="modal-content">
@@ -602,6 +622,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 <script src="dashboard.js"></script>
 <script src="admin.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="populationChart.js"></script>
+<script src="studentBreakdownChart.js"></script>
+<script src="studentBreakdownSummary.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderStudentBreakdownSummary === 'function') renderStudentBreakdownSummary();
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderStudentBreakdownChart === 'function') renderStudentBreakdownChart();
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderPopulationChart === 'function') renderPopulationChart();
+  });
+</script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof loadStudents === 'function') loadStudents();

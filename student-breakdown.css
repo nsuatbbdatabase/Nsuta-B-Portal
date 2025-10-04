@@ -1,0 +1,50 @@
+.student-breakdown-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.student-breakdown-card {
+  background: #f7f7fa;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  padding: 1rem 1.5rem;
+  min-width: 90px;
+  text-align: center;
+  font-size: 1.1rem;
+  flex: 1 1 90px;
+}
+.student-breakdown-card.boys { border-left: 5px solid #4e79a7; }
+.student-breakdown-card.girls { border-left: 5px solid #f28e2b; }
+.student-breakdown-card strong {
+  display: block;
+  font-size: 2rem;
+  margin-top: 0.2em;
+}
+.student-class-breakdown {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 1rem 1.5rem;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.class-breakdown-title {
+  font-weight: bold;
+  margin-bottom: 0.5em;
+  text-align: center;
+}
+.student-class-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3em 0;
+  border-bottom: 1px solid #eee;
+  font-size: 1rem;
+}
+.student-class-row:last-child { border-bottom: none; }
+.class-label { color: #555; }
+.class-count { font-weight: bold; color: #4e79a7; }
+@media (max-width: 600px) {
+  .student-breakdown-cards { flex-direction: column; gap: 8px; }
+  .student-class-breakdown { padding: 0.7rem 0.7rem; }
+}
