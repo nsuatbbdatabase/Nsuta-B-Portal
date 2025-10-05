@@ -255,13 +255,13 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
 
-  // Username: take only the first word from first and surname, even if they have spaces
-  const firstPart = firstName.trim().split(/\s+/)[0] || '';
-  const secondPart = surname.trim().split(/\s+/)[0] || '';
-  const username = (firstPart + '.' + secondPart).toLowerCase();
+      // Username: take only the first word from first and surname, even if they have spaces
+      const firstPart = firstName.trim().split(/\s+/)[0] || '';
+      const secondPart = surname.trim().split(/\s+/)[0] || '';
+      const username = (firstPart + '.' + secondPart).toLowerCase();
       const pin = generatePin();
       // Only set pin on insert, not on update
-      const payload = {
+      let payload = {
         first_name: firstName,
         surname: surname,
         area: area,
@@ -272,14 +272,26 @@ window.addEventListener('DOMContentLoaded', function() {
         parent_name: parentName,
         parent_contact: parentContact,
         username,
-        picture_url: pictureUrl
+        picture_url: pictureUrl,
+        register_id: form.register_id.value
       };
       let result;
       if (studentId) {
-        // Do not update pin when editing
+        // Do not update pin or register_id when editing
         result = await supabaseClient.from('students').update(payload).eq('id', studentId);
       } else {
-        // Set pin only on insert
+        // Assign register_id: e.g. JHS1_1, JHS1_2, ...
+        const { data: classStudents } = await supabaseClient.from('students').select('register_id').eq('class', studentClass);
+        let nextNum = 1;
+        if (classStudents && classStudents.length > 0) {
+          // Find max number for this class
+          const nums = classStudents.map(s => {
+            const m = (s.register_id||'').match(/_(\d+)$/); return m ? parseInt(m[1],10) : 0;
+          });
+          nextNum = Math.max(...nums, 0) + 1;
+        }
+        payload.register_id = studentClass.replace(/\s+/g,'').toUpperCase() + '_' + nextNum;
+        form.register_id.value = payload.register_id;
         payload.pin = pin;
         result = await supabaseClient.from('students').insert([payload]);
       }
@@ -308,9 +320,21 @@ function importCSV() {
     const raw = e.target.result;
     const lines = raw.split(/\r?\n/).filter(l => l.trim());
     if (lines.length < 2) return alert('CSV file is empty or missing data.');
-    // Expect header: Full Name,Area,DOB,NHIS Number,Gender,Class,Parent Name,Parent Contact
+    // Expect header: Student ID,Full Name,Area,DOB,NHIS Number,Gender,Class,Parent Name,Parent Contact
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
     let successCount = 0, failCount = 0, errorRows = [];
+    // Pre-fetch all current register_ids by class
+    const { data: allCurrent } = await supabaseClient.from('students').select('class,register_id');
+    const classCounters = {};
+    if (allCurrent && Array.isArray(allCurrent)) {
+      for (const s of allCurrent) {
+        if (!s.class || !s.register_id) continue;
+        const cls = s.class.replace(/\s+/g,'').toUpperCase();
+        const m = (s.register_id||'').match(/_(\d+)$/);
+        const num = m ? parseInt(m[1],10) : 0;
+        if (!classCounters[cls] || classCounters[cls] < num) classCounters[cls] = num;
+      }
+    }
     for (let i = 1; i < lines.length; i++) {
       let row = [];
       let inQuotes = false, field = '';
@@ -327,10 +351,11 @@ function importCSV() {
       }
       row.push(field);
       // Map columns by header
-      let fullName = '', area = '', dob = '', nhis_number = '', gender = '', studentClass = '', parent_name = '', parent_contact = '';
+      let register_id = '', fullName = '', area = '', dob = '', nhis_number = '', gender = '', studentClass = '', parent_name = '', parent_contact = '';
       headers.forEach((h, idx) => {
         const val = row[idx] ? row[idx].trim().replace(/^"|"$/g, '') : '';
-        if (/^full ?name$/i.test(h)) fullName = val;
+        if (/^student ?id$/i.test(h)) register_id = val;
+        else if (/^full ?name$/i.test(h)) fullName = val;
         else if (/^area$/i.test(h)) area = val;
         else if (/^dob$/i.test(h)) dob = val;
         else if (/^nhis ?number$/i.test(h)) nhis_number = val;
@@ -351,8 +376,8 @@ function importCSV() {
           surname = '';
         }
       }
-      // Only require first_name, gender, and class
-      if (!first_name || !gender || !studentClass) {
+      // Only require register_id, first_name, gender, and class
+      if (!register_id || !first_name || !gender || !studentClass) {
         failCount++;
         errorRows.push(i+1); // CSV is 1-based
         continue;
@@ -373,7 +398,8 @@ function importCSV() {
         parent_name: parent_name || '',
         parent_contact: parent_contact || '',
         username,
-        pin
+        pin,
+        register_id
       };
       try {
         const { error } = await supabaseClient.from('students').insert([studentPayload]);
@@ -413,6 +439,7 @@ async function editStudent(id) {
   form.class.value = data.class || '';
   form.parent_name.value = data.parent_name || '';
   form.parent_contact.value = data.parent_contact || '';
+  form.register_id.value = data.register_id || '';
   openModal('studentModal');
 }
 
@@ -425,32 +452,55 @@ async function deleteStudent(id) {
 }
 
 // 📋 Load Students
+// TEMP: Delete all students in a class (for re-import/testing)
+window.deleteClassStudents = async function deleteClassStudents() {
+  const className = prompt('Enter the class name to delete all students (e.g., JHS 1):');
+  if (!className) return alert('No class entered.');
+  if (!confirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.')) return;
+  const { error } = await supabaseClient.from('students').delete().eq('class', className);
+  if (error) alert('Delete failed: ' + error.message);
+  else {
+    alert('All students in ' + className + ' deleted.');
+    loadStudents();
+  }
+}
 async function loadStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   const tbody = document.querySelector('#studentTable tbody');
   const select = document.getElementById('studentSelect');
   tbody.innerHTML = '';
+  // Sort students by register_id (natural order)
+  let sorted = (data && Array.isArray(data)) ? [...data] : [];
+  sorted.sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    // Split e.g. JHS1_1 into [JHS1, 1]
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
   if (select) {
     select.innerHTML = '<option value="">-- Select Student --</option>';
-    if (data && Array.isArray(data)) {
-      data.forEach(student => {
-        const opt = document.createElement('option');
-        opt.value = student.id;
-        let name = '';
-        if (student.first_name && student.surname) {
-          name = student.first_name + ' ' + student.surname;
-        } else if (student.first_name) {
-          name = student.first_name;
-        } else if (student.surname) {
-          name = student.surname;
-        } else {
-          name = '[No Name]';
-        }
-        opt.textContent = name + ' (' + (student.class || '') + ')';
-        select.appendChild(opt);
-      });
-    }
+    sorted.forEach(student => {
+      const opt = document.createElement('option');
+      opt.value = student.id;
+      let name = '';
+      if (student.first_name && student.surname) {
+        name = student.first_name + ' ' + student.surname;
+      } else if (student.first_name) {
+        name = student.first_name;
+      } else if (student.surname) {
+        name = student.surname;
+      } else {
+        name = '[No Name]';
+      }
+      opt.textContent = (student.register_id ? student.register_id + ' - ' : '') + name + ' (' + (student.class || '') + ')';
+      select.appendChild(opt);
+    });
   }
+  // Optionally, update the table to show register_id as a column
+  // (You may need to update the table header in HTML to add <th>Register ID</th> at the right spot)
+  // If you want to render the table rows here, do it in register_id order as well
   // Show nothing by default until a student is selected
 }
 // Show only the selected student's info in the table
@@ -594,7 +644,6 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   form.reset();
   document.getElementById('assignmentRowsContainer').innerHTML = '';
   closeModal('teacherModal');
-  loadTeachers();
 });
 
 // 📝 Edit Teacher

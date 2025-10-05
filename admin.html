@@ -25,6 +25,8 @@
   <link rel="stylesheet" href="dashboard-cards.css" />
   <link rel="stylesheet" href="student-breakdown.css" />
   <link rel="stylesheet" href="student-breakdown-table.css" />
+  <link rel="stylesheet" href="student-duplicates-warning.css" />
+  <link rel="stylesheet" href="teacher-breakdown.css" />
 </head>
 <body>
 
@@ -47,17 +49,9 @@
         <p class="section-desc">Gender and Class Distribution</p>
       </div>
       <div id="studentBreakdownSummary"></div>
+  <div id="teacherBreakdownSummary"></div>
     </section>
     <!-- Population Chart Overview -->
-    <section id="populationOverview" class="dashboard-section enhanced-section">
-      <div class="section-header">
-        <h2>Population Overview</h2>
-        <p class="section-desc">Students vs Teachers</p>
-      </div>
-      <div style="max-width:400px;margin:auto;width:100%;height:260px;min-height:180px;">
-        <canvas id="populationChart" style="width:100%;height:100%;max-width:400px;max-height:260px;"></canvas>
-      </div>
-    </section>
     <!-- Report Card Promotion Pass Mark Modal -->
     <div id="promotionPassMarkModal" class="modal hidden">
       <div class="modal-content">
@@ -194,6 +188,7 @@
 
     <!-- Students Section -->
     <section id="students" class="enhanced-section">
+  <div id="studentDuplicatesWarning"></div>
       <div class="section-header">
     
         <div>
@@ -206,6 +201,7 @@
       <button onclick="importCSV()">Import CSV</button>
   <button onclick="exportStudentsCSV()">Export CSV</button>
   <div class="student-filter-row">
+  <button style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;margin-bottom:8px;" onclick="deleteClassStudents()">Delete All Students in Class (TEMP)</button>
         <label for="classFilter">Class:</label>
         <select id="classFilter">
           <option value="">-- All Classes --</option>
@@ -293,6 +289,8 @@
     <div class="modal-content">
       <h3>Register Student</h3>
       <form id="studentForm" enctype="multipart/form-data">
+        <label for="register_id">Student ID</label>
+        <input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly style="background:#f7f7fa;" />
         <input type="hidden" name="student_id" />
         <input type="text" name="first_name" placeholder="First Name" required />
         <input type="text" name="surname" placeholder="Surname" required />
@@ -626,6 +624,18 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="populationChart.js"></script>
 <script src="studentBreakdownChart.js"></script>
 <script src="studentBreakdownSummary.js"></script>
+<script src="teacherBreakdownSummary.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderTeacherBreakdownSummary === 'function') renderTeacherBreakdownSummary();
+  });
+</script>
+<script src="studentDuplicatesWarning.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (typeof renderDuplicateStudentsWarning === 'function') renderDuplicateStudentsWarning();
+  });
+</script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderStudentBreakdownSummary === 'function') renderStudentBreakdownSummary();

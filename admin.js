@@ -274,11 +274,12 @@ function exportStudentsCSV() {
     alert('No student data to export.');
     return;
   }
-  // Export as: Full Name, Area, DOB, NHIS Number, Gender, Class, Parent Name, Parent Contact
+  // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Parent Name, Parent Contact
   const headers = [
-    'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent Name', 'Parent Contact'
+    'Student ID', 'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent Name', 'Parent Contact'
   ];
   const rows = allStudents.map(s => [
+    s.register_id || '',
     ((s.first_name || '') + (s.surname ? ' ' + s.surname : '')).trim(),
     s.area || '',
     s.dob || '',
@@ -525,7 +526,14 @@ async function fetchAndRenderStudents() {
     alert('Failed to fetch students');
     return;
   }
-  allStudents = data || [];
+  // Sort students by register_id (natural order: class, then number)
+  allStudents = (data || []).slice().sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
   filterStudentsByClass();
 }
 
