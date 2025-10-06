@@ -56,32 +56,49 @@ function setupAttendanceSection() {
 
 // Load students for selected class and date
 async function loadAttendanceStudents() {
-  const classVal = document.getElementById('attendanceClassSelect').value;
+  let classVal = document.getElementById('attendanceClassSelect').value;
+  classVal = classVal ? classVal.trim() : '';
+  console.log('[Attendance] Normalized class value:', classVal);
   const tbody = document.getElementById('attendanceTableBody');
   tbody.innerHTML = '';
   if (!classVal) return;
+  // Try to match class ignoring case and trimming spaces
+  // DEBUG: Fetch all students regardless of class to inspect actual class values
+  // Query students matching the selected class (case-insensitive, trimmed)
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, first_name, surname', { head: true })
-    .eq('class', classVal);
+    .select('id, first_name, surname, class')
+    .or(`class.ilike.${classVal},class.eq.${classVal}`);
   if (error || !Array.isArray(data) || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="2">No students found for this class.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="color:red;">No students found for this class. If you are the class teacher, please check that students are registered for this class in the system.</td></tr>';
     return;
   }
   data.forEach(student => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
+      <td style="text-align:center;">
+        <input type="checkbox" class="attendance-present" data-student-id="${student.id}" checked /> Present
+      </td>
       <td>
-        <select class="attendance-status" data-student-id="${student.id}">
-          <option value="Present">Present</option>
-          <option value="Absent">Absent</option>
-          <option value="Late">Late</option>
+        <select class="attendance-late" data-student-id="${student.id}">
+          <option value="No">No</option>
+          <option value="Yes">Yes</option>
         </select>
       </td>
     `;
     tbody.appendChild(row);
   });
+  // Add check all logic
+  const checkAll = document.getElementById('checkAllPresent');
+  if (checkAll) {
+    checkAll.checked = true;
+    checkAll.onclick = function() {
+      document.querySelectorAll('.attendance-present').forEach(cb => {
+        cb.checked = checkAll.checked;
+      });
+    };
+  }
 }
 
 // Submit attendance to Supabase
@@ -92,14 +109,25 @@ async function submitAttendance() {
     alert('Please select class and date.');
     return;
   }
-  const statusSelects = document.querySelectorAll('.attendance-status');
-  const records = Array.from(statusSelects).map(sel => ({
-    student_id: sel.getAttribute('data-student-id'),
-    class: classVal,
-    date: dateVal,
-    status: sel.value,
-    marked_by: teacher.id
-  }));
+  const presentCheckboxes = document.querySelectorAll('.attendance-present');
+  const lateSelects = document.querySelectorAll('.attendance-late');
+  const records = Array.from(presentCheckboxes).map(cb => {
+    const student_id = cb.getAttribute('data-student-id');
+    const isPresent = cb.checked;
+    const lateSel = Array.from(lateSelects).find(sel => sel.getAttribute('data-student-id') === student_id);
+    const isLate = lateSel && lateSel.value === 'Yes';
+    let status = 'Absent';
+    if (isPresent && isLate) status = 'Late';
+    else if (isPresent) status = 'Present';
+    else status = 'Absent';
+    return {
+      student_id,
+      class: classVal,
+      date: dateVal,
+      status,
+      marked_by: teacher.id
+    };
+  });
   if (records.length === 0) {
     alert('No students to mark.');
     return;
@@ -675,6 +703,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.submitPromotionExam = submitPromotionExam;
 async function loadStudents(section = 'sba') {
+  // Restrict loading students for attendance to Class Teacher only
+  if (!teacher || teacher.responsibility !== 'Class Teacher') {
+    students = [];
+    if (section === 'sba') {
+      renderSBAForm({});
+      const sbaTable = document.getElementById('sbaTableBody');
+      if (sbaTable) {
+        sbaTable.innerHTML = '<tr><td colspan="10" style="color:red;">Only Class Teachers can load students for attendance.</td></tr>';
+      }
+    } else if (section === 'exam') {
+      renderExamForm({});
+      const examTable = document.getElementById('examTableBody');
+      if (examTable) {
+        examTable.innerHTML = '<tr><td colspan="10" style="color:red;">Only Class Teachers can load students for attendance.</td></tr>';
+      }
+    }
+    return;
+  }
   let selectedClass, selectedSubject;
   if (section === 'exam') {
     selectedClass = document.getElementById('classSelectExam').value;

@@ -426,9 +426,11 @@ async function fetchAndDisplaySchoolDates() {
   if (latest) {
     document.getElementById('vacation_date').value = latest.vacation_date || '';
     document.getElementById('reopen_date').value = latest.reopen_date || '';
+    document.getElementById('attendance_total_days').value = latest.attendance_total_days || '';
   } else {
     document.getElementById('vacation_date').value = '';
     document.getElementById('reopen_date').value = '';
+    document.getElementById('attendance_total_days').value = '';
   }
 }
 
@@ -440,11 +442,17 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const vacation_date = document.getElementById('vacation_date').value;
       const reopen_date = document.getElementById('reopen_date').value;
+      const attendance_total_days = parseInt(document.getElementById('attendance_total_days').value, 10);
+      if (isNaN(attendance_total_days) || attendance_total_days < 1) {
+        alert('Please enter a valid number for Actual Attendance Days.');
+        return;
+      }
       // Upsert (insert or update latest row)
-      const { data, error } = await supabaseClient.rpc('upsert_school_dates', {
-        vacation_date,
-        reopen_date
-      }, { headers: { Accept: 'application/json' } });
+      const { data, error } = await supabaseClient
+        .from('school_dates')
+        .upsert([
+          { vacation_date, reopen_date, attendance_total_days }
+        ]);
       if (error) {
         alert('Failed to save dates');
         return;

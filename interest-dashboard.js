@@ -51,27 +51,48 @@ async function loadProfiles() {
     return;
   }
 
+  // Fetch global attendance total (Y) from school_dates
+  let attendanceTotalDays = 0;
+  try {
+    const { data: schoolDatesData, error: schoolDatesError } = await supabaseClient
+      .from('school_dates')
+      .select('attendance_total_days')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    if (schoolDatesError) throw schoolDatesError;
+    attendanceTotalDays = (schoolDatesData && schoolDatesData.length > 0 && schoolDatesData[0].attendance_total_days) ? schoolDatesData[0].attendance_total_days : 0;
+  } catch (e) {
+    attendanceTotalDays = 0;
+  }
+
+  // Fetch all attendance records for this class and term
+  const { data: attendanceRecords, error: attendanceError } = await supabaseClient
+    .from('attendance')
+    .select('student_id, present, term')
+    .eq('term', term);
+  if (attendanceError) {
+    console.error('Failed to load attendance:', attendanceError.message);
+  }
+
+  // Fetch profiles for interest/conduct
   const { data: profiles, error: profileError } = await supabaseClient
     .from('profiles')
-    .select('student_id, term, attendance_total, attendance_actual, interest, conduct')
+    .select('student_id, term, interest, conduct')
     .eq('term', term);
-
   if (profileError) {
     console.error('Failed to load profiles:', profileError.message);
     return;
   }
 
   students.forEach(student => {
+    // Count present days for this student (X)
+    const presentCount = (attendanceRecords || []).filter(a => a.student_id === student.id && a.present === true).length;
     const profile = profiles.find(p => p.student_id === student.id);
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
       <td>${student.class}</td>
-      <td>
-        <input type="number" value="${profile?.attendance_total ?? ''}" data-student="${student.id}" data-field="attendance_total" />
-        /
-        <input type="number" value="${profile?.attendance_actual ?? ''}" data-student="${student.id}" data-field="attendance_actual" />
-      </td>
+      <td>${presentCount} out of ${attendanceTotalDays}</td>
       <td>
         <select data-student="${student.id}" data-field="interest">
           ${generateInterestOptions(profile?.interest ?? '')}

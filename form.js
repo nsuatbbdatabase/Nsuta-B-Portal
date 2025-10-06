@@ -57,7 +57,24 @@ async function populateStudentDropdown(className, term, year) {
 }
 
 // 🖊️ Load selected student's details for update
+async function setAttendanceActualFromSchoolDates() {
+  // Always fetch the latest attendance_total_days from school_dates
+  let attendanceTotalDays = '';
+  try {
+    const { data: schoolDatesData, error: schoolDatesError } = await supabaseClient
+      .from('school_dates')
+      .select('attendance_total_days')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    if (!schoolDatesError && schoolDatesData && schoolDatesData.length > 0) {
+      attendanceTotalDays = schoolDatesData[0].attendance_total_days || '';
+    }
+  } catch (e) {}
+  document.getElementById('attendanceActual').value = attendanceTotalDays;
+}
+
 async function loadStudentProfileForUpdate() {
+  await setAttendanceActualFromSchoolDates();
   const studentId = document.getElementById('studentSelect').value;
   const term = document.getElementById('term').value.trim();
   if (!studentId || !term) return;
@@ -69,12 +86,10 @@ async function loadStudentProfileForUpdate() {
     .single();
   if (profile) {
     document.getElementById('attendanceTotal').value = profile.attendance_total || '';
-    document.getElementById('attendanceActual').value = profile.attendance_actual || '';
     document.getElementById('interest').value = profile.interest || '';
     document.getElementById('conduct').value = profile.conduct || '';
   } else {
     document.getElementById('attendanceTotal').value = '';
-    document.getElementById('attendanceActual').value = '';
     document.getElementById('interest').value = '';
     document.getElementById('conduct').value = '';
   }
@@ -86,11 +101,11 @@ async function submitProfile() {
   const term = document.getElementById('term').value.trim();
   const year = document.getElementById('year')?.value?.trim() || '';
   const attendanceTotal = parseInt(document.getElementById('attendanceTotal').value);
-  const attendanceActual = parseInt(document.getElementById('attendanceActual').value);
+  const attendanceActual = parseInt(document.getElementById('attendanceActual').value); // This is now always set from school_dates and read-only
   const interest = document.getElementById('interest').value.trim();
   const conduct = document.getElementById('conduct').value.trim();
 
-  if (!studentId || !term || !year || isNaN(attendanceTotal) || isNaN(attendanceActual) || !interest || !conduct) {
+  if (!studentId || !term || !year || isNaN(attendanceTotal) || !interest || !conduct) {
     alert('Please fill in all fields correctly.');
     return;
   }
@@ -152,11 +167,13 @@ async function submitProfile() {
 
 // 🚀 Initialize
 populateClassDropdown();
+setAttendanceActualFromSchoolDates();
 const classSelect = document.getElementById('classSelect');
 if (classSelect) {
   classSelect.addEventListener('change', function() {
     const term = document.getElementById('term')?.value?.trim() || '';
     const year = document.getElementById('year')?.value?.trim() || '';
+    setAttendanceActualFromSchoolDates();
     populateStudentDropdown(this.value, term, year);
   });
 }
@@ -165,6 +182,7 @@ if (termInput) {
   termInput.addEventListener('change', function() {
     const className = document.getElementById('classSelect')?.value || '';
     const year = document.getElementById('year')?.value?.trim() || '';
+    setAttendanceActualFromSchoolDates();
     populateStudentDropdown(className, this.value.trim(), year);
   });
 }
@@ -173,6 +191,7 @@ if (yearInput) {
   yearInput.addEventListener('input', function() {
     const className = document.getElementById('classSelect')?.value || '';
     const term = document.getElementById('term')?.value?.trim() || '';
+    setAttendanceActualFromSchoolDates();
     populateStudentDropdown(className, term, this.value.trim());
   });
 }
