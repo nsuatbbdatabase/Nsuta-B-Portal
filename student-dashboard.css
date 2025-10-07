@@ -74,6 +74,44 @@
   position: relative;
   animation: modalFadeIn 0.25s;
 }
+
+@media screen and (max-width: 600px) {
+  .modal-content {
+    min-width: unset;
+    width: 98vw;
+    max-width: 98vw;
+    padding: 1.1rem 0.5rem 1.5rem 0.5rem;
+    border-radius: 10px;
+    box-sizing: border-box;
+  }
+  .modal-content table, .modal-content .about-me-table {
+    width: 100%;
+    font-size: 1rem;
+    text-align: left;
+    margin: 0 auto;
+    word-break: break-word;
+  }
+  .modal-content td {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.5rem 0.2rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .modal-content td:first-child {
+    font-weight: 600;
+    color: #2a4d69;
+    width: 100%;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+  .modal-content tr {
+    display: block;
+    margin-bottom: 0.7rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+}
+}
 .close {
   position: absolute;
   top: 1rem;
