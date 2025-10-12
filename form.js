@@ -106,7 +106,7 @@ async function submitProfile() {
   const conduct = document.getElementById('conduct').value.trim();
 
   if (!studentId || !term || !year || isNaN(attendanceTotal) || !interest || !conduct) {
-    alert('Please fill in all fields correctly.');
+    try { notify('Please fill in all fields correctly.', 'warning'); } catch (e) { alert('Please fill in all fields correctly.'); }
     return;
   }
 
@@ -143,7 +143,7 @@ async function submitProfile() {
   }
 
   if (result.error) {
-    alert('Error saving profile: ' + result.error.message);
+    try { notify('Error saving profile: ' + result.error.message, 'error'); } catch (e) { alert('Error saving profile: ' + result.error.message); }
     // Extra logging for debugging
     console.error('Full Supabase error:', result.error);
     if (result.status) {
@@ -153,7 +153,7 @@ async function submitProfile() {
       console.error('Supabase response data:', result.data);
     }
   } else {
-    alert('Profile saved successfully.');
+    try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
     document.getElementById('term').value = '';
     document.getElementById('year').value = '';
     document.getElementById('attendanceTotal').value = '';

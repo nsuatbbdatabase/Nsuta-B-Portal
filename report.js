@@ -105,7 +105,7 @@ if (!document.getElementById('reportPrompt')) {
   promptDiv.style.color = 'red';
   promptDiv.style.margin = '1em 0';
   promptDiv.style.display = 'none';
-  // Fix: append to report-container instead of insertBefore
+          try { notify('No results found for this student.', 'warning'); } catch (e) { console.warn('No results found for this student.'); }
   const reportContainer = document.querySelector('.report-container');
   if (reportContainer) {
     reportContainer.appendChild(promptDiv);
@@ -505,13 +505,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 document.getElementById('bulkPrintBtn').onclick = async function() {
   const selectedClass = document.getElementById('classSelect').value;
   if (!selectedClass) {
-    alert('Please select a class first.');
+    notify('Please select a class first.', 'warning');
     return;
   }
   // Fetch all students in the selected class
   const { data: students, error } = await supabaseClient.from('students').select('id').eq('class', selectedClass);
   if (error || !students || students.length === 0) {
-    alert('No students found for this class.');
+    notify('No students found for this class.', 'warning');
     return;
   }
   // Print each student's report in sequence
@@ -539,12 +539,12 @@ document.getElementById('sendResultBtn').onclick = async function() {
     .select('*')
     .eq('student_id', studentId);
   if (error || !results || results.length === 0) {
-    alert('No results found for this student.');
+    notify('No results found for this student.', 'warning');
     return;
   }
   // Here you would send the result to the student (e.g., via email, SMS, or update a Supabase table)
   // For demo, we'll just show a confirmation
-  alert(`Result for ${studentName} (Class: ${studentClass}) sent successfully!`);
+  notify(`Result for ${studentName} (Class: ${studentClass}) sent successfully!`, 'info');
 };
 
 window.loadReportForStudent = loadReportForStudent;

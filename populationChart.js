@@ -8,7 +8,7 @@ async function renderPopulationChart() {
     supabaseClient.from('teachers').select('id')
   ]);
   if (sErr || tErr) {
-    alert('Failed to load population data.');
+    try { notify('Failed to load population data.', 'error'); } catch (e) { console.error('Failed to load population data.'); }
     return;
   }
   const studentCount = students ? students.length : 0;

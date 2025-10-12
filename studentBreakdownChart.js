@@ -5,7 +5,7 @@ async function renderStudentBreakdownChart() {
   // Fetch all students
   const { data: students, error } = await supabaseClient.from('students').select('gender, class');
   if (error) {
-    alert('Failed to load student data.');
+    try { notify('Failed to load student data.', 'error'); } catch (e) { console.error('Failed to load student data.', e); }
     return;
   }
   // Gender counts

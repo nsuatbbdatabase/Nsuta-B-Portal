@@ -1,0 +1,41 @@
+<!-- Student Registration Modal -->
+<div id="studentModal" class="modal hidden">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal('studentModal')">&times;</span>
+    <h2 class="modal-title">Register Student</h2>
+    <form id="studentForm">
+      <label for="first_name">First Name:</label>
+      <input type="text" name="first_name" required />
+      <label for="surname">Surname:</label>
+      <input type="text" name="surname" required />
+      <label for="area">Location:</label>
+      <input type="text" name="area" />
+      <label for="dob">Date of Birth:</label>
+      <input type="date" name="dob" />
+      <label for="nhis_number">NHIS Number:</label>
+      <input type="text" name="nhis_number" />
+      <label for="gender">Gender:</label>
+      <select name="gender" required>
+        <option value="">-- Select Gender --</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+      <label for="class">Class (e.g. JHS 1):</label>
+      <input type="text" name="class" required />
+      <div id="subclassFieldContainer">
+        <label for="subclass">Subclass (e.g. A, B):</label>
+        <input type="text" name="subclass" maxlength="1" style="text-transform:uppercase" />
+      </div>
+      <label for="parent_name">Parent/Guardian Name:</label>
+      <input type="text" name="parent_name" />
+      <label for="parent_contact">Parent/Guardian Number:</label>
+      <input type="text" name="parent_contact" />
+      <label for="picture">Picture:</label>
+      <input type="file" name="picture" accept="image/*" />
+      <input type="hidden" name="student_id" />
+      <input type="hidden" name="register_id" />
+      <button type="submit" class="modal-btn primary">Register</button>
+      <button type="button" onclick="closeModal('studentModal')" class="modal-btn secondary">Cancel</button>
+    </form>
+  </div>
+</div>

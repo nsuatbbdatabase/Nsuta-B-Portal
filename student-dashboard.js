@@ -589,7 +589,7 @@ async function submitAssignment() {
   const file = fileInput.files[0];
 
   if (!assignmentId || !file) {
-    alert('Please select an assignment and upload a file.');
+    notify('Please select an assignment and upload a file.', 'warning');
     return;
   }
 
@@ -601,7 +601,7 @@ async function submitAssignment() {
     .upload(filePath, file);
   console.log('Student upload response:', data, error);
   if (error) {
-    alert('File upload failed: ' + error.message);
+    notify('File upload failed: ' + error.message, 'error');
     return;
   }
   // Try to extract the file path from the response
@@ -619,11 +619,11 @@ async function submitAssignment() {
       .getPublicUrl(uploadedPath);
     fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
     if (!fileUrl) {
-      alert('File uploaded but public URL could not be generated.');
+      notify('File uploaded but public URL could not be generated.', 'error');
       return;
     }
   } else {
-    alert('File uploaded but no path returned.');
+    notify('File uploaded but no path returned.', 'error');
     return;
   }
   const submissionPayload = {
@@ -633,7 +633,7 @@ async function submitAssignment() {
   };
   console.log('DEBUG: Inserting into student_submissions:', submissionPayload);
   await supabaseClient.from('student_submissions').insert([submissionPayload]);
-  alert('Assignment submitted successfully.');
+  notify('Assignment submitted successfully.', 'info');
   fileInput.value = '';
   await loadSubmissions();
 }
@@ -1018,7 +1018,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         .eq('username', studentUsername)
         .single();
       if (error || !data) {
-        alert('Session expired. Please log in again.');
+        notify('Session expired. Please log in again.', 'error');
         window.location.href = 'index.html';
         return;
       }

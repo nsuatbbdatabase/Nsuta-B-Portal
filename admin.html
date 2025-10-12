@@ -283,6 +283,39 @@
         <tbody></tbody>
       </table>
     </section>
+  <!-- Toast container for in-page notifications -->
+  <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
+
+  <script>
+    // Inject minimal toast CSS for better visuals
+    (function(){
+      const css = `
+        .app-toast { font-family: 'Segoe UI', Arial, sans-serif; font-size:0.95rem; }
+        .app-toast-info { background: #f0f9ff; color: #0b2740; }
+        .app-toast-warning { background: #fff7ed; color: #92400e; }
+        .app-toast-error { background: #fee2e2; color: #7f1d1d; }
+      `;
+      const s = document.createElement('style'); s.appendChild(document.createTextNode(css)); document.head.appendChild(s);
+    })();
+    // Minimal showToast shim so alert() calls on this page render as toasts
+    if (!window.showToast) {
+      window._toastQueue = window._toastQueue || [];
+      window.showToast = function(message, type='info', durationMs = 3500) {
+        // If admin.js has already provided a richer showToast, call that instead
+        if (typeof window.__realShowToast === 'function') {
+          return window.__realShowToast(message, type, durationMs);
+        }
+        // Otherwise, queue messages to display once real showToast is available
+        window._toastQueue.push({ message: String(message), type, durationMs });
+      };
+      // Override native alert to use showToast
+      window._originalAlert = window.alert;
+      window.alert = function(msg) {
+        try { window.showToast(String(msg), 'info'); } catch (e) { try { window._originalAlert(msg); } catch (ee) { console.log('alert:', msg); } }
+      };
+    }
+  </script>
+
   </main>
   <script src="admin-section-toggle.js"></script>
 
@@ -290,32 +323,47 @@
   <div id="studentModal" class="modal hidden">
     <div class="modal-content">
       <h3>Register Student</h3>
-      <form id="studentForm" enctype="multipart/form-data">
+  <form id="studentForm" enctype="multipart/form-data" novalidate>
         <label for="register_id">Student ID</label>
         <input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly style="background:#f7f7fa;" />
         <input type="hidden" name="student_id" />
-        <input type="text" name="first_name" placeholder="First Name" required />
-        <input type="text" name="surname" placeholder="Surname" required />
-        <input type="text" name="area" placeholder="Area" required />
         <label for="student_dob">Date of Birth</label>
-        <input type="date" id="student_dob" name="dob" required />
+        <input type="date" id="student_dob" name="dob" />
         <input type="text" name="nhis_number" placeholder="NHIS Number" />
-  <select name="gender" required title="Gender">
+          <input type="text" name="first_name" placeholder="First Name" />
+          <input type="text" name="surname" placeholder="Surname" />
+          <input type="text" name="area" placeholder="Area" />
+          <select name="gender" title="Gender">
           <option value="">Select Gender</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>
         </select>
-  <select name="class" required title="Class">
-          <option value="">Select Class</option>
-          <option value="JHS 1">JHS 1</option>
-          <option value="JHS 2">JHS 2</option>
-          <option value="JHS 3">JHS 3</option>
-        </select>
-        <input type="text" name="parent_name" placeholder="Parent/Guardian Name" required />
-        <input type="tel" name="parent_contact" placeholder="Parent/Guardian Number" required />
-  <input type="file" name="picture" accept="image/*" title="Upload Picture" placeholder="Upload Picture" />
+        <div class="class-select-group">
+            <!-- Main class + subclass UI -->
+            <div class="class-select-row">
+              <select name="main_class_select" id="student_main_class_select" required title="Main Class">
+                <option value="">Select Class</option>
+                <option value="JHS 1">JHS 1</option>
+                <option value="JHS 2">JHS 2</option>
+                <option value="JHS 3">JHS 3</option>
+              </select>
+              <select name="sub_class_select" id="student_sub_class_select" style="display:none;" title="Subclass">
+                <option value="">Select Subclass</option>
+                <option value="A">A</option>
+                <option value="B">B</option>
+              </select>
+              <input type="hidden" name="class" id="student_class_hidden" />
+            </div>
+            <style>
+            .class-select-row { display:flex; gap:0.5rem; align-items:center; }
+            .class-select-row select { padding:0.35em 0.6em; border-radius:6px; border:1px solid #cbd5e1; background:#fff; }
+            </style>
+        <input type="hidden" name="class" id="student_class_combined" />
+        <input type="text" name="parent_name" placeholder="Parent/Guardian Name" />
+        <input type="tel" name="parent_contact" placeholder="Parent/Guardian Number" />
+        <input type="file" name="picture" accept="image/*" title="Upload Picture" placeholder="Upload Picture" />
         <div class="form-actions">
-          <button type="submit">Save</button>
+          <button type="button" id="studentSaveBtn">Save</button>
           <button type="button" onclick="closeModal('studentModal')">Cancel</button>
         </div>
       </form>
@@ -382,25 +430,8 @@
           <div class="form-group full-width"><button type="button" id="addAssignmentRowBtn">Add Class-Subject Pair</button></div>
         </div>
   <script src="admin-section-toggle.js"></script>
-  <script>
-// Show/hide class teacher section based on responsibility (ensure this runs after DOM is ready)
-document.addEventListener('DOMContentLoaded', function() {
-  var respSelect = document.getElementById('responsibility');
-  var classSection = document.getElementById('classTeacherSection');
-  if (respSelect && classSection) {
-    respSelect.addEventListener('change', function() {
-      if (respSelect.value === 'Class Teacher') {
-        classSection.style.display = '';
-        document.getElementById('class_teacher_class').required = true;
-      } else {
-        classSection.style.display = 'none';
-        document.getElementById('class_teacher_class').required = false;
-        document.getElementById('class_teacher_class').value = '';
-      }
-    });
-  }
-});
-// --- Dynamic Class-Subject Assignment Rows ---
+  <!-- centralized scripts in admin.js/dashboard.js handle student subclass and responsibility logic -->
+  <!-- --- Dynamic Class-Subject Assignment Rows --- -->
 const SUBJECT_OPTIONS = [
   'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
 ];

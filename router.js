@@ -59,7 +59,7 @@ window.addEventListener('DOMContentLoaded', function() {
         }
       }
       if (!found) {
-        alert('Access denied. Please log in first.');
+          try { notify('Access denied. Please log in first.', 'error'); } catch (e) { alert('Access denied. Please log in first.'); }
         window.location.href = 'index.html';
         return;
       }
@@ -95,7 +95,7 @@ function logout() {
 function protectRoute(role) {
   const id = localStorage.getItem(`${role}Id`);
   if (!id) {
-    alert('Access denied. Please log in.');
+    try { notify('Access denied. Please log in.', 'error'); } catch (e) { alert('Access denied. Please log in.'); }
     window.location.href = 'login.html';
   }
 }

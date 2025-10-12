@@ -6,6 +6,9 @@ function logout() {
   window.location.href = 'login.html';
 }
 
+// Notification helper: prefer in-page toast if available
+const notify = (msg, type='info') => { try { if (window.showToast) return window.showToast(msg, type); alert(msg); } catch (e) { console.log('Notify fallback:', msg); } };
+
 window.addEventListener('DOMContentLoaded', function() {
   // Prevent access if not logged in as teacher
   const teacherId = localStorage.getItem('teacherId');
@@ -106,7 +109,7 @@ async function submitAttendance() {
   const classVal = document.getElementById('attendanceClassSelect').value;
   const dateVal = document.getElementById('attendanceDate').value;
   if (!classVal || !dateVal) {
-    alert('Please select class and date.');
+    notify('Please select class and date.', 'warning');
     return;
   }
   const presentCheckboxes = document.querySelectorAll('.attendance-present');
@@ -129,7 +132,7 @@ async function submitAttendance() {
     };
   });
   if (records.length === 0) {
-    alert('No students to mark.');
+    notify('No students to mark.', 'warning');
     return;
   }
   // Upsert attendance records (one per student per date)
@@ -137,9 +140,9 @@ async function submitAttendance() {
     .from('attendance')
     .upsert(records, { onConflict: ['student_id', 'date'] });
   if (error) {
-    alert('Failed to submit attendance: ' + error.message);
+    notify('Failed to submit attendance: ' + error.message, 'error');
   } else {
-    alert('Attendance submitted successfully!');
+    notify('Attendance submitted successfully!', 'info');
   }
 }
 // ----------------------------------------------------------
@@ -147,18 +150,18 @@ async function submitAttendance() {
 async function sendMotivationalMessage() {
   const studentId = document.getElementById('motivationStudentSelect')?.value;
   const message = document.getElementById('motivationText')?.value.trim();
-  if (!teacher || !teacher.id) {
-    alert('Teacher session not found.');
-    return;
-  }
+    if (!teacher || !teacher.id) {
+      notify('Teacher session not found.', 'error');
+      return;
+    }
   if (!studentId || !message) {
-    alert('Please select a student and enter a message.');
+    notify('Please select a student and enter a message.', 'warning');
     return;
   }
   // Basic UUID format check
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(studentId) || !uuidRegex.test(teacher.id)) {
-    alert('Invalid student or teacher ID format.');
+    notify('Invalid student or teacher ID format.', 'error');
     return;
   }
   const { error } = await supabaseClient.from('motivations').insert([
@@ -169,9 +172,9 @@ async function sendMotivationalMessage() {
     }
   ]);
   if (error) {
-    alert('Failed to send motivation: ' + error.message);
+    notify('Failed to send motivation: ' + error.message, 'error');
   } else {
-    alert('Motivational message sent!');
+    notify('Motivational message sent!', 'info');
     document.getElementById('motivationText').value = '';
     // Optionally reload sent messages here if you have a loader
   }
@@ -611,13 +614,13 @@ async function submitPromotionExam() {
   const termVal = document.getElementById('promotionTermInput').value;
   const yearVal = document.getElementById('promotionYearInput').value;
   if (!classVal || !subjectVal || !termVal || !yearVal) {
-      alert('Please select class, subject, term, and year.');
+      notify('Please select class, subject, term, and year.', 'warning');
     return;
   }
   // Ensure term is valid
   const allowedTerms = ['First', 'Second', 'Third', 'Promotion'];
   if (!allowedTerms.includes(termVal)) {
-    alert('Invalid term value.');
+    notify('Invalid term value.', 'warning');
     return;
   }
   const scoreInputs = document.querySelectorAll('.promotion-score');
@@ -632,25 +635,25 @@ async function submitPromotionExam() {
     submitted_to_admin: true
   }));
   if (records.length === 0) {
-    alert('No students to mark.');
+    notify('No students to mark.', 'warning');
     return;
   }
   try {
     const { error, data } = await supabaseClient
       .from('promotion_exams')
       .upsert(records, { onConflict: ['student_id', 'class', 'subject', 'term', 'year'] });
-    if (error) {
+      if (error) {
       console.error('Promotion exam upsert error:', error);
-      alert('Failed to submit promotion exam: ' + (error.message || JSON.stringify(error)));
+      notify('Failed to submit promotion exam: ' + (error.message || JSON.stringify(error)), 'error');
     } else {
-      alert('Promotion exam submitted to admin!');
+      notify('Promotion exam submitted to admin!', 'info');
       document.getElementById('promotionExamTableBody').innerHTML = '';
       // Optionally reload students to repopulate form with latest marks
       loadPromotionExamStudents();
     }
-  } catch (err) {
+    } catch (err) {
     console.error('Promotion exam upsert exception:', err);
-    alert('Unexpected error: ' + err.message);
+    notify('Unexpected error: ' + err.message, 'error');
   }
 }
 
@@ -768,7 +771,7 @@ async function loadStudents(section = 'sba') {
         }
       } catch (err) {
         console.error('SBA marks query failed:', err);
-        alert('Failed to load SBA marks. Please check your database columns.');
+      notify('Failed to load SBA marks. Please check your database columns.', 'error');
       }
     }
     renderSBAForm(marksMap);
@@ -843,11 +846,11 @@ function getTermYear() {
 // Validation for SBA and Exam entry
 function validateMarks(sba, exam) {
   if (sba > 15) {
-    alert('SBA marks cannot exceed 15.');
+    notify('SBA marks cannot exceed 15.', 'warning');
     return false;
   }
   if (exam > 100) {
-    alert('Exam marks cannot exceed 100.');
+    notify('Exam marks cannot exceed 100.', 'warning');
     return false;
   }
   return true;
@@ -861,7 +864,7 @@ function tryReloadReport(studentId) {
     loadReportForStudent();
   } else {
     // Otherwise, show a message to prompt user to refresh/reselect
-    alert('Scores submitted! Please refresh or reselect the student in the report dashboard to see updated results.');
+  notify('Scores submitted! Please refresh or reselect the student in the report dashboard to see updated results.', 'info');
   }
 }
 
@@ -870,7 +873,7 @@ async function submitSBA() {
   const subject = document.getElementById('subjectSelect').value;
   const { term, year } = getTermYear();
   if (!subject || !term || !year) {
-      alert('Please select class, subject, term, and year.');
+      notify('Please select class, subject, term, and year.', 'warning');
     return;
   }
     const classVal = document.getElementById('classSelect').value;
@@ -878,7 +881,7 @@ async function submitSBA() {
   for (const student of students) {
     const scaled = parseInt(document.getElementById(`scaled-${student.id}`).textContent);
     if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-  alert(`Invalid SBA score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
+  notify(`Invalid SBA score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`, 'warning');
       continue;
     }
     // Fetch existing exam score for this student/subject/term/year
@@ -906,7 +909,7 @@ async function submitSBA() {
     });
   }
   if (submissions.length === 0) {
-    alert('No valid SBA scores to submit.');
+  notify('No valid SBA scores to submit.', 'warning');
     return;
   }
   const { data, error } = await supabaseClient
@@ -917,10 +920,10 @@ async function submitSBA() {
     .select();
   if (error) {
     console.error('SBA upsert error:', error.message);
-    alert('Failed to submit SBA scores.');
+  notify('Failed to submit SBA scores.', 'error');
   } else {
     console.log('SBA upserted:', data);
-    alert('SBA scores submitted successfully.');
+  notify('SBA scores submitted successfully.', 'info');
   }
 }
 
@@ -965,7 +968,7 @@ async function submitExams() {
   const term = document.getElementById('termInputExam').value;
   const year = document.getElementById('yearInputExam').value;
   if (!subject || !term || !year) {
-      alert('Please select class, subject, term, and year.');
+      notify('Please select class, subject, term, and year.', 'warning');
     return;
   }
     const classVal = document.getElementById('classSelectExam').value;
@@ -973,7 +976,7 @@ async function submitExams() {
   for (const student of students) {
     const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
     if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-  alert(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`);
+  notify(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`, 'warning');
       continue;
     }
     // Fetch existing SBA score for this student/subject/term/year
@@ -1001,7 +1004,7 @@ async function submitExams() {
     });
   }
   if (submissions.length === 0) {
-    alert('No valid exam scores to submit.');
+    notify('No valid exam scores to submit.', 'warning');
     return;
   }
   const { data, error } = await supabaseClient
@@ -1012,10 +1015,10 @@ async function submitExams() {
     .select();
   if (error) {
     console.error('Exam upsert error:', error.message);
-    alert('Failed to submit exam scores.');
+    notify('Failed to submit exam scores.', 'error');
   } else {
     console.log('Exam upserted:', data);
-    alert('Exam scores submitted successfully.');
+    notify('Exam scores submitted successfully.', 'info');
     // Clear Exam form fields after submit
     document.getElementById('examTableBody').innerHTML = '';
     // Optionally reload students to repopulate form with latest marks
@@ -1033,13 +1036,13 @@ async function sendAssignment() {
   const fileInput = document.getElementById('assignFile');
   const file = fileInput && fileInput.files[0];
   if (!teacher || !teacher.id || !className || !subject || !term || !year || !title || !instructions) {
-    alert('Please fill in all required fields.');
+    notify('Please fill in all required fields.', 'warning');
     return;
   }
   // Prevent sending assignment to class/subject not assigned to teacher
   const isAssigned = teacher.assignments && teacher.assignments.some(a => a.class === className && a.subject === subject);
   if (!isAssigned) {
-    alert('You are not assigned to this class and subject. You cannot compose an assignment for it.');
+    notify('You are not assigned to this class and subject. You cannot compose an assignment for it.', 'warning');
     return;
   }
   let fileUrl = null;
@@ -1051,7 +1054,7 @@ async function sendAssignment() {
       .upload(filePath, file);
     console.log('Upload response:', data, error);
     if (error) {
-      alert('File upload failed: ' + error.message);
+      notify('File upload failed: ' + error.message, 'error');
       return;
     }
     // Try to extract the file path from the response
@@ -1074,11 +1077,11 @@ async function sendAssignment() {
       }
       fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
       if (!fileUrl) {
-        alert('File uploaded but public URL could not be generated.');
+        notify('File uploaded but public URL could not be generated.', 'error');
         return;
       }
     } else {
-      alert('File uploaded but no path returned.');
+      notify('File uploaded but no path returned.', 'error');
       return;
     }
   }
@@ -1094,9 +1097,9 @@ async function sendAssignment() {
   };
   const { error } = await supabaseClient.from('assignments').insert([payload]);
   if (error) {
-    alert('Assignment submission failed: ' + error.message);
+    notify('Assignment submission failed: ' + error.message, 'error');
   } else {
-    alert('Assignment sent successfully.');
+    notify('Assignment sent successfully.', 'info');
     try {
       document.getElementById('assignTitle').value = '';
       document.getElementById('assignText').value = '';
@@ -1288,26 +1291,26 @@ window.addEventListener('DOMContentLoaded', function() {
       const currentPin = document.getElementById('currentPin').value.trim();
       const newPin = document.getElementById('newPin').value.trim();
       if (!teacher || !teacher.id) {
-        alert('Teacher session not found.');
+        notify('Teacher session not found.', 'error');
         return;
       }
       // Fetch teacher record to verify current PIN
       const { data, error } = await supabaseClient.from('teachers').select('pin').eq('id', teacher.id).single();
       if (error || !data) {
-        alert('Failed to verify current PIN.');
+        notify('Failed to verify current PIN.', 'error');
         return;
       }
       if (data.pin !== currentPin) {
-        alert('Current PIN is incorrect.');
+        notify('Current PIN is incorrect.', 'warning');
         return;
       }
       // Update PIN
       const { error: updateError } = await supabaseClient.from('teachers').update({ pin: newPin }).eq('id', teacher.id);
       if (updateError) {
-        alert('Failed to update PIN.');
+        notify('Failed to update PIN.', 'error');
         return;
       }
-      alert('PIN changed successfully!');
+      notify('PIN changed successfully!', 'info');
       closeChangePinModal();
     };
   }

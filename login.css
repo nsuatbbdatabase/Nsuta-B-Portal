@@ -2,7 +2,8 @@
 @media (max-width: 900px) {
   .login-container {
     padding: 1rem;
-    max-width: 98vw;
+    max-width: 98%;
+    box-sizing: border-box;
   }
   h2, h3 {
     font-size: 1.2rem;
@@ -12,7 +13,7 @@
 @media (max-width: 600px) {
   .login-container {
     padding: 0.5rem;
-    max-width: 98vw;
+    max-width: 98%;
     border-radius: 6px;
   }
   h2, h3 {
@@ -46,7 +47,8 @@
 @media (max-width: 600px) {
   .login-container {
     padding: 0.7rem;
-    max-width: 98vw;
+    max-width: 98%;
+    box-sizing: border-box;
     border-radius: 6px;
   }
   .school-header {
@@ -83,8 +85,8 @@ body, html {
 
 
 body.index-dashboard-bg {
-  min-height: 100vh;
-  min-width: 100vw;
+  min-height: 100%;
+  min-width: 100%;
   background: #f4f6f8;
   position: relative;
   overflow: hidden;

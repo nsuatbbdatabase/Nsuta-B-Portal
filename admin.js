@@ -58,6 +58,20 @@ function closeModal(modalId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // --- Student registration modal: show subclass select when main class is selected ---
+  var studentMainClass = document.getElementById('student_main_class_select');
+  var studentSubClass = document.getElementById('student_sub_class_select');
+  if (studentMainClass && studentSubClass) {
+    studentMainClass.addEventListener('change', function() {
+      if (studentMainClass.value === 'JHS 1' || studentMainClass.value === 'JHS 2') {
+        studentSubClass.style.display = '';
+        studentSubClass.value = '';
+      } else {
+        studentSubClass.style.display = 'none';
+        studentSubClass.value = '';
+      }
+    });
+  }
   // --- Class/Subclass selection logic for Class Teacher ---
   var mainClass = document.getElementById('main_class_select');
   var subClass = document.getElementById('sub_class_select');
@@ -97,13 +111,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (resp === 'Class Teacher') {
         if (!mainClass.value) {
           e.preventDefault();
-          alert('Please select the main class you are responsible for.');
+          showToast('Please select the main class you are responsible for.', 'warning');
           mainClass.focus();
           return;
         }
         if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2') && !subClass.value) {
           e.preventDefault();
-          alert('Please select the subclass (A or B) for ' + mainClass.value + '.');
+          showToast('Please select the subclass (A or B) for ' + mainClass.value + '.', 'warning');
           subClass.focus();
           return;
         }
@@ -195,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = evt.target.result;
         const lines = text.split(/\r?\n/).filter(l => l.trim());
         if (lines.length < 2) {
-          alert('CSV file is empty or missing data.');
+          notify('CSV file is empty or missing data.', 'warning');
           return;
         }
         // Define allowed schema fields for Supabase students table
@@ -285,12 +299,58 @@ document.addEventListener('DOMContentLoaded', function() {
         let msg = `Import complete. Success: ${successCount}, Failed: ${failCount}`;
         if (duplicateRows.length) msg += `\nDuplicate students (already exist in this class): ${duplicateRows.join(', ')}`;
         if (invalidRows.length) msg += `\nRows with missing/invalid fields or other errors: ${invalidRows.join(', ')}`;
-        alert(msg);
+        notify(msg, 'info');
       };
       reader.readAsText(file);
     });
   }
 });
+
+// Simple toast UI helper: showToast(message, type="info", durationMs=3500)
+function showToast(message, type = 'info', durationMs = 3500) {
+  try {
+    const container = document.getElementById('toastContainer');
+    if (!container) { console.log('Toast:', message); return; }
+    const toast = document.createElement('div');
+    toast.className = 'app-toast app-toast-' + type;
+    toast.style.pointerEvents = 'auto';
+    toast.style.minWidth = '220px';
+    toast.style.maxWidth = '360px';
+    toast.style.padding = '0.6rem 0.9rem';
+    toast.style.borderRadius = '8px';
+    toast.style.boxShadow = '0 6px 18px rgba(9,30,66,0.12)';
+    toast.style.background = (type === 'error' ? '#fee2e2' : (type === 'warning' ? '#fff7ed' : '#f0f9ff'));
+    toast.style.color = (type === 'error' ? '#7f1d1d' : (type === 'warning' ? '#92400e' : '#0b2740'));
+    toast.style.border = '1px solid rgba(9,30,66,0.06)';
+    toast.style.fontWeight = '600';
+  toast.style.opacity = '0';
+  toast.style.transform = 'translateY(8px)';
+  toast.style.transition = 'opacity 220ms ease, transform 220ms ease';
+  // Accessibility
+  toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  toast.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.tabIndex = 0; // make focusable for screen readers
+  // content
+  toast.textContent = message;
+    container.appendChild(toast);
+    // Force layout then animate
+    requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+    const hide = () => {
+      toast.style.opacity = '0'; toast.style.transform = 'translateY(8px)';
+      setTimeout(() => { try { container.removeChild(toast); } catch (e) {} }, 240);
+    };
+    setTimeout(hide, durationMs);
+    // click to dismiss quickly
+    toast.addEventListener('click', hide);
+    // Make screen readers read it immediately
+    try { toast.focus(); } catch (e) { /* ignore */ }
+  } catch (e) {
+    console.log('Toast error:', e, message);
+  }
+}
+// Expose as the real showToast so other scripts can use it immediately
+try { window.__realShowToast = showToast; if (window._toastQueue && window._toastQueue.length) { window._toastQueue.forEach(t => showToast(t.message, t.type, t.durationMs)); window._toastQueue = []; } } catch (e) { /* ignore */ }
 // Export students as CSV
 // Split full name into first name and surname
 // Generate username and pin
@@ -300,13 +360,71 @@ function splitFullName(fullName) {
   const firstName = parts.join(' ');
   return { first_name: firstName, surname: surname };
 }
-  // Intercept student form submission to support full name splitting
+
+// Suppress native HTML5 validation UI globally and log invalid events for debugging.
+// This prevents browsers from showing the built-in "Please fill in all required fields" dialog
+// while we perform validation and submission in JavaScript.
+document.addEventListener('invalid', function(e) {
+  try {
+    e.preventDefault(); // stop browser default bubble/tooltip
+  } catch (err) {
+    /* ignore */
+  }
+  console.warn('Suppressed native validation for element:', e.target, 'in form:', e.target && e.target.form ? (e.target.form.id || e.target.form.name) : null);
+  // Attempt to focus the invalid element so user gets feedback
+  try { e.target.focus(); } catch (err) { /* ignore */ }
+}, true); // use capture to catch the event before the browser shows UI
+
+// Capture any native submit events across the document for diagnostics.
+document.addEventListener('submit', function(e) {
+  console.log('Document-level submit captured for form:', e.target && (e.target.id || e.target.name) ? (e.target.id || e.target.name) : e.target);
+}, true);
+  // Intercept student form submission to support full name splitting and proper required field validation
   const studentForm = document.getElementById('studentForm');
   if (studentForm) {
     studentForm.addEventListener('submit', function(e) {
-      const fullNameInput = studentForm.querySelector('[name="full_name"]');
-      if (fullNameInput) {
+      // Always prevent browser default submit/validation; we manage everything in JS
+      e.preventDefault();
+      console.log('studentForm submit handler invoked');
+      // Validate all required fields
+      const mainClass = studentForm.querySelector('[name="main_class_select"]');
+      const subClass = studentForm.querySelector('[name="sub_class_select"]');
+      const firstName = studentForm.querySelector('[name="first_name"]');
+      const surname = studentForm.querySelector('[name="surname"]');
+      const area = studentForm.querySelector('[name="area"]');
+      const dob = studentForm.querySelector('[name="dob"]');
+      const gender = studentForm.querySelector('[name="gender"]');
+      const parentName = studentForm.querySelector('[name="parent_name"]');
+      const parentContact = studentForm.querySelector('[name="parent_contact"]');
+      let combinedClass = '';
+  if (!firstName.value.trim()) { e.preventDefault(); notify('Please enter first name.', 'warning'); firstName.focus(); return; }
+  if (!surname.value.trim()) { e.preventDefault(); notify('Please enter surname.', 'warning'); surname.focus(); return; }
+  if (!area.value.trim()) { e.preventDefault(); notify('Please enter area.', 'warning'); area.focus(); return; }
+  // Date of birth is optional
+  if (!gender.value) { e.preventDefault(); notify('Please select gender.', 'warning'); gender.focus(); return; }
+  // Parent/guardian name and contact are optional
+  if (mainClass && mainClass.value) {
+        if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
+          if (!subClass.value) {
+            e.preventDefault();
+            notify('Please select subclass (A or B) for ' + mainClass.value, 'warning');
+            subClass.focus();
+            return;
+          }
+          combinedClass = mainClass.value + ' ' + subClass.value;
+        } else {
+          combinedClass = mainClass.value;
+        }
+      } else {
         e.preventDefault();
+        notify('Please select a class.', 'warning');
+        mainClass.focus();
+        return;
+      }
+  studentForm.querySelector('[name="class"]').value = combinedClass;
+      // ...existing full name splitting and duplicate check logic...
+  const fullNameInput = studentForm.querySelector('[name="full_name"]');
+  if (fullNameInput) {
         const { first_name, surname } = splitFullName(fullNameInput.value);
         studentForm.querySelector('[name="first_name"]').value = first_name;
         studentForm.querySelector('[name="surname"]').value = surname;
@@ -328,10 +446,155 @@ function splitFullName(fullName) {
           return;
         }
         window._studentNameClassSet.add(nameClass);
-        studentForm.submit();
       }
+      // Passed validation — create student via JS flow
+      console.log('studentForm validation passed, creating student...');
+      createStudentFromForm(studentForm).catch(err => { console.error(err); alert('Failed to save student: ' + (err.message || err)); });
+      return;
     });
+    // Wire up custom Save button to trigger form submit programmatically
+    const saveBtn = document.getElementById('studentSaveBtn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        // Ensure native validation is disabled for programmatic submit
+        studentForm.noValidate = true;
+        // Programmatically dispatch a submit event that will be handled by our listener
+        const ev = new Event('submit', { bubbles: true, cancelable: true });
+        studentForm.dispatchEvent(ev);
+        // If event wasn't prevented, submit the form programmatically so server logic runs
+        if (!ev.defaultPrevented) {
+          // Use our own JS flow to insert the student to avoid native validation
+          createStudentFromForm(studentForm).catch(err => {
+            console.error('Student insert failed:', err);
+            alert('Failed to save student. See console for details.');
+          });
+        }
+      });
+    }
   }
+
+// Create student record from the provided form element (uploads picture, assigns register_id)
+async function createStudentFromForm(form) {
+  // gather values
+  const firstName = (form.querySelector('[name="first_name"]')?.value || '').trim();
+  const surname = (form.querySelector('[name="surname"]')?.value || '').trim();
+  const area = (form.querySelector('[name="area"]')?.value || '').trim();
+  const dob = form.querySelector('[name="dob"]')?.value || null;
+  const nhis = (form.querySelector('[name="nhis_number"]')?.value || '').trim();
+  const gender = form.querySelector('[name="gender"]')?.value || '';
+  const mainClass = form.querySelector('[name="main_class_select"]')?.value || '';
+  const subClass = form.querySelector('[name="sub_class_select"]')?.value || '';
+  const parentName = (form.querySelector('[name="parent_name"]')?.value || '').trim();
+  const parentContact = (form.querySelector('[name="parent_contact"]')?.value || '').trim();
+  const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
+
+  const studentClass = (mainClass && subClass) ? `${mainClass} ${subClass}` : (mainClass || '');
+
+  // Generate username & pin
+  const firstPart = (firstName || '').split(/\s+/)[0] || '';
+  const secondPart = (surname || '').split(/\s+/)[0] || '';
+  const baseUsername = (firstPart + '.' + secondPart).toLowerCase().replace(/[^a-z0-9\.\-_]/g, '');
+  const pin = typeof generatePin === 'function' ? generatePin() : Math.floor(1000 + Math.random() * 9000).toString();
+
+  // Helper: check DB for existing username and produce a unique candidate
+  async function ensureUniqueUsername(client, base, maxAttempts = 20) {
+    if (!client) return base;
+    let candidate = base;
+    for (let i = 0; i < maxAttempts; i++) {
+      try {
+        const { data, error } = await client.from('students').select('username').eq('username', candidate).limit(1);
+        if (error) {
+          console.warn('Username uniqueness check error:', error);
+          // fall back to candidate as-is
+          return candidate;
+        }
+        if (!data || data.length === 0) return candidate; // available
+      } catch (err) {
+        console.warn('Username check catch:', err);
+        return candidate;
+      }
+      // already exists — append a suffix and retry
+      candidate = `${base}${i + 1}`;
+    }
+    // last resort: append timestamp fragment
+    return `${base}_${Date.now().toString().slice(-4)}`;
+  }
+
+  // Upload picture if present
+  let pictureUrl = null;
+  if (pictureFile && window.supabaseClient) {
+    const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
+    const { data: uploadData, error: uploadError } = await window.supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
+    if (uploadError) {
+      console.warn('Picture upload failed:', uploadError.message);
+    } else {
+      const publicUrlResult = window.supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
+      pictureUrl = publicUrlResult?.data?.publicUrl || publicUrlResult?.publicUrl || null;
+    }
+  }
+
+  // Determine next register_id for this class
+  let register_id = form.querySelector('[name="register_id"]')?.value || '';
+  if (!register_id && window.supabaseClient) {
+    const { data: classStudents } = await window.supabaseClient.from('students').select('register_id').eq('class', studentClass);
+    let nextNum = 1;
+    if (classStudents && classStudents.length > 0) {
+      const nums = classStudents.map(s => { const m = (s.register_id||'').match(/_(\d+)$/); return m ? parseInt(m[1],10) : 0; });
+      nextNum = Math.max(...nums, 0) + 1;
+    }
+    register_id = studentClass.replace(/\s+/g,'').toUpperCase() + '_' + nextNum;
+    const ridField = form.querySelector('[name="register_id"]'); if (ridField) ridField.value = register_id;
+  }
+
+  // Ensure username uniqueness before creating payload
+  let finalUsername = baseUsername;
+  if (window.supabaseClient) {
+    finalUsername = await ensureUniqueUsername(window.supabaseClient, baseUsername);
+  }
+
+  const payload = {
+    first_name: firstName,
+    surname: surname,
+    area: area || null,
+    dob: dob || null,
+    nhis_number: nhis || '',
+    gender: gender || '',
+    class: studentClass || '',
+    subclass: subClass || null,
+    parent_name: parentName || '',
+    parent_contact: parentContact || '',
+    username: finalUsername,
+    pin,
+    picture_url: pictureUrl,
+    register_id
+  };
+
+  if (!window.supabaseClient) throw new Error('Supabase client not available');
+  // Try inserting; on unique-constraint failure for username, retry with a new username
+  let insertError = null;
+  const maxInsertAttempts = 6;
+  for (let attempt = 0; attempt < maxInsertAttempts; attempt++) {
+    const { error } = await window.supabaseClient.from('students').insert([payload]);
+    if (!error) { insertError = null; break; }
+    insertError = error;
+    // If the error looks like a unique constraint on username, pick a new username and retry
+    const errMsg = (error && (error.message || error.details || '')).toString();
+    const isUsernameConflict = errMsg.toLowerCase().includes('username') || (error.code && error.code === '23505');
+    if (!isUsernameConflict) break; // other error — don't retry
+    // generate a new username candidate and update payload
+    const suffix = '_' + Math.floor(1000 + Math.random() * 9000);
+    finalUsername = `${baseUsername}${suffix}`;
+    payload.username = finalUsername;
+    console.warn(`Username conflict detected, retrying insert with username=${finalUsername} (attempt ${attempt + 1})`);
+    // small delay (non-blocking) — optional, here we just continue
+  }
+  if (insertError) throw insertError;
+  alert(`Student added!\nUsername: ${finalUsername}\nPIN: ${pin}`);
+  // reset and close
+  if (typeof loadStudents === 'function') loadStudents();
+  closeModal('studentModal');
+}
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
     alert('No student data to export.');

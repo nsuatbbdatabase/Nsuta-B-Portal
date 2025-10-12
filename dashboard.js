@@ -40,12 +40,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+// Notification helper: prefer in-page toast if available
+const notify = (msg, type='info') => { try { if (window.showToast) return window.showToast(msg, type); alert(msg); } catch (e) { console.log('Notify fallback:', msg); } };
 // Utility: Create a test teacher user for login
 async function createTestTeacher() {
   // Check if test user already exists
   const { data: existing } = await supabaseClient.from('teachers').select('*').eq('staff_id', 'TST001');
   if (existing && existing.length > 0) {
-    alert(`Test teacher already exists.\nStaff ID: ${existing[0].staff_id}\nPIN: ${existing[0].pin}`);
+    notify(`Test teacher already exists.\nStaff ID: ${existing[0].staff_id}\nPIN: ${existing[0].pin}`, 'warning');
     return;
   }
   const pin = '1234';
@@ -81,9 +83,9 @@ async function createTestTeacher() {
     pin
   }]);
   if (error) {
-    alert('Failed to create test teacher: ' + error.message);
+    notify('Failed to create test teacher: ' + error.message, 'error');
   } else {
-    alert(`Test teacher created!\nStaff ID: TST001\nPIN: ${pin}`);
+    notify(`Test teacher created!\nStaff ID: TST001\nPIN: ${pin}`, 'info');
   }
 }
 
@@ -93,23 +95,23 @@ async function createTestTeacher() {
 async function deleteTeacher(id) {
   if (!confirm('Are you sure you want to delete this teacher?')) return;
   const { error } = await supabaseClient.from('teachers').delete().eq('id', id);
-  if (error) alert('Delete failed.');
+  if (error) notify('Delete failed.', 'error');
   else loadTeachers();
 }
 // 🗑️ Delete Admin
 async function deleteAdmin(id) {
   if (!confirm('Are you sure you want to delete this admin?')) return;
   const { error } = await supabaseClient.from('admins').delete().eq('id', id);
-  if (error) alert('Delete failed.');
+  if (error) notify('Delete failed.', 'error');
   else loadAdmins();
 }
 // � Edit Admin
 async function editAdmin(id) {
   const { data, error } = await supabaseClient.from('admins').select('*').eq('id', id).single();
-  if (error) return alert('Failed to load admin.');
+  if (error) return notify('Failed to load admin.', 'error');
   const form = document.getElementById('adminForm');
   if (!form) {
-    alert('Admin form not found in the HTML.');
+  notify('Admin form not found in the HTML.', 'error');
     return;
   }
   form.admin_id.value = data.id || '';
@@ -160,9 +162,9 @@ document.getElementById('adminForm').addEventListener('submit', async (e) => {
     : await supabaseClient.from('admins').insert([adminData]);
 
   if (result.error) {
-    alert('Error: ' + result.error.message);
+    notify('Error: ' + result.error.message, 'error');
   } else {
-    alert(adminId ? 'Admin updated!' : `Admin registered: ${adminData.full_name}`);
+    notify(adminId ? 'Admin updated!' : `Admin registered: ${adminData.full_name}`, 'info');
     form.reset();
     closeModal('adminModal');
     loadAdmins();
@@ -247,6 +249,20 @@ const getMultiSelectValues = (selectElement) =>
 
 // 🧑‍🎓 Student Registration
 window.addEventListener('DOMContentLoaded', function() {
+  // Show/hide subclass field based on class selection in student registration modal
+  const classInput = document.querySelector('#studentForm [name="class"]');
+  const subclassContainer = document.getElementById('subclassFieldContainer');
+  if (classInput && subclassContainer) {
+    subclassContainer.style.display = 'none';
+    classInput.addEventListener('input', function() {
+      if (classInput.value.trim()) {
+        subclassContainer.style.display = '';
+      } else {
+        subclassContainer.style.display = 'none';
+        document.querySelector('#studentForm [name="subclass"]').value = '';
+      }
+    });
+  }
   const studentForm = document.getElementById('studentForm');
   if (studentForm) {
     studentForm.addEventListener('submit', async (e) => {
@@ -259,13 +275,14 @@ window.addEventListener('DOMContentLoaded', function() {
       const dob = form.dob.value;
       const nhisNumber = form.nhis_number.value.trim();
       const gender = form.gender.value;
-      const studentClass = form.class.value.trim();
+  const studentClass = form.class.value.trim();
+  const subclass = form.subclass && form.subclass.value ? form.subclass.value.trim().toUpperCase() : null;
       const parentName = form.parent_name.value.trim();
       const parentContact = form.parent_contact.value.trim();
       const pictureFile = form.picture.files[0];
 
       if (!firstName || !surname || !gender || !studentClass) {
-        alert('Please fill in all required fields.');
+        notify('Please fill in all required fields.', 'warning');
         return;
       }
 
@@ -275,8 +292,8 @@ window.addEventListener('DOMContentLoaded', function() {
         const { data: uploadData, error: uploadError } = await supabaseClient.storage
           .from('student-pictures')
           .upload(uploadPath, pictureFile);
-        if (uploadError) {
-          alert('Picture upload failed: ' + uploadError.message);
+          if (uploadError) {
+          notify('Picture upload failed: ' + uploadError.message, 'error');
           return;
         }
         let publicUrl = null;
@@ -292,7 +309,7 @@ window.addEventListener('DOMContentLoaded', function() {
         }
         pictureUrl = publicUrl;
         if (!pictureUrl) {
-          alert('Picture uploaded but public URL could not be generated.');
+          notify('Picture uploaded but public URL could not be generated.', 'error');
           return;
         }
       }
@@ -310,7 +327,8 @@ window.addEventListener('DOMContentLoaded', function() {
         dob: dob,
         nhis_number: nhisNumber,
         gender,
-        class: studentClass,
+  class: studentClass,
+  subclass: subclass,
         parent_name: parentName,
         parent_contact: parentContact,
         username,
@@ -339,9 +357,9 @@ window.addEventListener('DOMContentLoaded', function() {
       }
 
       if (result.error) {
-        alert('Error: ' + result.error.message);
+        notify('Error: ' + result.error.message, 'error');
       } else {
-        alert(studentId ? 'Student updated!' : `Student added!\nUsername: ${username}\nPIN: ${pin}`);
+        notify(studentId ? 'Student updated!' : `Student added!\nUsername: ${username}\nPIN: ${pin}`, 'info');
         form.reset();
         closeModal('studentModal');
         loadStudents();
@@ -354,14 +372,14 @@ window.addEventListener('DOMContentLoaded', function() {
 function importCSV() {
   const input = document.getElementById('csvInput');
   const file = input.files[0];
-  if (!file) return alert('Please select a CSV file.');
+  if (!file) return notify('Please select a CSV file.', 'warning');
 
   const reader = new FileReader();
   reader.onload = async (e) => {
     // Robust CSV parse: handle quoted fields, trim whitespace, ignore empty lines
     const raw = e.target.result;
     const lines = raw.split(/\r?\n/).filter(l => l.trim());
-    if (lines.length < 2) return alert('CSV file is empty or missing data.');
+  if (lines.length < 2) return notify('CSV file is empty or missing data.', 'warning');
     // Expect header: Student ID,Full Name,Area,DOB,NHIS Number,Gender,Class,Parent Name,Parent Contact
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
     let successCount = 0, failCount = 0, errorRows = [];
@@ -460,7 +478,7 @@ function importCSV() {
     }
     let msg = `CSV import complete. Success: ${successCount}, Failed: ${failCount}`;
     if (errorRows.length) msg += `\nRows with errors: ${errorRows.join(', ')}`;
-    alert(msg);
+  notify(msg, 'info');
     loadStudents();
   };
   reader.readAsText(file);
@@ -469,7 +487,7 @@ function importCSV() {
 // 📝 Edit Student
 async function editStudent(id) {
   const { data, error } = await supabaseClient.from('students').select('*').eq('id', id).single();
-  if (error) return alert('Failed to load student.');
+  if (error) return notify('Failed to load student.', 'error');
   const form = document.getElementById('studentForm');
   form.student_id.value = data.id || '';
   form.first_name.value = data.first_name || '';
@@ -489,7 +507,7 @@ async function editStudent(id) {
 async function deleteStudent(id) {
   if (!confirm('Are you sure you want to delete this student?')) return;
   const { error } = await supabaseClient.from('students').delete().eq('id', id);
-  if (error) alert('Delete failed.');
+  if (error) notify('Delete failed.', 'error');
   else loadStudents();
 }
 
@@ -497,12 +515,12 @@ async function deleteStudent(id) {
 // TEMP: Delete all students in a class (for re-import/testing)
 window.deleteClassStudents = async function deleteClassStudents() {
   const className = prompt('Enter the class name to delete all students (e.g., JHS 1):');
-  if (!className) return alert('No class entered.');
+  if (!className) return notify('No class entered.', 'warning');
   if (!confirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.')) return;
   const { error } = await supabaseClient.from('students').delete().eq('class', className);
-  if (error) alert('Delete failed: ' + error.message);
+  if (error) notify('Delete failed: ' + error.message, 'error');
   else {
-    alert('All students in ' + className + ' deleted.');
+  notify('All students in ' + className + ' deleted.', 'info');
     loadStudents();
   }
 }
@@ -600,6 +618,18 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   // For Postgres array columns, use JSON string format: '{"val1","val2"}'
   const classesValue = classesArray.length ? '{"' + classesArray.join('","') + '"}' : '{""}';
   const subjectsValue = subjectsArray.length ? '{"' + subjectsArray.join('","') + '"}' : '{""}';
+  const responsibilityValue = form.responsibility ? form.responsibility.value.trim() : '';
+  // Ensure class teacher class value is captured when responsibility is Class Teacher
+  let classTeacherClassValue = null;
+  if (responsibilityValue === 'Class Teacher' && form.class_teacher_class && form.class_teacher_class.value.trim()) {
+    classTeacherClassValue = form.class_teacher_class.value.trim();
+  }
+
+  if (responsibilityValue === 'Class Teacher' && !classTeacherClassValue) {
+  notify('Please select the class you are responsible for before submitting.', 'warning');
+    return;
+  }
+
   const teacherData = {
     name,
     gender: form.gender.value,
@@ -624,7 +654,9 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     previous_station: form.previous_station.value.trim(),
     years_at_present_school: parseInt(form.years_at_present_school.value || '0'),
     due_for_promotion: form.due_for_promotion.value.trim(),
-    responsibility: form.responsibility.value.trim(),
+  responsibility: responsibilityValue,
+  // Store the class teacher value under a single canonical column
+  class_teacher_class: classTeacherClassValue,
     denomination: form.denomination.value.trim(),
     home_town: form.home_town.value.trim(),
     classes: classesValue,
@@ -643,7 +675,7 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   }
 
   if (result.error) {
-    alert('Error: ' + result.error.message);
+  notify('Error: ' + result.error.message, 'error');
     return;
   }
 
@@ -679,9 +711,9 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   }
 
   if (teacherId) {
-    alert('Teacher updated!');
+  notify('Teacher updated!', 'info');
   } else {
-    alert(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`);
+  notify(`Teacher registered: ${teacherData.name}\nPIN: ${pin}`, 'info');
   }
   form.reset();
   document.getElementById('assignmentRowsContainer').innerHTML = '';
@@ -691,10 +723,10 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
 // 📝 Edit Teacher
 async function editTeacher(id) {
   const { data, error } = await supabaseClient.from('teachers').select('*').eq('id', id).single();
-  if (error) return alert('Failed to load teacher.');
+  if (error) return notify('Failed to load teacher.', 'error');
   const form = document.getElementById('teacherForm');
   if (!form) {
-    alert('Teacher form not found.');
+  notify('Teacher form not found.', 'error');
     return;
   }
   if (form.teacher_id) form.teacher_id.value = data.id || '';

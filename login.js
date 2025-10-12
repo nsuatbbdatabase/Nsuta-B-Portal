@@ -6,7 +6,7 @@ async function login() {
   const pin = document.getElementById('pin').value.trim();
 
   if (!role || !username) {
-    alert('Please select a role and enter your username.');
+    try { notify('Please select a role and enter your username.', 'warning'); } catch (e) { alert('Please select a role and enter your username.'); }
     return;
   }
 
@@ -18,7 +18,7 @@ async function login() {
       .eq('username', username)
       .single();
     if (error || !data) {
-      alert('Student not found.');
+      try { notify('Student not found.', 'error'); } catch (e) { alert('Student not found.'); }
       return;
     }
     if (data.forcepinchange) {
@@ -30,7 +30,7 @@ async function login() {
 
   // Continue with normal login
   if (!pin) {
-    alert('Please enter your PIN.');
+    try { notify('Please enter your PIN.', 'warning'); } catch (e) { alert('Please enter your PIN.'); }
     return;
   }
 
@@ -51,7 +51,7 @@ async function login() {
       query = { email: username, pin };
       break;
     default:
-      alert('Invalid role selected.');
+  try { notify('Invalid role selected.', 'error'); } catch (e) { alert('Invalid role selected.'); }
       return;
   }
 
@@ -62,7 +62,7 @@ async function login() {
     .single();
 
   if (error || !data) {
-    alert('Login failed. Please check your credentials.');
+    try { notify('Login failed. Please check your credentials.', 'error'); } catch (e) { alert('Login failed. Please check your credentials.'); }
     return;
   }
 
@@ -93,8 +93,8 @@ function showChangePinModal(studentId, username) {
     modal.style.position = 'fixed';
     modal.style.top = '0';
     modal.style.left = '0';
-    modal.style.width = '100vw';
-    modal.style.height = '100vh';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
     modal.style.background = 'rgba(0,0,0,0.4)';
     modal.style.display = 'flex';
     modal.style.alignItems = 'center';

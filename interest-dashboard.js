@@ -37,7 +37,7 @@ async function loadProfiles() {
   tbody.innerHTML = '';
 
   if (!term || !className) {
-    alert('Please select both term and class.');
+    try { notify('Please select both term and class.', 'warning'); } catch (e) { alert('Please select both term and class.'); }
     return;
   }
 
@@ -166,10 +166,10 @@ async function upsertProfile(studentId) {
     });
 
   if (error) {
-    alert('Save failed: ' + error.message);
+    try { notify('Save failed: ' + error.message, 'error'); } catch (e) { alert('Save failed: ' + error.message); }
     console.error('Upsert error:', error.message);
   } else {
-    alert('Profile saved successfully.');
+    try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
     loadProfiles();
   }
 }
