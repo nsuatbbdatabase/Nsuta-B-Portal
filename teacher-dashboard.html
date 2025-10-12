@@ -6,133 +6,6 @@
   <title>Teacher Dashboard</title>
   <link rel="icon" type="image/png" href="Badge.png" />
   <link rel="stylesheet" href="teacher-dashboard.css" />
-  <style>
-    body {
-      background:
-        linear-gradient(135deg, rgba(33,150,243,0.55) 0%, rgba(21,101,192,0.55) 100%),
-        url('20250515_073527.jpg') no-repeat center center/cover;
-      min-height: 100vh;
-      margin: 0;
-      font-family: 'Segoe UI', Arial, sans-serif;
-    }
-    .dashboard-bg-overlay {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      width: 100vw; height: 100vh;
-      background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
-      z-index: 0;
-      pointer-events: none;
-    }
-    .dashboard-container {
-      position: relative;
-      z-index: 1;
-      max-width: 900px;
-      margin: 3rem auto 2rem auto;
-      background: rgba(255,255,255,0.97);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
-      border-radius: 18px;
-      padding: 2.5rem 2rem 2rem 2rem;
-    }
-    .school-header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1.5rem;
-    }
-    .school-logo {
-      height: 70px;
-      margin-right: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    }
-    .school-title {
-      margin: 0;
-      font-size: 2rem;
-      color: #003366;
-      font-weight: 700;
-    }
-    .motto {
-      margin: 0.2rem 0 0 0;
-      font-size: 1.1rem;
-      color: #ffffff;
-      font-style: italic;
-    }
-    .dashboard-overview {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.5rem;
-      justify-content: center;
-      margin-bottom: 2rem;
-          /* Legacy card styles removed */
-          .dashboard-card-icon {
-            margin-right: 0.5rem;
-            font-size: 1.5rem;
-          }
-    }
-    .logout-btn {
-      float: right;
-      margin: 1rem;
-      position: relative;
-      z-index: 2;
-      background: #e3e8f0;
-      color: #003366;
-      border: none;
-      border-radius: 8px;
-      padding: 0.7rem 1.2rem;
-      font-size: 1rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .logout-btn:hover {
-      background: #cdd6e6;
-    }
-    /* #aboutMeBtn style moved to teacher-dashboard.css for consistency */
-    .tab-section {
-      display: none;
-    }
-    .tab-section.active {
-      display: block;
-    }
-    @media (max-width: 700px) {
-      .dashboard-container {
-        padding: 0.7rem 0.1rem;
-        border-radius: 8px;
-        margin-top: 0.2rem;
-        margin-bottom: 0.2rem;
-        box-shadow: 0 1px 6px rgba(0,64,128,0.08);
-      }
-      .school-logo {
-        height: 36px;
-        margin-right: 0.3rem;
-      }
-      .school-title {
-        font-size: 1rem;
-        font-weight: 600;
-      }
-      .dashboard-overview {
-        flex-direction: column;
-        gap: 0.8rem;
-        align-items: stretch;
-        width: 100%;
-      }
-      .dashboard-card {
-        width: 100%;
-        min-width: unset;
-        max-width: unset;
-        font-size: 0.97rem;
-        border-radius: 10px;
-        margin-bottom: 0.5rem;
-        box-shadow: 0 1px 6px rgba(0,64,128,0.08);
-      }
-      .teacher-header h2 {
-        font-size: 1.1rem;
-        margin-bottom: 0.3rem;
-      }
-      .floating-roles {
-        font-size: 0.95rem;
-      }
-    }
-  </style>
 </head>
 <body>
   <div class="dashboard-bg-overlay"></div>
@@ -178,7 +51,7 @@
     </div>
     <!-- Dashboard Overview Cards -->
     <div id="dashboardOverview" class="dashboard-overview">
-  <!-- Profile card removed -->
+  <div class="dashboard-card about-me-card" data-section="aboutMeSection">About Me</div>
   <div class="dashboard-card" data-section="promotionExamSection">Promotion Exam Entry</div>
       <div class="dashboard-card" data-section="studentListSection">Student List</div>
       <div class="dashboard-card" data-section="attendanceSection">Attendance</div>
@@ -189,6 +62,25 @@
       <div class="dashboard-card" data-section="messagesSection">Messages</div>
       <div class="dashboard-card" data-section="resourceRequestsSection">Resource Requests</div>
       <div class="dashboard-card" data-section="motivationSection">Motivation</div>
+  <!-- End of dashboard cards -->
+<style>
+@media (max-width: 700px) {
+  #aboutMeBtn {
+    display: none !important;
+  }
+  .about-me-card {
+    display: flex !important;
+  }
+  .dashboard-overview {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-auto-rows: minmax(70px, 1fr);
+    min-height: 100vh;
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+</style>
     </div>
     <!-- Attendance Section -->
   <div id="attendanceSection" class="tab-section">
@@ -556,9 +448,23 @@
   // Add click listeners to dashboard cards
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.dashboard-card').forEach(card => {
-      card.onclick = function() {
-        showTabSection(card.getAttribute('data-section'));
-      };
+      // On mobile, About Me card opens modal, others show tab
+      if (card.classList.contains('about-me-card')) {
+        card.onclick = function(e) {
+          // Only trigger on mobile view
+          if (window.innerWidth <= 700) {
+            document.getElementById('aboutMeBtn').click();
+          } else {
+            // On desktop, do nothing (card is hidden anyway)
+            e.preventDefault();
+            return false;
+          }
+        };
+      } else {
+        card.onclick = function() {
+          showTabSection(card.getAttribute('data-section'));
+        };
+      }
     });
     showDashboardOverview();
   });

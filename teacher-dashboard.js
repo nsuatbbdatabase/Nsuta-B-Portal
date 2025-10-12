@@ -1036,6 +1036,12 @@ async function sendAssignment() {
     alert('Please fill in all required fields.');
     return;
   }
+  // Prevent sending assignment to class/subject not assigned to teacher
+  const isAssigned = teacher.assignments && teacher.assignments.some(a => a.class === className && a.subject === subject);
+  if (!isAssigned) {
+    alert('You are not assigned to this class and subject. You cannot compose an assignment for it.');
+    return;
+  }
   let fileUrl = null;
   if (file) {
     const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');

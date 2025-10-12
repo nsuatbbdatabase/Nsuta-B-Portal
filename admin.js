@@ -58,6 +58,69 @@ function closeModal(modalId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // --- Class/Subclass selection logic for Class Teacher ---
+  var mainClass = document.getElementById('main_class_select');
+  var subClass = document.getElementById('sub_class_select');
+  var hiddenClass = document.getElementById('class_teacher_class');
+  if (mainClass && subClass && hiddenClass) {
+    mainClass.addEventListener('change', function() {
+      if (mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2') {
+        subClass.style.display = '';
+        subClass.value = '';
+        hiddenClass.value = '';
+      } else if (mainClass.value === 'JHS 3') {
+        subClass.style.display = 'none';
+        subClass.value = '';
+        hiddenClass.value = 'JHS 3';
+      } else {
+        subClass.style.display = 'none';
+        subClass.value = '';
+        hiddenClass.value = '';
+      }
+    });
+    subClass.addEventListener('change', function() {
+      if (mainClass.value && subClass.value) {
+        hiddenClass.value = mainClass.value + ' ' + subClass.value;
+      } else {
+        hiddenClass.value = '';
+      }
+    });
+  }
+  // --- Teacher Form Submission Logic ---
+  const teacherForm = document.getElementById('teacherForm');
+  if (teacherForm) {
+    teacherForm.addEventListener('submit', async function(e) {
+      const resp = teacherForm.querySelector('[name="responsibility"]').value;
+      const mainClass = teacherForm.querySelector('[name="main_class_select"]');
+      const subClass = teacherForm.querySelector('[name="sub_class_select"]');
+      const classField = teacherForm.querySelector('[name="class_teacher_class"]');
+      if (resp === 'Class Teacher') {
+        if (!mainClass.value) {
+          e.preventDefault();
+          alert('Please select the main class you are responsible for.');
+          mainClass.focus();
+          return;
+        }
+        if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2') && !subClass.value) {
+          e.preventDefault();
+          alert('Please select the subclass (A or B) for ' + mainClass.value + '.');
+          subClass.focus();
+          return;
+        }
+        if (mainClass.value === 'JHS 3') {
+          classField.value = 'JHS 3';
+        } else if (mainClass.value && subClass.value) {
+          classField.value = mainClass.value + ' ' + subClass.value;
+        }
+        classField.disabled = false;
+      } else {
+        if (classField) {
+          classField.value = '';
+          classField.disabled = true;
+        }
+      }
+    });
+  }
   // --- Promotion Pass Mark UI Logic ---
   // --- Promotion Pass Mark Modal Logic ---
   const promotionPassMarkInput = document.getElementById('promotionPassMarkInput');

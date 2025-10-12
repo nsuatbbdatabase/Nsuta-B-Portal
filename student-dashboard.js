@@ -294,6 +294,14 @@ async function loadAssignments() {
   // Query assignments where class matches exactly the student's class (no section logic)
   // Ensure class is used exactly as stored (no :1 or section letters)
   const className = (window.student.class || '').replace(/:.*$/, '').replace(/\s+[A-Z]$/, '');
+  // Fetch all teachers for mapping id to name
+  const { data: teachers, error: teachersError } = await supabaseClient
+    .from('teachers')
+    .select('id, name');
+  const teacherMap = {};
+  if (Array.isArray(teachers)) {
+    teachers.forEach(t => { teacherMap[t.id] = t.name; });
+  }
   const { data, error } = await supabaseClient
     .from('assignments')
     .select('id, title, subject, term, year, file_url, instructions, class, teacher_id')
@@ -319,7 +327,7 @@ async function loadAssignments() {
       : '<span style="color:gray;">No file</span>';
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${item.teacher_id || '\u2014'}</td>
+      <td>${teacherMap[item.teacher_id] || item.teacher_id || '\u2014'}</td>
       <td>${item.subject}</td>
       <td>${item.title}</td>
       <td>${item.term}</td>

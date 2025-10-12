@@ -329,6 +329,37 @@
       <form id="teacherForm">
         <input type="hidden" name="teacher_id" />
         <div class="modal-form-grid">
+          <!-- ...existing form fields... -->
+  <!-- Responsibility and Class Teacher Section at the bottom -->
+  <div class="form-group full-width" style="margin-top:1.5em;">
+    <label for="responsibility">Responsibility</label>
+    <select name="responsibility" id="responsibility" required>
+      <option value="">Select Responsibility</option>
+      <option value="Class Teacher">Class Teacher</option>
+      <option value="Headteacher">Headteacher</option>
+      <option value="Assistant Headteacher">Assistant Headteacher</option>
+      <option value="Subject Teacher">Subject Teacher</option>
+      <option value="Career Tech Teacher">Career Tech Teacher</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+  <div class="form-group full-width" id="classTeacherSection" style="display:none; margin: 0.5em 0 1em 0;">
+    <label for="main_class_select">Class Responsible For</label>
+    <div class="class-select-group">
+      <select name="main_class_select" id="main_class_select" style="margin-right:0.5em;">
+        <option value="">Select Main Class</option>
+        <option value="JHS 1">JHS 1</option>
+        <option value="JHS 2">JHS 2</option>
+        <option value="JHS 3">JHS 3</option>
+      </select>
+      <select name="sub_class_select" id="sub_class_select" style="display:none;">
+        <option value="">Select Subclass</option>
+        <option value="A">A</option>
+        <option value="B">B</option>
+      </select>
+    </div>
+    <input type="hidden" name="class_teacher_class" id="class_teacher_class" />
+  </div>
           <div class="form-group"><input type="text" name="name" placeholder="Full Name" required /></div>
           <div class="form-group">
             <select name="gender" required title="Gender">
@@ -352,6 +383,23 @@
         </div>
   <script src="admin-section-toggle.js"></script>
   <script>
+// Show/hide class teacher section based on responsibility (ensure this runs after DOM is ready)
+document.addEventListener('DOMContentLoaded', function() {
+  var respSelect = document.getElementById('responsibility');
+  var classSection = document.getElementById('classTeacherSection');
+  if (respSelect && classSection) {
+    respSelect.addEventListener('change', function() {
+      if (respSelect.value === 'Class Teacher') {
+        classSection.style.display = '';
+        document.getElementById('class_teacher_class').required = true;
+      } else {
+        classSection.style.display = 'none';
+        document.getElementById('class_teacher_class').required = false;
+        document.getElementById('class_teacher_class').value = '';
+      }
+    });
+  }
+});
 // --- Dynamic Class-Subject Assignment Rows ---
 const SUBJECT_OPTIONS = [
   'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
@@ -480,13 +528,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   </script>
   <input type="text" name="due_for_promotion" placeholder="Due For Promotion to Grade" />
-  <label for="responsibility">Responsibility</label>
-  <select name="responsibility" id="responsibility" required>
-    <option value="">Select Responsibility</option>
-    <option value="Class Teacher">Class Teacher</option>
-    <option value="Subject Teacher">Subject Teacher</option>
-    <option value="Career Tech Teacher">Career Tech Teacher</option>
-    <option value="Other">Other</option>
+<script>
+// Show/hide class teacher section based on responsibility
+document.addEventListener('DOMContentLoaded', function() {
+  var respSelect = document.getElementById('responsibility');
+  var classSection = document.getElementById('classTeacherSection');
+  if (respSelect && classSection) {
+    respSelect.addEventListener('change', function() {
+      if (respSelect.value === 'Class Teacher') {
+        classSection.style.display = '';
+        document.getElementById('class_teacher_class').required = true;
+      } else {
+        classSection.style.display = 'none';
+        document.getElementById('class_teacher_class').required = false;
+        document.getElementById('class_teacher_class').value = '';
+      }
+    });
+  }
+});
+</script>
   </select>
   <div id="attendanceNote" class="attendance-note">Attendance will be enabled for Class Teachers only.</div>
   <label for="denomination">Denomination</label>

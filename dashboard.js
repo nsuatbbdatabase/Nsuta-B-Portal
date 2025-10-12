@@ -1,3 +1,45 @@
+// Show/hide class teacher section based on responsibility in teacher modal
+document.addEventListener('DOMContentLoaded', function() {
+  // --- Teacher Form Submission Logic: Ensure class_teacher_class is set ---
+  const teacherForm = document.getElementById('teacherForm');
+  if (teacherForm) {
+    teacherForm.addEventListener('submit', async function(e) {
+      // Set class_teacher_class before submit
+      const resp = teacherForm.querySelector('[name="responsibility"]').value;
+      const mainClass = teacherForm.querySelector('[name="main_class_select"]');
+      const subClass = teacherForm.querySelector('[name="sub_class_select"]');
+      const classField = teacherForm.querySelector('[name="class_teacher_class"]');
+      if (resp === 'Class Teacher') {
+        if (mainClass && mainClass.value === 'JHS 3') {
+          classField.value = 'JHS 3';
+        } else if (mainClass && subClass && mainClass.value && subClass.value) {
+          classField.value = mainClass.value + ' ' + subClass.value;
+        }
+      } else {
+        if (classField) classField.value = '';
+      }
+      // Collect all form data and send to Supabase
+      // (Replace this with your actual Supabase insert/update logic)
+      // let formData = new FormData(teacherForm);
+      // let teacherData = Object.fromEntries(formData.entries());
+      // await supabaseClient.from('teachers').insert([teacherData]);
+    });
+  }
+  var respSelect = document.getElementById('responsibility');
+  var classSection = document.getElementById('classTeacherSection');
+  if (respSelect && classSection) {
+    respSelect.addEventListener('change', function() {
+      if (respSelect.value === 'Class Teacher') {
+        classSection.style.display = '';
+        document.getElementById('class_teacher_class').required = true;
+      } else {
+        classSection.style.display = 'none';
+        document.getElementById('class_teacher_class').required = false;
+        document.getElementById('class_teacher_class').value = '';
+      }
+    });
+  }
+});
 // Utility: Create a test teacher user for login
 async function createTestTeacher() {
   // Check if test user already exists
@@ -651,33 +693,37 @@ async function editTeacher(id) {
   const { data, error } = await supabaseClient.from('teachers').select('*').eq('id', id).single();
   if (error) return alert('Failed to load teacher.');
   const form = document.getElementById('teacherForm');
-  form.teacher_id.value = data.id || '';
-  form.name.value = data.name || '';
-  form.gender.value = data.gender || '';
-  form.dob.value = data.dob || '';
-  form.staff_id.value = data.staff_id || '';
-  form.ntc.value = data.ntc || '';
-  form.registered_number.value = data.registered_number || '';
-  form.ssnit.value = data.ssnit || '';
-  form.ghana_card.value = data.ghana_card || '';
-  form.contact.value = data.contact || '';
-  form.rank.value = data.rank || '';
-  form.qualification.value = data.qualification || '';
-  form.first_appointment_date.value = data.first_appointment_date || '';
-  form.date_placed_on_rank.value = data.date_placed_on_rank || '';
-  form.salary_level.value = data.salary_level || '';
-  form.bank.value = data.bank || '';
-  form.bank_branch.value = data.bank_branch || '';
-  form.bank_account_number.value = data.bank_account_number || '';
-  form.highest_professional_qualification.value = data.highest_professional_qualification || '';
-  form.professional_qualification_date.value = data.professional_qualification_date || '';
-  form.last_promotion_date.value = data.last_promotion_date || '';
-  form.previous_station.value = data.previous_station || '';
-  form.years_at_present_school.value = data.years_at_present_school || '';
-  form.due_for_promotion.value = data.due_for_promotion || '';
-  form.responsibility.value = data.responsibility || '';
-  form.denomination.value = data.denomination || '';
-  form.home_town.value = data.home_town || '';
+  if (!form) {
+    alert('Teacher form not found.');
+    return;
+  }
+  if (form.teacher_id) form.teacher_id.value = data.id || '';
+  if (form.name) form.name.value = data.name || '';
+  if (form.gender) form.gender.value = data.gender || '';
+  if (form.dob) form.dob.value = data.dob || '';
+  if (form.staff_id) form.staff_id.value = data.staff_id || '';
+  if (form.ntc) form.ntc.value = data.ntc || '';
+  if (form.registered_number) form.registered_number.value = data.registered_number || '';
+  if (form.ssnit) form.ssnit.value = data.ssnit || '';
+  if (form.ghana_card) form.ghana_card.value = data.ghana_card || '';
+  if (form.contact) form.contact.value = data.contact || '';
+  if (form.rank) form.rank.value = data.rank || '';
+  if (form.qualification) form.qualification.value = data.qualification || '';
+  if (form.first_appointment_date) form.first_appointment_date.value = data.first_appointment_date || '';
+  if (form.date_placed_on_rank) form.date_placed_on_rank.value = data.date_placed_on_rank || '';
+  if (form.salary_level) form.salary_level.value = data.salary_level || '';
+  if (form.bank) form.bank.value = data.bank || '';
+  if (form.bank_branch) form.bank_branch.value = data.bank_branch || '';
+  if (form.bank_account_number) form.bank_account_number.value = data.bank_account_number || '';
+  if (form.highest_professional_qualification) form.highest_professional_qualification.value = data.highest_professional_qualification || '';
+  if (form.professional_qualification_date) form.professional_qualification_date.value = data.professional_qualification_date || '';
+  if (form.last_promotion_date) form.last_promotion_date.value = data.last_promotion_date || '';
+  if (form.previous_station) form.previous_station.value = data.previous_station || '';
+  if (form.years_at_present_school) form.years_at_present_school.value = data.years_at_present_school || '';
+  if (form.due_for_promotion) form.due_for_promotion.value = data.due_for_promotion || '';
+  if (form.responsibility) form.responsibility.value = data.responsibility || '';
+  if (form.denomination) form.denomination.value = data.denomination || '';
+  if (form.home_town) form.home_town.value = data.home_town || '';
 
   // Load teaching assignments
   const container = document.getElementById('assignmentRowsContainer');
