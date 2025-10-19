@@ -1,0 +1,87 @@
+/* Professional, responsive homepage styles */
+:root{
+  --brand-primary:#003366;
+  --brand-accent:#0074D9;
+  --muted:#667085;
+  --bg-gradient: linear-gradient(120deg, #eef2f6 0%, #f8fbff 100%);
+  --card-bg: #ffffff;
+  --radius-lg: 16px;
+  --radius-md: 10px;
+  --shadow-soft: 0 8px 32px rgba(2,6,23,0.08);
+  --shadow-sm: 0 2px 10px rgba(2,6,23,0.06);
+}
+html,body{height:100%;margin:0;font-family: 'Segoe UI', Roboto, system-ui, -apple-system, "Helvetica Neue", Arial; background:var(--bg-gradient); color: #0b1a2b}
+.dashboard-bg-overlay{position:fixed;inset:0;background:linear-gradient(120deg, rgba(0,32,64,0.06) 0%, rgba(0,32,64,0.02) 100%);pointer-events:none;z-index:0}
+.homepage-container{position:relative;z-index:1;max-width:1100px;margin:48px auto;padding:28px;border-radius:var(--radius-lg);background:var(--card-bg);box-shadow:var(--shadow-soft);display:flex;gap:24px;align-items:center}
+.homepage-left{flex:1;min-width:280px}
+.homepage-right{flex:0 0 360px}
+.homepage-header{display:flex;align-items:center;gap:16px}
+.homepage-logo{width:84px;height:84px;border-radius:12px;object-fit:cover;box-shadow:var(--shadow-sm)}
+.homepage-title{margin:0;font-size:1.6rem;color:var(--brand-primary);font-weight:700}
+.homepage-motto{margin:2px 0 0 0;color:var(--brand-accent);font-style:italic}
+.homepage-intro h2{margin:16px 0 8px 0;font-size:1.25rem;color:var(--brand-primary)}
+.homepage-intro p{margin:0;color:var(--muted);line-height:1.45}
+.role-cards-container{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px}
+.role-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;border-radius:12px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--shadow-sm);border:1px solid rgba(7,18,36,0.04);width:160px;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s}
+.role-card:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(2,6,23,0.12);border-color:var(--brand-accent)}
+.role-card:focus{outline:none;box-shadow:0 16px 48px rgba(2,6,23,0.16);border-color:var(--brand-accent);transform:translateY(-6px)}
+.role-card:focus-visible{outline:3px solid rgba(0,116,217,0.15);outline-offset:4px}
+.role-icon{width:56px;height:56px;border-radius:50%;background:#f7f9fc;display:block;margin-bottom:10px;object-fit:cover}
+.role-title{font-size:1rem;font-weight:600;color:#07102a}
+.homepage-cta{margin-top:22px;display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600}
+.btn-primary{background:var(--brand-accent);color:#fff;box-shadow:0 8px 24px rgba(0,116,217,0.18)}
+.btn-ghost{background:transparent;color:var(--brand-primary);border:1px solid rgba(3,50,96,0.06)}
+.homepage-footer{margin-top:28px;color:var(--muted);font-size:0.95rem;text-align:center}
+/* Right column quick links */
+.quick-links{display:flex;flex-direction:column;gap:12px}
+.quick-card{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:var(--shadow-sm);border:1px solid rgba(7,18,36,0.04);display:flex;align-items:center;gap:12px}
+.quick-card .btn{padding:8px 10px;font-size:0.95rem}
+
+/* Modal (inline login) */
+.modal.hidden{display:none}
+.modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.35);z-index:200000}
+.modal-content{background:var(--card-bg);padding:20px;border-radius:12px;max-width:420px;width:96%;box-shadow:0 18px 48px rgba(2,6,23,0.18);position:relative}
+.modal-close{position:absolute;top:10px;right:10px;background:transparent;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+
+/* Disabled submit and spinner */
+.btn[disabled]{opacity:0.6;cursor:not-allowed}
+
+/* small spinner text style (uses simple emoji fallback) */
+/* CSS spinner */
+.spinner{display:inline-block;width:16px;height:16px;border-radius:50%;border:2px solid rgba(0,0,0,0.08);border-top-color:var(--brand-accent);animation:spin 900ms linear infinite;vertical-align:middle;margin-right:8px}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#loginSpinner{display:inline-block}
+
+/* Micro-animations */
+.role-card{transition:transform .18s cubic-bezier(.2,.9,.3,1),box-shadow .18s, border-color .18s}
+.role-card .role-icon{transition:transform .28s ease, filter .2s ease}
+.role-card:hover .role-icon{transform:scale(1.06) translateY(-3px);filter:brightness(1.03)}
+.quick-card{transition:transform .18s ease, box-shadow .18s ease}
+.quick-card:hover{transform:translateY(-4px)}
+
+/* Modal entrance */
+.modal-content{transform:translateY(8px) scale(.99);opacity:0;transition:transform .22s ease, opacity .22s ease}
+.modal:not(.hidden) .modal-content{transform:translateY(0) scale(1);opacity:1}
+
+/* focus trap helper: prevent document behind modal from being focusable when modal open */
+.modal[aria-hidden='true']{pointer-events:none}
+
+.quick-card h4{margin:0;font-size:0.98rem;color:var(--brand-primary)}
+.quick-card p{margin:0;color:var(--muted);font-size:0.9rem}
+/* responsive */
+@media (max-width:900px){
+  .homepage-container{flex-direction:column;padding:18px;margin:18px}
+  .homepage-right{width:100%;flex:0 0 auto}
+  .homepage-left{width:100%}
+  .role-card{width:48%}
+}
+@media (max-width:520px){
+  .role-card{width:100%}
+  .homepage-logo{width:56px;height:56px}
+  .homepage-title{font-size:1.05rem}
+}
+/* small utility */
+.center{display:flex;align-items:center;justify-content:center}

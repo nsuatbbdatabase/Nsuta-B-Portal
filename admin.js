@@ -195,7 +195,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Prevent access if not logged in as admin
   const adminId = localStorage.getItem('adminId');
   if (!adminId) {
-    window.location.href = 'login.html';
+    try { localStorage.setItem('openLoginRole', 'admin'); } catch (e) {}
+    window.location.href = 'index.html';
     return;
   }
   // CSV Import Handler (schema-aligned)
@@ -213,32 +214,33 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         // Define allowed schema fields for Supabase students table
-        // Match new schema: no full_name, require first_name and surname, include area, dob, nhis_number
+        // Match new schema: no full_name, require first_name and surname; dob/nhis/parent fields are optional
         const allowedFields = [
           'first_name', 'surname', 'area', 'dob', 'nhis_number',
-          'gender', 'class', 'parent_name', 'parent_contact', 'username', 'pin', 'picture_url'
+          'gender', 'class', 'subclass', 'parent_name', 'parent_contact', 'username', 'pin', 'picture_url'
         ];
         // Map CSV headers to schema fields (case-insensitive)
         const headers = lines[0].split(/\t|,/).map(h => h.trim());
         const normalizedHeaders = headers.map(h => h.toLowerCase());
-        // Build a mapping from CSV header to schema field
+        // Build a mapping from CSV header to schema field (support common aliases)
         const headerToField = {};
         headers.forEach((h, idx) => {
           const norm = h.toLowerCase();
-          // Map common variations to schema fields
-          if (norm === 'full name') headerToField[h] = 'full_name';
-          else if (norm === 'parent') headerToField[h] = 'parent_name';
-          else if (norm === 'contact') headerToField[h] = 'parent_contact';
-          else if (norm === 'nhis number') headerToField[h] = 'nhis_number';
-          else if (norm === 'class') headerToField[h] = 'class';
+          // Map common variations to schema fields (add sensible aliases)
+          if (norm === 'full name' || norm === 'fullname') headerToField[h] = 'full_name';
+          else if (norm === 'parent' || norm === 'parent name' || norm === 'guardian') headerToField[h] = 'parent_name';
+          else if (norm === 'contact' || norm === 'parent contact' || norm === 'guardian contact') headerToField[h] = 'parent_contact';
+          else if (norm === 'nhis number' || norm === 'nhis') headerToField[h] = 'nhis_number';
+          else if (norm === 'class' || norm === 'main class' || norm === 'class name' || norm === 'class_name') headerToField[h] = 'class';
+          else if (norm === 'subclass' || norm === 'sub class' || norm === 'sub-class' || norm === 'arm' || norm === 'section') headerToField[h] = 'subclass';
           else if (norm === 'gender') headerToField[h] = 'gender';
           else if (norm === 'area') headerToField[h] = 'area';
-          else if (norm === 'dob') headerToField[h] = 'dob';
+          else if (norm === 'dob' || norm === 'date of birth') headerToField[h] = 'dob';
           else if (norm === 'username') headerToField[h] = 'username';
           else if (norm === 'pin') headerToField[h] = 'pin';
-          else if (norm === 'picture url') headerToField[h] = 'picture_url';
-          else if (norm === 'surname') headerToField[h] = 'surname';
-          else if (norm === 'first name') headerToField[h] = 'first_name';
+          else if (norm === 'picture url' || norm === 'picture') headerToField[h] = 'picture_url';
+          else if (norm === 'surname' || norm === 'last name') headerToField[h] = 'surname';
+          else if (norm === 'first name' || norm === 'firstname' || norm === 'given name') headerToField[h] = 'first_name';
           else headerToField[h] = null; // ignore unknown columns
         });
   let successCount = 0, failCount = 0, duplicateRows = [], invalidRows = [];
@@ -249,7 +251,8 @@ document.addEventListener('DOMContentLoaded', function() {
           const studentData = {};
           let hasAllRequired = true;
           // Required fields for import (username and pin are always generated)
-          const requiredFields = ['first_name', 'surname', 'gender', 'class', 'parent_name', 'parent_contact'];
+          // DOB, NHIS number, parent name/contact are optional per request
+          const requiredFields = ['first_name', 'surname', 'gender', 'class'];
           // Fill studentData from CSV row (CSV uses Full Name, split to first_name/surname)
           headers.forEach((h, idx) => {
             const field = headerToField[h];
@@ -264,6 +267,28 @@ document.addEventListener('DOMContentLoaded', function() {
           // Always auto-generate username and pin
           studentData['username'] = generateUsername(studentData['first_name'], studentData['surname']);
           studentData['pin'] = generatePin();
+          // Normalize class/subclass: if `class` contains both (e.g. "JHS 1 A"), extract subclass
+          if (studentData['class']) {
+            const clsRaw = String(studentData['class']).trim();
+            // Match patterns like "JHS 1 A", "JHS1 A", "JHS 2A"
+            const m = clsRaw.match(/^(jhs\s*\d+)\s*([a-zA-Z])$/i) || clsRaw.match(/^(jhs\s*\d+)([a-zA-Z])$/i);
+            if (m) {
+              studentData['class'] = m[1].toUpperCase().replace(/\s+/g,' ').trim();
+              studentData['subclass'] = m[2].toUpperCase();
+            } else {
+              // Normalize spacing and casing for class only
+              studentData['class'] = clsRaw.toUpperCase().replace(/\s+/g,' ').trim();
+            }
+          }
+
+          // Fix subclass logic: ensure subclass is present for JHS 1/2; null for others
+          if (studentData['class'] === 'JHS 1' || studentData['class'] === 'JHS 2') {
+            if (!('subclass' in studentData)) studentData['subclass'] = '';
+            // If subclass exists but is empty string, leave as '' (will be validated later)
+            if (studentData['subclass'] && typeof studentData['subclass'] === 'string') studentData['subclass'] = studentData['subclass'].toUpperCase();
+          } else {
+            studentData['subclass'] = null;
+          }
           // Check for required fields
           for (const req of requiredFields) {
             if (!studentData[req] || studentData[req].length === 0) {
@@ -397,31 +422,33 @@ document.addEventListener('submit', function(e) {
       const parentName = studentForm.querySelector('[name="parent_name"]');
       const parentContact = studentForm.querySelector('[name="parent_contact"]');
       let combinedClass = '';
-  if (!firstName.value.trim()) { e.preventDefault(); notify('Please enter first name.', 'warning'); firstName.focus(); return; }
-  if (!surname.value.trim()) { e.preventDefault(); notify('Please enter surname.', 'warning'); surname.focus(); return; }
-  if (!area.value.trim()) { e.preventDefault(); notify('Please enter area.', 'warning'); area.focus(); return; }
-  // Date of birth is optional
-  if (!gender.value) { e.preventDefault(); notify('Please select gender.', 'warning'); gender.focus(); return; }
-  // Parent/guardian name and contact are optional
-  if (mainClass && mainClass.value) {
+      // Validate required fields
+  if (!firstName.value.trim()) { notify('Please enter first name.', 'warning'); firstName.focus(); return; }
+  if (!surname.value.trim()) { notify('Please enter surname.', 'warning'); surname.focus(); return; }
+      // Area is optional now
+  // DOB is optional now
+  // if (!dob.value) { notify('Please enter date of birth.', 'warning'); dob.focus(); return; }
+  if (!gender.value) { notify('Please select gender.', 'warning'); gender.focus(); return; }
+      if (mainClass && mainClass.value) {
         if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
+          subClass.required = true;
           if (!subClass.value) {
-            e.preventDefault();
             notify('Please select subclass (A or B) for ' + mainClass.value, 'warning');
             subClass.focus();
             return;
           }
           combinedClass = mainClass.value + ' ' + subClass.value;
         } else {
+          subClass.required = false;
           combinedClass = mainClass.value;
         }
       } else {
-        e.preventDefault();
         notify('Please select a class.', 'warning');
         mainClass.focus();
         return;
       }
-  studentForm.querySelector('[name="class"]').value = combinedClass;
+      // Set hidden class value
+      studentForm.querySelector('[name="class"]').value = combinedClass;
       // ...existing full name splitting and duplicate check logic...
   const fullNameInput = studentForm.querySelector('[name="full_name"]');
   if (fullNameInput) {
@@ -442,14 +469,19 @@ document.addEventListener('submit', function(e) {
         const nameClass = (first_name + ' ' + surname + '|' + (classInput ? classInput.value : ''));
         window._studentNameClassSet = window._studentNameClassSet || new Set();
         if (window._studentNameClassSet.has(nameClass)) {
-          alert('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''));
+    try { notify('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''), 'warning'); } catch (e) { alert('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : '')); }
           return;
         }
         window._studentNameClassSet.add(nameClass);
       }
       // Passed validation — create student via JS flow
       console.log('studentForm validation passed, creating student...');
-      createStudentFromForm(studentForm).catch(err => { console.error(err); alert('Failed to save student: ' + (err.message || err)); });
+  // Use centralized saveStudent which handles create and update
+  if (typeof window.saveStudent === 'function') {
+    window.saveStudent(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
+  } else {
+    createStudentFromForm(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
+  }
       return;
     });
     // Wire up custom Save button to trigger form submit programmatically
@@ -465,14 +497,22 @@ document.addEventListener('submit', function(e) {
         // If event wasn't prevented, submit the form programmatically so server logic runs
         if (!ev.defaultPrevented) {
           // Use our own JS flow to insert the student to avoid native validation
-          createStudentFromForm(studentForm).catch(err => {
-            console.error('Student insert failed:', err);
-            alert('Failed to save student. See console for details.');
-          });
+          if (typeof window.saveStudent === 'function') {
+            window.saveStudent(studentForm).catch(err => {
+              console.error('Student insert failed:', err);
+              try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
+            });
+          } else {
+            createStudentFromForm(studentForm).catch(err => {
+              console.error('Student insert failed:', err);
+              try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
+            });
+          }
         }
       });
-    }
+              const requiredFields = ['first_name', 'surname', 'gender', 'class'];
   }
+}
 
 // Create student record from the provided form element (uploads picture, assigns register_id)
 async function createStudentFromForm(form) {
@@ -484,11 +524,13 @@ async function createStudentFromForm(form) {
   const nhis = (form.querySelector('[name="nhis_number"]')?.value || '').trim();
   const gender = form.querySelector('[name="gender"]')?.value || '';
   const mainClass = form.querySelector('[name="main_class_select"]')?.value || '';
-  const subClass = form.querySelector('[name="sub_class_select"]')?.value || '';
+  let subClass = form.querySelector('[name="sub_class_select"]')?.value || '';
   const parentName = (form.querySelector('[name="parent_name"]')?.value || '').trim();
   const parentContact = (form.querySelector('[name="parent_contact"]')?.value || '').trim();
   const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
 
+  // Only JHS 1 and JHS 2 have subclass, JHS 3 should be null
+  if (mainClass === 'JHS 3') subClass = null;
   const studentClass = (mainClass && subClass) ? `${mainClass} ${subClass}` : (mainClass || '');
 
   // Generate username & pin
@@ -558,12 +600,12 @@ async function createStudentFromForm(form) {
     surname: surname,
     area: area || null,
     dob: dob || null,
-    nhis_number: nhis || '',
+  nhis_number: nhis || null,
     gender: gender || '',
-    class: studentClass || '',
-    subclass: subClass || null,
-    parent_name: parentName || '',
-    parent_contact: parentContact || '',
+  class: studentClass || '',
+  subclass: subClass !== '' ? subClass : null,
+  parent_name: parentName || null,
+  parent_contact: parentContact || null,
     username: finalUsername,
     pin,
     picture_url: pictureUrl,
@@ -590,19 +632,81 @@ async function createStudentFromForm(form) {
     // small delay (non-blocking) — optional, here we just continue
   }
   if (insertError) throw insertError;
-  alert(`Student added!\nUsername: ${finalUsername}\nPIN: ${pin}`);
+  try { showToast(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info', 6000); } catch (e) { alert(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`); }
   // reset and close
   if (typeof loadStudents === 'function') loadStudents();
   closeModal('studentModal');
 }
-function exportStudentsCSV() {
-  if (!allStudents || allStudents.length === 0) {
-    alert('No student data to export.');
+// Centralized saveStudent wrapper: handles create and update consistently.
+// Preserves username and pin on updates and reuses createStudentFromForm behaviour for inserts.
+window.saveStudent = async function saveStudent(form) {
+  if (!form) throw new Error('Form is required');
+  const studentId = form.querySelector('[name="student_id"]')?.value || '';
+  // If updating, build payload similar to create but avoid changing username and pin
+  if (studentId) {
+    // Build update payload from form fields
+    const payload = {};
+    const fields = ['first_name','surname','area','dob','nhis_number','gender','parent_name','parent_contact','picture_url','register_id'];
+    fields.forEach(f => {
+      const el = form.querySelector('[name="' + f + '"]');
+      if (el) payload[f] = el.value || null;
+    });
+    // class and subclass handling: use hidden composite if present
+    const classEl = form.querySelector('[name="class"]');
+    const mainClassEl = form.querySelector('[name="main_class_select"]');
+    const subClassEl = form.querySelector('[name="sub_class_select"]');
+    let computedClass = '';
+    let computedSub = null;
+    if (classEl && classEl.value) {
+      computedClass = classEl.value;
+    } else if (mainClassEl && mainClassEl.value) {
+      computedClass = mainClassEl.value + (subClassEl && subClassEl.value ? ' ' + subClassEl.value : '');
+    }
+    if (computedClass) payload.class = computedClass;
+    // determine subclass: only JHS1/JHS2
+    if (/^JHS\s*1$/i.test(computedClass) || /^JHS\s*2$/i.test(computedClass)) {
+      // try explicit sub select then hidden
+      let sc = (subClassEl && subClassEl.value) ? subClassEl.value : null;
+      if (!sc && classEl && classEl.value) {
+        const m = String(classEl.value).trim().match(/JHS\s*\d+\s*([A-Za-z])/i);
+        sc = m ? m[1].toUpperCase() : null;
+      }
+      payload.subclass = sc ? String(sc).toUpperCase() : '';
+    } else {
+      payload.subclass = null;
+    }
+    // Prevent updating username or pin
+    // If picture file present, upload it first
+    const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
+    if (pictureFile && window.supabaseClient) {
+      try {
+        const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
+        const { data: uploadData, error: uploadError } = await window.supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
+        if (!uploadError && uploadData && uploadData.path) {
+          const publicUrlResult = window.supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
+          payload.picture_url = publicUrlResult?.data?.publicUrl || publicUrlResult?.publicUrl || null;
+        }
+      } catch (err) { console.warn('Picture upload failed during update', err); }
+    }
+    // Apply update
+    const { error } = await window.supabaseClient.from('students').update(payload).eq('id', studentId);
+    if (error) throw error;
+    if (typeof loadStudents === 'function') loadStudents();
+    closeModal('studentModal');
+    try { showToast('Student updated!', 'info'); } catch (e) {}
     return;
   }
-  // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Parent Name, Parent Contact
+  // Insert: reuse createStudentFromForm to handle picture upload, username uniqueness and register_id
+  return createStudentFromForm(form);
+};
+function exportStudentsCSV() {
+  if (!allStudents || allStudents.length === 0) {
+    try { notify('No student data to export.', 'warning'); } catch (e) { alert('No student data to export.'); }
+    return;
+  }
+  // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Subclass, Parent Name, Parent Contact
   const headers = [
-    'Student ID', 'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Parent Name', 'Parent Contact'
+    'Student ID', 'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Subclass', 'Parent Name', 'Parent Contact'
   ];
   const rows = allStudents.map(s => [
     s.register_id || '',
@@ -612,6 +716,7 @@ function exportStudentsCSV() {
     s.nhis_number || '',
     s.gender || '',
     s.class || '',
+    s.subclass || '',
     s.parent_name || '',
     s.parent_contact || ''
   ]);
@@ -676,7 +781,7 @@ function showSelectedStudent() {
     <td>${student.parent_name || ''}</td>
     <td>${student.parent_contact || ''}</td>
     <td>${student.username || ''}</td>
-    <td>${student.pin || ''}</td>
+  <td>${student.pin ? '••••' : ''}</td>
     <td>
       <button class="edit-btn" onclick="editStudent('${student.id}')">Edit</button>
       <button class="delete-btn" onclick="deleteStudent('${student.id}')">Delete</button>
@@ -693,7 +798,7 @@ let allStudents = [];
 async function resetStudentPin(studentId) {
   if (!studentId) return;
   if (!window.supabaseClient) {
-    alert('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.');
+  try { notify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (e) { alert('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.'); }
     // Optionally disable the button to prevent further attempts
     const btn = document.querySelector(`button.reset-pin-btn[onclick*="${studentId}"]`);
     if (btn) {
@@ -710,7 +815,7 @@ async function resetStudentPin(studentId) {
     .update({ pin: '1234', forcePinChange: true })
     .eq('id', studentId);
   if (error) {
-    alert('Failed to reset PIN. Please check your Supabase connection and schema.');
+  try { notify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (e) { alert('Failed to reset PIN. Please check your Supabase connection and schema.'); }
     return;
   }
   // Log out student if currently logged in
@@ -723,14 +828,15 @@ async function resetStudentPin(studentId) {
       localStorage.removeItem('studentUsername');
       localStorage.removeItem('studentPin');
       // Optionally, redirect if on student dashboard
-      if (window.location.pathname.includes('student-dashboard')) {
-        window.location.href = 'student-login.html';
-      }
+        if (window.location.pathname.includes('student-dashboard')) {
+          try { localStorage.setItem('openLoginRole', 'student'); } catch (e) {}
+          window.location.href = 'index.html';
+        }
     }
   } catch (e) {
     // Ignore errors
   }
-  alert('Student PIN has been reset. The student will be required to change their PIN on next login.');
+  try { notify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (e) { alert('Student PIN has been reset. The student will be required to change their PIN on next login.'); }
   // Optionally refresh student view
   if (typeof showSelectedStudent === 'function') showSelectedStudent();
 }
@@ -770,7 +876,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reopen_date = document.getElementById('reopen_date').value;
       const attendance_total_days = parseInt(document.getElementById('attendance_total_days').value, 10);
       if (isNaN(attendance_total_days) || attendance_total_days < 1) {
-        alert('Please enter a valid number for Actual Attendance Days.');
+      try { notify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (e) { alert('Please enter a valid number for Actual Attendance Days.'); }
         return;
       }
       // Upsert (insert or update latest row)
@@ -780,7 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
           { vacation_date, reopen_date, attendance_total_days }
         ]);
       if (error) {
-        alert('Failed to save dates');
+  try { notify('Failed to save dates', 'error'); } catch (e) { alert('Failed to save dates'); }
         return;
       }
       closeModal('schoolDatesModal');
@@ -802,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { title, date, details, type }
       ]);
       if (error) {
-        alert('Failed to save event');
+  try { notify('Failed to save event', 'error'); } catch (e) { alert('Failed to save event'); }
         return;
       }
       closeModal('eventsModal');
@@ -842,7 +948,7 @@ async function deleteEvent(eventId) {
   if (!confirm('Delete this event?')) return;
   const { error } = await supabaseClient.from('events').delete().eq('id', eventId);
   if (error) {
-    alert('Failed to delete event');
+  try { notify('Failed to delete event', 'error'); } catch (e) { alert('Failed to delete event'); }
     return;
   }
   fetchAndRenderEvents();
@@ -857,7 +963,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function fetchAndRenderStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   if (error) {
-    alert('Failed to fetch students');
+  try { notify('Failed to fetch students', 'error'); } catch (e) { alert('Failed to fetch students'); }
     return;
   }
   // Sort students by register_id (natural order: class, then number)

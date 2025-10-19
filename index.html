@@ -6,175 +6,646 @@
   <title>School Login</title>
   <link rel="icon" type="image/png" href="Badge.png" />
   <link rel="stylesheet" href="login.css" />
+  <link rel="stylesheet" href="index.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="toasts.js"></script>
 </head>
 <body class="index-dashboard-bg">
     <div class="dashboard-bg-overlay"></div>
-    <div class="homepage-container">
-      <div class="homepage-header">
-        <img src="Badge.png" alt="School Logo" class="homepage-logo" />
-        <div class="homepage-title-group">
-          <h1 class="homepage-title">Nkawkaw Nsuta M/A 'B' Basic School Portal</h1>
-          <p class="homepage-motto">"Knowledge is Power"</p>
+  <div class="homepage-container">
+      <div class="homepage-left">
+        <div class="homepage-header">
+          <img src="Badge.png" alt="School Logo" class="homepage-logo" />
+          <div>
+            <h1 class="homepage-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
+            <div class="homepage-motto">"Knowledge is Power"</div>
+          </div>
+        </div>
+        <div class="homepage-intro">
+          <h2>Welcome</h2>
+          <p>Access student, teacher and admin dashboards. Use the quick links to sign in or explore recent announcements.</p>
+        </div>
+  <div class="role-cards-container">
+            <div class="role-card" role="button" tabindex="0" aria-label="Login as Student" data-role="student" onclick="redirectToLogin('student')">
+              <!-- Student SVG icon -->
+              <svg class="role-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="8" r="3.2" fill="#f7f9fc" stroke="#e6eef8" />
+                <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" fill="#f7f9fc" stroke="#e6eef8" />
+              </svg>
+              <div class="role-title">Student</div>
+            </div>
+            <div class="role-card" role="button" tabindex="0" aria-label="Login as Teacher" data-role="teacher" onclick="redirectToLogin('teacher')">
+              <!-- Teacher SVG icon -->
+              <svg class="role-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="14" rx="2" fill="#f7f9fc" stroke="#e6eef8" />
+                <path d="M7 8h10M7 12h10" stroke="#d6e7fb" stroke-width="1.2"/>
+              </svg>
+              <div class="role-title">Teacher</div>
+            </div>
+            <div class="role-card" role="button" tabindex="0" aria-label="Login as Admin" data-role="admin" onclick="redirectToLogin('admin')">
+              <!-- Admin / gear SVG icon -->
+              <svg class="role-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="12" cy="12" r="3" fill="#f7f9fc" stroke="#e6eef8" />
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a1 1 0 0 1-1.41 1.41l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V20a1 1 0 0 1-2 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06A1 1 0 0 1 6.71 17.88l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H4a1 1 0 0 1 0-2h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82L5.21 6.71A1 1 0 0 1 6.62 5.3l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 9.11 4.18V4a1 1 0 0 1 2 0v.18c.17.12.35.22.54.3.1.04.2.06.31.09.06.02.11.03.16.05.31.1.61.24.88.42.06.04.12.06.18.09.24.13.46.29.66.47l.05.04c.17.14.34.28.5.43.09.08.17.16.25.25.03.03.06.06.08.09.16.16.3.33.44.51.05.06.09.12.14.17.19.2.38.39.59.56.07.06.14.11.2.18.21.21.43.4.66.57.04.03.08.05.12.08.25.15.5.29.77.41.08.04.16.07.24.11.27.13.55.22.84.28.05.01.09.03.14.03.37.08.74.13 1.12.15.09 0 .17.02.26.02.28 0 .55.02.82.02h.03c.55 0 1 .45 1 1v1.09c.01.37.1.74.27 1.09z" fill="#f7f9fc" stroke="#e6eef8"/>
+              </svg>
+              <div class="role-title">Admin</div>
+            </div>
+        </div>
+        <div class="homepage-cta">
+          <button class="btn btn-primary" onclick="redirectToLogin('student')">Login as Student</button>
+          <button class="btn btn-ghost" onclick="redirectToLogin('teacher')">Teacher Login</button>
+        </div>
+        <div class="homepage-footer">
+          <span>&copy; 2025 Nkawkaw Nsuta M/A 'B' Basic School. All rights reserved.</span>
         </div>
       </div>
-      <div class="homepage-intro">
-        <h2>Welcome!</h2>
-        <p>Select your role to access your dashboard.</p>
-      </div>
-      <div class="role-cards-container">
-        <div class="role-card" onclick="redirectToLogin('student')">
-          <img src="Badge.png" alt="Student" class="role-icon" />
-          <div class="role-title">Student</div>
+      <aside class="homepage-right">
+        <div class="quick-links">
+          <div class="quick-card">
+            <div>
+              <h4>Latest Announcement</h4>
+              <p>Term 1 assessments start Monday. Ensure students are present and teachers submit SBA marks.</p>
+            </div>
+          </div>
+          <div class="quick-card">
+            <div>
+              <h4>Resources</h4>
+              <p><a href="student-import_template.csv" download>Download student import template</a></p>
+            </div>
+          </div>
+          <div class="quick-card">
+            <div>
+              <h4>Contact</h4>
+              <p>Email: admin@nkawkawschool.edu | Tel: +233-XXX-XXXX</p>
+            </div>
+          </div>
         </div>
-        <div class="role-card" onclick="redirectToLogin('teacher')">
-          <img src="Badge.png" alt="Teacher" class="role-icon" />
-          <div class="role-title">Teacher</div>
-        </div>
-        <div class="role-card" onclick="redirectToLogin('admin')">
-          <img src="Badge.png" alt="Admin" class="role-icon" />
-          <div class="role-title">Admin</div>
-        </div>
-      </div>
-      <div class="homepage-footer">
-        <span>&copy; 2025 Nkawkaw Nsuta M/A 'B' Basic School. All rights reserved.</span>
+      </aside>
+    </div>
+
+    <!-- Inline Login Modal -->
+    <div id="inlineLoginModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="inlineLoginTitle">
+      <div class="modal-content">
+        <button class="modal-close" aria-label="Close login dialog" onclick="closeInlineLogin()">×</button>
+        <h3 id="inlineLoginTitle">Sign in</h3>
+        <p id="inlineLoginSubtitle" style="color:var(--muted);margin-top:4px;margin-bottom:12px">Enter your credentials</p>
+        <form id="inlineLoginForm">
+          <label for="inlineRole">Role</label>
+          <select id="inlineRole" name="role" style="width:100%;padding:8px;margin-bottom:10px;border-radius:8px;border:1px solid #e6eef8">
+            <option value="student">Student</option>
+            <option value="teacher">Teacher</option>
+            <option value="admin">Admin</option>
+          </select>
+          <label id="inlineAuthLabel" for="inlineUsername">Username / ID</label>
+          <input id="inlineUsername" name="username" type="text" inputmode="text" autocomplete="username" required style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;margin-bottom:10px" />
+          <label id="inlinePinLabel" for="inlinePin">PIN</label>
+          <input id="inlinePin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" required aria-describedby="inlinePinHelp inlinePinError" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6eef8;margin-bottom:6px" />
+          <div id="inlinePinHelp" style="color:var(--muted);font-size:0.85rem;margin-bottom:6px">For students and teachers, PINs are 4 digits.</div>
+          <div id="inlinePinError" role="alert" aria-live="assertive" style="color:#b00020;font-size:0.9rem;min-height:1.2em;margin-bottom:6px"></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <input type="checkbox" id="rememberMe" />
+            <label for="rememberMe" style="margin:0;color:var(--muted);font-size:0.95rem">Remember my username</label>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button type="button" class="btn btn-ghost" onclick="closeInlineLogin()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="inlineSubmitBtn">Sign in</button>
+          </div>
+          <div id="inlineLoginStatus" style="margin-top:10px;color:var(--muted)"></div>
+          <div id="supabaseUnavailableBanner" role="status" aria-live="polite" style="display:none;margin-top:12px;padding:10px;border-radius:8px;background:#fff4f4;border:1px solid #f5c6cb;color:#7a0b0b">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <div style="flex:1">The authentication service is currently unavailable in this tab. You can try to <button type="button" id="retrySupabaseBtn" class="btn btn-ghost" style="margin-left:6px;padding:6px 10px">Retry</button> or
+              <a href="mailto:admin@nkawkawschool.edu" style="color:inherit;text-decoration:underline;margin-left:6px">contact support</a>.</div>
+              <button type="button" class="btn btn-ghost" id="dismissSupabaseBanner" aria-label="Dismiss">Dismiss</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
-    <style>
-      body.index-dashboard-bg {
-        background: linear-gradient(120deg, #e3e8f0 0%, #f7f9fc 100%);
-        min-height: 100%;
-        margin: 0;
-        font-family: 'Segoe UI', Arial, sans-serif;
-      }
-      .dashboard-bg-overlay {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
-        width: 100%; height: 100%;
-        background: linear-gradient(120deg, rgba(0,32,64,0.08) 0%, rgba(0,32,64,0.04) 100%);
-        z-index: 0;
-        pointer-events: none;
-      }
-      .homepage-container {
-        position: relative;
-        z-index: 1;
-        max-width: 700px;
-        margin: 3rem auto 2rem auto;
-        background: rgba(255,255,255,0.97);
-        box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 1.5px 8px rgba(0,32,64,0.08);
-        border-radius: 18px;
-        padding: 2.5rem 2rem 2rem 2rem;
-      }
-      .homepage-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.5rem;
-      }
-      .homepage-logo {
-        height: 70px;
-        margin-right: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-      }
-      .homepage-title-group {
-        flex: 1;
-      }
-      .homepage-title {
-        margin: 0;
-        font-size: 2rem;
-        color: #003366;
-        font-weight: 700;
-      }
-      .homepage-motto {
-        margin: 0.2rem 0 0 0;
-        font-size: 1.1rem;
-        color: #0074d9;
-        font-style: italic;
-      }
-      .homepage-intro {
-        text-align: center;
-        margin-bottom: 2.2rem;
-      }
-      .homepage-intro h2 {
-        margin: 0 0 0.5rem 0;
-        font-size: 1.4rem;
-        color: #003366;
-      }
-      .homepage-intro p {
-        margin: 0;
-        color: #444;
-        font-size: 1.05rem;
-      }
-      .role-cards-container {
-        display: flex;
-        justify-content: center;
-        gap: 2rem;
-        margin: 2.5rem 0 1.5rem 0;
-      }
-      .role-card {
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
-        padding: 2rem 1.5rem 1.2rem 1.5rem;
-        text-align: center;
-        cursor: pointer;
-        transition: box-shadow 0.2s, transform 0.2s;
-        width: 160px;
-        border: 2px solid #e3e8f0;
-      }
-      .role-card:hover {
-        box-shadow: 0 8px 32px rgba(0,32,64,0.18);
-        transform: translateY(-4px) scale(1.04);
-        border-color: #0074d9;
-      }
-      .role-icon {
-        width: 56px;
-        height: 56px;
-        margin-bottom: 1rem;
-        border-radius: 50%;
-        background: #f7f9fc;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-      }
-      .role-title {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #111;
-        margin-top: 0.5rem;
-      }
-      .homepage-footer {
-        text-align: center;
-        margin-top: 2.5rem;
-        color: #888;
-        font-size: 0.95rem;
-      }
-      @media (max-width: 700px) {
-        .homepage-container {
-          padding: 1rem 0.3rem;
-          border-radius: 10px;
-          margin-top: 0.5rem;
-          margin-bottom: 0.5rem;
-        }
-        .homepage-logo {
-          height: 40px;
-          margin-right: 0.5rem;
-        }
-        .homepage-title {
-          font-size: 1.1rem;
-        }
-        .role-cards-container {
-          flex-direction: column;
-          gap: 1.2rem;
-          align-items: center;
-        }
-        .role-card {
-          width: 90%;
-          min-width: 180px;
-        }
-      }
-    </style>
+    
     <script>
-      function redirectToLogin(role) {
-        window.location.href = `login.html?role=${encodeURIComponent(role)}`;
+        function redirectToLogin(role) {
+          try {
+            // Set a short-lived flag so index.html knows to open the inline login for this role
+            localStorage.setItem('openLoginRole', role);
+          } catch (e) {}
+          // Navigate to homepage; index.html will read the flag and open the modal
+          window.location.href = 'index.html';
+        }
+      // make role-cards keyboard-activatable
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.role-card[tabindex]').forEach(el => {
+          el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              const role = el.dataset.role;
+              if (role) redirectToLogin(role);
+            }
+          });
+        });
+        // toast demo buttons in quick links (if toasts.js loaded)
+        const demoContainer = document.querySelector('.quick-links');
+        if (demoContainer) {
+          const demo = document.createElement('div');
+          demo.className = 'quick-card';
+          demo.innerHTML = `<div><h4>Notifications</h4><p style="margin:6px 0 8px 0;color:var(--muted);font-size:0.9rem">Test UI notifications</p>
+            <div style="display:flex;gap:8px"><button class="btn btn-primary" id="toastInfo">Info</button><button class="btn btn-ghost" id="toastWarn">Warn</button></div></div>`;
+          demoContainer.appendChild(demo);
+          document.getElementById('toastInfo').addEventListener('click', ()=> { try { notify('This is an info toast', 'info'); } catch(e){ alert('Info'); } });
+          document.getElementById('toastWarn').addEventListener('click', ()=> { try { notify('This is a warning', 'warning'); } catch(e){ alert('Warn'); } });
+        }
+      });
+    </script>
+    <script>
+  // Supabase client for inline login
+  // Use the global UMD export (if loaded) via window.supabase to avoid TDZ/self-reference issues
+  const supabaseGlobal = (typeof window !== 'undefined' && window.supabase) ? window.supabase : null;
+      const supabaseUrl = 'https://omhmahhfeduejykrxflx.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo';
+      let supabaseClient = null;
+  try {
+    // Prefer the UMD export's createClient (window.supabase.createClient) like login.html
+    if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    } else if (typeof createClient === 'function') {
+      // fallback if a global createClient function was provided
+      supabaseClient = createClient(supabaseUrl, supabaseKey);
+    } else {
+      supabaseClient = null;
+    }
+  } catch(e) { supabaseClient = null; }
+
+      // Update the inline login inputs/labels/placeholders depending on role
+      function updateLoginFieldsForRole(role) {
+        const authLabel = document.getElementById('inlineAuthLabel');
+        const usernameInput = document.getElementById('inlineUsername');
+        const pinInput = document.getElementById('inlinePin');
+        const subtitle = document.getElementById('inlineLoginSubtitle');
+        const submitBtn = document.getElementById('inlineSubmitBtn');
+        // reset attributes
+        usernameInput.removeAttribute('pattern');
+        usernameInput.removeAttribute('inputmode');
+        usernameInput.type = 'text';
+        pinInput.type = 'password';
+        pinInput.inputMode = 'numeric';
+        pinInput.removeAttribute('pattern');
+  if (role === 'teacher') {
+          authLabel.textContent = 'Staff ID';
+          usernameInput.placeholder = 'e.g. STF-12345';
+          usernameInput.setAttribute('aria-label', 'Staff ID');
+          usernameInput.inputMode = 'text';
+          // teacher staff ids are alphanumeric, keep generic pattern
+          usernameInput.removeAttribute('pattern');
+          pinInput.placeholder = 'Enter your PIN';
+          pinInput.setAttribute('aria-label', 'PIN');
+          // enforce digits only for school PINs and require exactly 4 digits
+          pinInput.inputMode = 'numeric';
+          pinInput.setAttribute('pattern', '\\d{4}');
+          document.getElementById('inlinePinHelp').textContent = 'Staff PIN must be exactly 4 digits.';
+          submitBtn.textContent = 'Sign in as Teacher';
+          subtitle.textContent = 'Enter your Staff ID and PIN to access the teacher dashboard.';
+        } else if (role === 'admin') {
+          authLabel.textContent = 'Email';
+          usernameInput.placeholder = 'you@school.edu';
+          usernameInput.setAttribute('aria-label', 'Email');
+          usernameInput.type = 'email';
+          usernameInput.inputMode = 'email';
+          // remove any custom pattern for email — rely on the browser's email validation
+          usernameInput.removeAttribute('pattern');
+          pinInput.placeholder = 'Enter your PIN or password';
+          pinInput.setAttribute('aria-label', 'PIN or password');
+          submitBtn.textContent = 'Sign in as Admin';
+          subtitle.textContent = 'Sign in with your admin email and PIN.';
+        } else {
+          // student default
+          authLabel.textContent = 'Username';
+          usernameInput.placeholder = 'e.g. jdoe123';
+          usernameInput.setAttribute('aria-label', 'Username');
+          usernameInput.type = 'text';
+          usernameInput.inputMode = 'text';
+          usernameInput.removeAttribute('pattern');
+          pinInput.placeholder = 'Enter your PIN';
+          pinInput.setAttribute('aria-label', 'PIN');
+          // Admins: PIN/password can be free-form
+          pinInput.removeAttribute('pattern');
+          document.getElementById('inlinePinHelp').textContent = 'Admin PINs or passwords may contain letters and symbols.';
+          submitBtn.textContent = 'Sign in as Student';
+          subtitle.textContent = 'Students: use your username and school PIN to sign in.';
+        }
       }
+
+      // Sanitize PIN input for numeric-only roles (teacher/student) and validate length
+      (function attachPinSanitizer() {
+        const pinInput = document.getElementById('inlinePin');
+        const roleSelect = document.getElementById('inlineRole');
+        const pinError = document.getElementById('inlinePinError');
+        if (!pinInput || !roleSelect) return;
+        pinInput.addEventListener('input', function() {
+          const role = roleSelect.value;
+          if (role === 'teacher' || role === 'student') {
+            // Strip any non-digit characters to keep the PIN numeric
+            const sanitized = this.value.replace(/\D+/g, '');
+            if (sanitized !== this.value) {
+              const pos = this.selectionStart - (this.value.length - sanitized.length);
+              this.value = sanitized;
+              try { this.setSelectionRange(pos, pos); } catch (e) {}
+            }
+            // validate length (exactly 4 digits)
+            if (this.value.length === 4) {
+              pinError.textContent = '';
+              this.setCustomValidity('');
+            } else {
+              pinError.textContent = 'PIN must be exactly 4 digits.';
+              this.setCustomValidity('PIN must be exactly 4 digits.');
+            }
+          }
+          else {
+            // admin - clear any error
+            pinError.textContent = '';
+            this.setCustomValidity('');
+          }
+        });
+      })();
+
+      // Show PIN change modal before login if forcePinChange is true (copied from login.html)
+      function showChangePinModal(studentId, username) {
+        // Create modal if not exists
+        let modal = document.getElementById('preLoginChangePinModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'preLoginChangePinModal';
+          modal.style.position = 'fixed';
+          modal.style.top = '0';
+          modal.style.left = '0';
+          modal.style.width = '100%';
+          modal.style.height = '100%';
+          modal.style.background = 'rgba(0,0,0,0.4)';
+          modal.style.display = 'flex';
+          modal.style.alignItems = 'center';
+          modal.style.justifyContent = 'center';
+          modal.style.zIndex = '9999';
+          modal.innerHTML = `
+      <div style="background:#fff;padding:2rem;border-radius:12px;max-width:350px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.15);">
+        <h3 style="margin-top:0;color:#003366;">PIN Reset Required</h3>
+        <p>Your PIN was reset by admin. Please set a new PIN to continue.</p>
+        <form id="preLoginChangePinForm">
+          <input type="password" id="newPreLoginPin" placeholder="New PIN" required style="width:100%;margin-bottom:0.7rem;padding:0.7rem;border-radius:8px;border:1.5px solid #e3e8f0;" />
+          <input type="password" id="confirmPreLoginPin" placeholder="Confirm New PIN" required style="width:100%;margin-bottom:0.7rem;padding:0.7rem;border-radius:8px;border:1.5px solid #e3e8f0;" />
+          <button type="submit" style="width:100%;background:#0074d9;color:#fff;border:none;border-radius:8px;padding:0.8rem;font-size:1.1rem;font-weight:600;">Change PIN</button>
+          <div id="preLoginChangePinStatus" style="color:red;margin-top:0.7rem;"></div>
+        </form>
+      </div>
+    `;
+          document.body.appendChild(modal);
+        }
+        modal.style.display = 'flex';
+        const form = document.getElementById('preLoginChangePinForm');
+        form.onsubmit = async function(e) {
+          e.preventDefault();
+          const newPin = document.getElementById('newPreLoginPin').value.trim();
+          const confirmPin = document.getElementById('confirmPreLoginPin').value.trim();
+          const statusDiv = document.getElementById('preLoginChangePinStatus');
+          if (!newPin || !confirmPin) {
+            statusDiv.textContent = 'All fields are required.';
+            return;
+          }
+          if (newPin !== confirmPin) {
+            statusDiv.textContent = 'PINs do not match.';
+            return;
+          }
+          if (newPin.length < 4 || newPin.length > 8) {
+            statusDiv.textContent = 'PIN must be 4-8 digits.';
+            return;
+          }
+          // Update PIN and clear forcePinChange
+          const { error } = await supabaseClient
+            .from('students')
+            .update({ pin: newPin, forcePinChange: false })
+            .eq('id', studentId);
+          if (error) {
+            statusDiv.textContent = 'Failed to change PIN.';
+            return;
+          }
+          statusDiv.style.color = 'green';
+          statusDiv.textContent = 'PIN changed! You can now log in.';
+          setTimeout(() => {
+            modal.style.display = 'none';
+          }, 1200);
+        };
+      }
+
+      // Attach blur handler to inlineUsername to check forcePinChange for students (normalize username like login.html)
+      (function attachPreLoginPinCheck() {
+        const usernameInput = document.getElementById('inlineUsername');
+        const roleSelect = document.getElementById('inlineRole');
+        if (!usernameInput) return;
+        usernameInput.addEventListener('blur', async function() {
+          try {
+            const usernameRaw = usernameInput.value || '';
+            const normalized = usernameRaw.trim().replace(/\s+/g, '').toLowerCase();
+            const isStudent = roleSelect ? roleSelect.value === 'student' : true;
+            if (isStudent && normalized && supabaseClient) {
+              const { data, error } = await supabaseClient
+                .from('students')
+                .select('id, forcePinChange')
+                .eq('username', normalized)
+                .single();
+              if (data && data.forcePinChange) {
+                showChangePinModal(data.id, normalized);
+              }
+            }
+          } catch (e) {
+            // ignore pre-check errors
+            console.warn('pre-login pin check failed', e);
+          }
+        });
+      })();
+
+      // Helpers for a friendly Supabase-unavailable banner + retry
+      function showSupabaseUnavailable() {
+        const banner = document.getElementById('supabaseUnavailableBanner');
+        if (banner) banner.style.display = 'block';
+        const retry = document.getElementById('retrySupabaseBtn');
+        const dismiss = document.getElementById('dismissSupabaseBanner');
+        if (retry) retry.addEventListener('click', tryInitSupabase);
+        if (dismiss) dismiss.addEventListener('click', hideSupabaseUnavailable);
+      }
+      function hideSupabaseUnavailable() {
+        const banner = document.getElementById('supabaseUnavailableBanner');
+        if (banner) banner.style.display = 'none';
+      }
+      function tryInitSupabase() {
+        try {
+          if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+            supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+          } else if (typeof createClient === 'function') {
+            supabaseClient = createClient(supabaseUrl, supabaseKey);
+            if (supabaseClient) {
+              hideSupabaseUnavailable();
+              try { notify('Reconnected to authentication service.', 'info'); } catch(e){}
+            }
+          } else {
+            try { notify('Authentication library not available in this tab.', 'warning'); } catch(e){}
+          }
+        } catch (e) {
+          console.warn('Re-init supabase failed', e);
+          try { notify('Retry failed. Please try again or contact support.', 'error'); } catch(er){}
+        }
+      }
+
+      // Sanitize admin email input to avoid accidental spaces causing browser validation errors
+      (function attachEmailSanitizer() {
+        const emailInput = document.getElementById('inlineUsername');
+        const roleSelect = document.getElementById('inlineRole');
+        if (!emailInput || !roleSelect) return;
+        emailInput.addEventListener('input', function() {
+          // only act if admin role — avoid interfering with student/teacher ids
+          if (roleSelect.value === 'admin') {
+            // basic sanitize: remove leading/trailing spaces as the user types
+            const trimmed = this.value.replace(/^\s+|\s+$/g, '');
+            if (trimmed !== this.value) {
+              const pos = this.selectionStart - (this.value.length - trimmed.length);
+              this.value = trimmed;
+              try { this.setSelectionRange(pos, pos); } catch (e) {}
+            }
+          }
+        });
+        emailInput.addEventListener('blur', function() {
+          if (roleSelect.value === 'admin') this.value = this.value.trim();
+        });
+      })();
+
+      function openInlineLogin(role) {
+        document.getElementById('inlineRole').value = role || 'student';
+        document.getElementById('inlineUsername').value = '';
+        document.getElementById('inlinePin').value = '';
+        document.getElementById('inlineLoginStatus').textContent = '';
+        document.getElementById('inlineLoginModal').classList.remove('hidden');
+        // update UI to match role (labels, placeholders, types)
+        updateLoginFieldsForRole(role || 'student');
+        // focus the primary input
+        setTimeout(() => { try { document.getElementById('inlineUsername').focus(); } catch(e){} }, 10);
+      }
+      function closeInlineLogin() {
+        document.getElementById('inlineLoginModal').classList.add('hidden');
+      }
+      // Wire role-cards to open modal instead of redirect
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.role-card[data-role]').forEach(el => {
+          el.addEventListener('click', function(e) {
+            e.preventDefault();
+            const role = el.dataset.role;
+            // If already on index.html, open modal directly, otherwise set flag and navigate
+            if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '') {
+              openInlineLogin(role);
+            } else {
+              try { localStorage.setItem('openLoginRole', role); } catch (e) {}
+              window.location.href = 'index.html';
+            }
+          });
+        });
+        // Prefill remembered username
+        try {
+          const saved = localStorage.getItem('rememberedUsername');
+          if (saved) document.getElementById('inlineUsername').value = saved;
+        } catch (e) {}
+        // Ensure the fields reflect the currently selected role on load
+        try { updateLoginFieldsForRole(document.getElementById('inlineRole').value || 'student'); } catch(e){}
+        // When role changes, update labels/placeholders/validation
+        document.getElementById('inlineRole').addEventListener('change', function(e) {
+          updateLoginFieldsForRole(e.target.value);
+        });
+        // Handle login submit
+        const form = document.getElementById('inlineLoginForm');
+        form.addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const role = document.getElementById('inlineRole').value;
+          const username = document.getElementById('inlineUsername').value.trim();
+          const pinEl = document.getElementById('inlinePin');
+          const pin = pinEl.value.trim();
+          const pinErrorEl = document.getElementById('inlinePinError');
+          // enforce 4-digit PIN for students and teachers before sending
+          if ((role === 'student' || role === 'teacher')) {
+            if (!/^[0-9]{4}$/.test(pin)) {
+              try { notify('PIN must be exactly 4 digits.', 'warning'); } catch(e){}
+              pinErrorEl.textContent = 'PIN must be exactly 4 digits.';
+              try { pinEl.focus(); pinEl.select(); } catch (e) {}
+              return;
+            }
+          }
+          const status = document.getElementById('inlineLoginStatus');
+          const remember = document.getElementById('rememberMe').checked;
+          if (!username || !pin) { try { notify('Please enter your credentials.', 'warning'); } catch(e){ alert('Please enter your credentials.'); } return; }
+          if (!supabaseClient) {
+            // Show a helpful inline banner with retry and contact info instead of a generic toast
+            try { showSupabaseUnavailable(); } catch(e){ try { notify('Supabase client unavailable', 'error'); } catch(n){ alert('Supabase client unavailable'); } }
+            return;
+          }
+          status.textContent = 'Signing in...';
+          // disable submit and show busy
+          const submitBtn = form.querySelector('button[type="submit"]');
+          submitBtn.disabled = true; submitBtn.setAttribute('aria-disabled','true');
+          form.setAttribute('aria-busy','true');
+          // show a CSS spinner
+          const spinnerEl = document.createElement('span'); spinnerEl.id = 'loginSpinner'; spinnerEl.className = 'spinner'; spinnerEl.setAttribute('aria-hidden','true');
+          submitBtn.insertAdjacentElement('afterbegin', spinnerEl);
+          try {
+            // If username looks like an email, try Supabase Auth first
+            const emailLike = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(username);
+            if (emailLike && typeof supabaseClient.auth?.signInWithPassword === 'function') {
+              try {
+                const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({ email: username, password: pin });
+                // If auth succeeded, finish the flow. If auth failed, allow fallback to table lookup.
+                if (!authErr && authData && authData.user) {
+                  if (remember) try { localStorage.setItem('rememberedUsername', username); } catch(e){}
+                  try { notify('Welcome!', 'info'); } catch(e){}
+                  if (role === 'student') window.location.href = 'student-dashboard.html';
+                  else if (role === 'teacher') window.location.href = 'teacher-dashboard.html';
+                  else window.location.href = 'admin.html';
+                  return;
+                }
+                // Otherwise, continue to table lookup (admins may be stored in the DB rather than Supabase Auth)
+              } catch (ae) {
+                // network or unexpected - treat as fatal for now and ask user to retry
+                console.warn('Auth attempt failed:', ae);
+                try { notify('Network error during authentication. Please try again.', 'error'); } catch(e){}
+                status.textContent = '';
+                submitBtn.disabled = false; submitBtn.removeAttribute('aria-disabled'); form.removeAttribute('aria-busy'); const spinner = document.getElementById('loginSpinner'); if (spinner) spinner.remove();
+                return;
+              }
+            }
+            let table = role === 'student' ? 'students' : (role === 'teacher' ? 'teachers' : 'admins');
+            let query = {};
+            if (role === 'teacher') query = { staff_id: username, pin };
+            else if (role === 'student') query = { username, pin };
+            else query = { email: username, pin };
+            const { data, error } = await supabaseClient.from(table).select('*').match(query).single();
+            if (error || !data) {
+              // Distinguish not found vs wrong password where possible
+              const msg = (error && error.message) ? error.message : 'No matching account found.';
+              if (/no rows|not found|empty/i.test(msg)) {
+                try { notify('Account not found. Please check your username.', 'error'); } catch (e) { alert('Account not found.'); }
+              } else if (/password|pin|credentials|invalid/i.test(msg)) {
+                try { notify('Wrong credentials. Please check PIN/Password.', 'error'); } catch (e) { alert('Wrong credentials.'); }
+              } else {
+                try { notify('Login failed. ' + msg, 'error'); } catch (e) { alert('Login failed.'); }
+              }
+              status.textContent = '';
+              submitBtn.disabled = false; submitBtn.removeAttribute('aria-disabled');
+              form.removeAttribute('aria-busy');
+              const spinner = document.getElementById('loginSpinner'); if (spinner) spinner.remove();
+              return;
+            }
+            // store session-like info and redirect
+            if (role === 'student') {
+              localStorage.setItem('studentId', data.id);
+              try { notify('Welcome back!', 'info'); } catch(e){}
+              if (remember) try { localStorage.setItem('rememberedUsername', username); } catch(e){}
+              window.location.href = 'student-dashboard.html';
+            } else if (role === 'teacher') {
+              localStorage.setItem('teacherId', data.id);
+              if (data.staff_id) sessionStorage.setItem('teacher_staff_id', data.staff_id);
+              try { notify('Welcome, ' + (data.name || 'Teacher'), 'info'); } catch(e){}
+              if (remember) try { localStorage.setItem('rememberedUsername', username); } catch(e){}
+              window.location.href = 'teacher-dashboard.html';
+            } else {
+              localStorage.setItem('adminId', data.id);
+              try { notify('Welcome, admin', 'info'); } catch(e){}
+              if (remember) try { localStorage.setItem('rememberedUsername', username); } catch(e){}
+              window.location.href = 'admin.html';
+            }
+          } catch (err) {
+            console.error('Inline login error:', err);
+            try { notify('Unexpected error during login.', 'error'); } catch(e){ alert('Unexpected error'); }
+            status.textContent = '';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = false; submitBtn.removeAttribute('aria-disabled');
+            form.removeAttribute('aria-busy');
+            const spinner = document.getElementById('loginSpinner'); if (spinner) spinner.remove();
+          }
+        });
+      });
+      // Programmatic open: support localStorage flag 'openLoginRole' so other pages
+      // can set it then navigate to index.html to trigger the inline modal.
+      (function() {
+        // Helper to open when needed and then clear the flag
+        function tryOpenFromStorage() {
+          try {
+            const role = localStorage.getItem('openLoginRole');
+            if (role) {
+              // Clear flag immediately so re-navigation doesn't re-open unexpectedly
+              localStorage.removeItem('openLoginRole');
+              setTimeout(() => openInlineLogin(role), 40);
+            }
+          } catch (e) {}
+        }
+        // Open on initial load if flag present
+        tryOpenFromStorage();
+        // Listen for other tabs/pages setting the flag then navigated here
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'openLoginRole' && e.newValue) {
+            tryOpenFromStorage();
+          }
+        });
+      })();
+
+      // Focus trap implementation for the inline login modal
+      (function() {
+        let lastFocusedElement = null;
+        const modal = document.getElementById('inlineLoginModal');
+        const focusableSelector = 'a[href], area[href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+        function getFocusableElements(container) {
+          return Array.from(container.querySelectorAll(focusableSelector)).filter(el => el.offsetParent !== null);
+        }
+
+        // Open wrapper: capture opener and focus the first focusable in modal
+        const origOpen = openInlineLogin;
+        window.openInlineLogin = function(role) {
+          try { lastFocusedElement = document.activeElement; } catch (e) { lastFocusedElement = null; }
+          origOpen(role);
+          // set inert/aria-hidden on the rest of the document for screen-readers
+          document.querySelectorAll('body > *:not(#inlineLoginModal)').forEach(el => el.setAttribute('aria-hidden', 'true'));
+          // focus first focusable element inside modal
+          const focusables = getFocusableElements(modal);
+          if (focusables && focusables.length) focusables[0].focus();
+          // Listen for Tab/Shift+Tab to cycle focus
+          document.addEventListener('keydown', trapKeydown);
+        };
+
+        // Close wrapper: restore focus and cleanup
+        const origClose = closeInlineLogin;
+        window.closeInlineLogin = function() {
+          origClose();
+          document.querySelectorAll('body > *:not(#inlineLoginModal)').forEach(el => el.removeAttribute('aria-hidden'));
+          document.removeEventListener('keydown', trapKeydown);
+          try { if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') lastFocusedElement.focus(); } catch (e) {}
+        };
+
+        function trapKeydown(e) {
+          if (!modal || modal.classList.contains('hidden')) return;
+          if (e.key === 'Escape') {
+            e.preventDefault();
+            window.closeInlineLogin();
+            return;
+          }
+          if (e.key !== 'Tab') return;
+          const focusables = getFocusableElements(modal);
+          if (!focusables.length) return;
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          if (e.shiftKey) {
+            if (document.activeElement === first || document.activeElement === modal) {
+              e.preventDefault();
+              last.focus();
+            }
+          } else {
+            if (document.activeElement === last) {
+              e.preventDefault();
+              first.focus();
+            }
+          }
+        }
+      })();
     </script>
   </body>
 </html>
