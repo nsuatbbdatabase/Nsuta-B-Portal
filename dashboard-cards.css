@@ -35,6 +35,19 @@
   margin-bottom: 0.7rem;
   display: block;
 }
+
+/* Remove dashboard-card-desc style if present */
+.dashboard-card-desc {
+  display: none !important;
+}
+
+/* Change dashboard-card-title font color to suit background */
+.dashboard-card-title {
+  color: #ffd700; /* gold/yellow for contrast on deep blue */
+  font-weight: bold;
+  font-size: 1.15em;
+  letter-spacing: 0.5px;
+}
  .dashboard-card:hover, .dashboard-card:focus {
   background: linear-gradient(120deg, #2c5364 40%, #0f2027 100%); /* cyan to deep blue */
   color: #fff;
@@ -61,5 +74,39 @@
     padding: 0.7rem 0.3rem;
     min-width: 0;
     box-sizing: border-box;
+  }
+
+  /* Ensure cards are readable on very small screens */
+  .dashboard-card {
+    background: #ffffff !important;
+    color: #07203a !important;
+    box-shadow: 0 6px 18px rgba(9,30,66,0.06) !important;
+    border: 1px solid rgba(9,30,66,0.06) !important;
+    z-index: 3;
+    position: relative;
+  }
+}
+
+/* Strong mobile safety overrides: ensure no card is hidden or clipped */
+@media (max-width: 700px) {
+  .dashboard-cards-bg, .dashboard-overview {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+  }
+  .dashboard-overview {
+    grid-auto-rows: auto !important;
+    align-items: stretch !important;
+  }
+  .dashboard-overview .dashboard-card {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    aspect-ratio: unset !important;
+    min-height: 64px !important;
+    max-height: none !important;
+    max-width: 100% !important;
+    margin: 0 !important;
   }
 }

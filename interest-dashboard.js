@@ -37,7 +37,7 @@ async function loadProfiles() {
   tbody.innerHTML = '';
 
   if (!term || !className) {
-    try { notify('Please select both term and class.', 'warning'); } catch (e) { alert('Please select both term and class.'); }
+  try { notify('Please select both term and class.', 'warning'); } catch (e) { alert('Please select both term and class.'); }
     return;
   }
 
@@ -68,8 +68,9 @@ async function loadProfiles() {
   // Fetch all attendance records for this class and term
   const { data: attendanceRecords, error: attendanceError } = await supabaseClient
     .from('attendance')
-    .select('student_id, present, term')
-    .eq('term', term);
+    .select('student_id, present, term, class')
+    .eq('term', term)
+    .eq('class', className);
   if (attendanceError) {
     console.error('Failed to load attendance:', attendanceError.message);
   }
@@ -86,7 +87,18 @@ async function loadProfiles() {
 
   students.forEach(student => {
     // Count present days for this student (X)
-    const presentCount = (attendanceRecords || []).filter(a => a.student_id === student.id && a.present === true).length;
+    const presentCount = (attendanceRecords || []).filter(a => {
+      if (a.student_id !== student.id) return false;
+      const v = a.present;
+      // Accept different representations: boolean true, 't', 'true', 1, '1'
+      if (v === true) return true;
+      if (typeof v === 'string') {
+        const s = v.trim().toLowerCase();
+        return s === 't' || s === 'true' || s === '1';
+      }
+      if (typeof v === 'number') return v === 1;
+      return false;
+    }).length;
     const profile = profiles.find(p => p.student_id === student.id);
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -166,10 +178,10 @@ async function upsertProfile(studentId) {
     });
 
   if (error) {
-    try { notify('Save failed: ' + error.message, 'error'); } catch (e) { alert('Save failed: ' + error.message); }
+  try { notify('Save failed: ' + error.message, 'error'); } catch (e) { alert('Save failed: ' + error.message); }
     console.error('Upsert error:', error.message);
   } else {
-    try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
+  try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
     loadProfiles();
   }
 }

@@ -78,12 +78,8 @@ async function loadStudentProfileForUpdate() {
   const studentId = document.getElementById('studentSelect').value;
   const term = document.getElementById('term').value.trim();
   if (!studentId || !term) return;
-  const { data: profile, error } = await supabaseClient
-    .from('profiles')
-    .select('interest, conduct, attendance_total, attendance_actual')
-    .eq('student_id', studentId)
-    .eq('term', term)
-    .single();
+  // Fetch profile with retry/backoff to handle eventual consistency or transient DB visibility
+  const { profile, error } = await fetchProfileWithRetry(studentId, term, 5);
   if (profile) {
     document.getElementById('attendanceTotal').value = profile.attendance_total || '';
     document.getElementById('interest').value = profile.interest || '';
@@ -93,6 +89,36 @@ async function loadStudentProfileForUpdate() {
     document.getElementById('interest').value = '';
     document.getElementById('conduct').value = '';
   }
+}
+
+// Helper: fetch profile with exponential backoff when no result is immediately available
+async function fetchProfileWithRetry(studentId, term, maxAttempts = 5) {
+  const baseDelay = 200; // ms
+  let attempt = 0;
+  while (attempt < maxAttempts) {
+    attempt += 1;
+    try {
+      const { data: profile, error } = await supabaseClient
+        .from('profiles')
+        .select('interest, conduct, attendance_total, attendance_actual')
+        .eq('student_id', studentId)
+        .eq('term', term)
+        .maybeSingle();
+      // If we have a profile or a server error, return immediately
+      if (error) return { profile: null, error };
+      if (profile) return { profile, error: null };
+      // No profile returned — wait and retry
+    } catch (e) {
+      // Network or unexpected error — return it
+      return { profile: null, error: e };
+    }
+    // Exponential backoff with jitter
+    const jitter = Math.floor(Math.random() * 100);
+    const delay = Math.min(2000, baseDelay * Math.pow(2, attempt - 1)) + jitter;
+    await new Promise(res => setTimeout(res, delay));
+  }
+  // After attempts, return null without error (caller handles empty state)
+  return { profile: null, error: null };
 }
 
 // ✅ Submit profile data
@@ -106,7 +132,7 @@ async function submitProfile() {
   const conduct = document.getElementById('conduct').value.trim();
 
   if (!studentId || !term || !year || isNaN(attendanceTotal) || !interest || !conduct) {
-    try { notify('Please fill in all fields correctly.', 'warning'); } catch (e) { alert('Please fill in all fields correctly.'); }
+  try { notify('Please fill in all fields correctly.', 'warning'); } catch (e) { alert('Please fill in all fields correctly.'); }
     return;
   }
 
@@ -143,7 +169,7 @@ async function submitProfile() {
   }
 
   if (result.error) {
-    try { notify('Error saving profile: ' + result.error.message, 'error'); } catch (e) { alert('Error saving profile: ' + result.error.message); }
+  try { notify('Error saving profile: ' + result.error.message, 'error'); } catch (e) { alert('Error saving profile: ' + result.error.message); }
     // Extra logging for debugging
     console.error('Full Supabase error:', result.error);
     if (result.status) {
@@ -153,7 +179,7 @@ async function submitProfile() {
       console.error('Supabase response data:', result.data);
     }
   } else {
-    try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
+  try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
     document.getElementById('term').value = '';
     document.getElementById('year').value = '';
     document.getElementById('attendanceTotal').value = '';
@@ -199,3 +225,21 @@ const studentSelect = document.getElementById('studentSelect');
 if (studentSelect) {
   studentSelect.addEventListener('change', loadStudentProfileForUpdate);
 }
+
+// Listen for attendance updates from other pages and refresh profile if affected
+window.addEventListener('storage', function(ev) {
+  if (!ev.key) return;
+  if (ev.key === 'attendanceUpdated') {
+    try {
+      const payload = JSON.parse(ev.newValue || '{}');
+      // If current selected student is in the updated list, refresh
+      const studentId = document.getElementById('studentSelect')?.value;
+      if (!studentId) return;
+      const updatedIds = Array.isArray(payload.studentIds) ? payload.studentIds : [];
+      if (updatedIds.includes(studentId)) {
+        // Refresh the profile display
+        setTimeout(() => loadStudentProfileForUpdate(), 50);
+      }
+    } catch (e) { /* ignore parse errors */ }
+  }
+});

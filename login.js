@@ -10,18 +10,18 @@ async function login() {
     return;
   }
 
-  // For students, check forcepinchange after username entry
+  // For students, check forcePinChange after username entry
   if (role === 'student') {
     const { data, error } = await supabaseClient
       .from('students')
-      .select('id, forcepinchange')
+      .select('id, forcePinChange')
       .eq('username', username)
       .single();
     if (error || !data) {
       try { notify('Student not found.', 'error'); } catch (e) { alert('Student not found.'); }
       return;
     }
-    if (data.forcepinchange) {
+    if (data.forcePinChange) {
       // Show PIN change modal before login
       showChangePinModal(data.id, username);
       return;
@@ -133,10 +133,10 @@ function showChangePinModal(studentId, username) {
       statusDiv.textContent = 'PIN must be 4-8 digits.';
       return;
     }
-    // Update PIN and clear forcepinchange
+    // Update PIN and clear forcePinChange (do not leak PINs in UI)
     const { error } = await supabaseClient
       .from('students')
-      .update({ pin: newPin, forcepinchange: false })
+      .update({ pin: newPin, forcePinChange: false })
       .eq('id', studentId);
     if (error) {
       statusDiv.textContent = 'Failed to change PIN.';

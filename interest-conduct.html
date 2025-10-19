@@ -38,8 +38,8 @@
     <input type="text" id="year" placeholder="e.g. 2025/2026" required />
 
     <!-- 📅 Attendance -->
-    <label for="attendanceTotal">Total Attendance:</label>
-    <input type="number" id="attendanceTotal" placeholder="e.g. 42" required />
+  <label for="attendanceTotal">Total Attendance (computed):</label>
+  <input type="number" id="attendanceTotal" placeholder="e.g. 42" required readonly />
 
     <label for="attendanceActual">Out of (Actual Days):</label>
   <input type="number" id="attendanceActual" placeholder="e.g. 45" readonly />
@@ -94,8 +94,16 @@
     <button onclick="submitProfile()">Submit</button>
   </div>
 
+  <!-- Runtime error monitor (shows unhandledrejection and error stacks) -->
+  <div id="errorMonitor" aria-live="polite" style="position:fixed;right:1rem;bottom:1rem;max-width:380px;z-index:9999;font-family:monospace;display:none;">
+    <div id="errorMonitorHeader" style="background:#3a3a3a;color:#fff;padding:0.5rem 0.75rem;border-radius:6px 6px 0 0;">Runtime Error Monitor</div>
+    <div id="errorMonitorBody" style="background:#fff;border:1px solid #ccc;padding:0.5rem 0.75rem;border-radius:0 0 6px 6px;color:#111;max-height:240px;overflow:auto;font-size:12px;"></div>
+  </div>
+
   <!-- Supabase + Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <script src="form.js"></script>
+  <script src="error-monitor.js"></script>
+    <script src="toasts.js"></script>
+    <script src="form.js"></script>
 </body>
 </html>

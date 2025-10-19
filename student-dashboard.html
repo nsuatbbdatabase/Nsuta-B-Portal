@@ -237,6 +237,7 @@
   <!-- Supabase + Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="toasts.js"></script>
   <script src="student-dashboard.js"></script>
     <script src="router.js"></script>
 <script>
@@ -271,13 +272,13 @@
   });
 </script>
 <script>
-  // Add logout logic to redirect to login.html
+  // Add logout logic to redirect to homepage (inline login)
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
     logoutBtn.onclick = function() {
       sessionStorage.clear();
       localStorage.clear();
-      window.location.href = 'login.html';
+      window.location.href = 'index.html';
     };
   }
 </script>

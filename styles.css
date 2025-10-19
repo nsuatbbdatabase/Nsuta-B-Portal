@@ -1123,6 +1123,8 @@ td img {
   padding: 2.5rem 2rem 2rem 2rem;
   margin: 0 auto 2rem auto;
   max-width: 900px;
+  position: relative; /* ensure it forms its own stacking context */
+  z-index: 2; /* sit above the page overlay (which uses z-index:0) */
 }
 
 /* Responsive Enhancements */
@@ -1152,6 +1154,79 @@ td img {
     width: 100% !important;
     box-sizing: border-box !important;
   }
+
+  /* Mobile-specific: make dashboard cards opaque and above overlays */
+  .dashboard-cards-bg {
+    background: #ffffff !important;
+    padding: 1rem !important;
+    margin: 0.6rem !important;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.08) !important;
+    border-radius: 12px !important;
+    z-index: 10 !important;
+  }
+
+  .dashboard-overview {
+    background: transparent !important;
+    z-index: 11 !important;
+    position: relative !important;
+  }
+
+  .dashboard-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%) !important;
+    color: #07203a !important;
+    box-shadow: 0 6px 18px rgba(9,30,66,0.06) !important;
+    border: 1px solid rgba(9,30,66,0.04) !important;
+  }
+}
+
+/* Emergency override: ensure dashboard overview/cards are always visible on small screens */
+@media (max-width: 900px) {
+  .dashboard-cards-bg, .dashboard-overview, .dashboard-overview .dashboard-card {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .dashboard-overview {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.8rem !important;
+    padding: 0.6rem !important;
+  }
+  .dashboard-overview .dashboard-card {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 64px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    aspect-ratio: unset !important;
+  }
+}
+
+/* New dashboard-card body layout */
+.dashboard-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  padding: 0 0.25rem;
+}
+.dashboard-card-title { font-weight: 800; color: inherit; font-size: 1rem; }
+.dashboard-card-stat { font-weight: 700; color: #0074d9; font-size: 1.15rem; }
+.dashboard-card-desc { color: rgba(0,0,0,0.65); font-size: 0.92rem; }
+.dashboard-card-actions { margin-top: 0.45rem; }
+.dashboard-card-action { background: #004080; color: #fff; border: none; padding: 0.45rem 0.8rem; border-radius: 8px; cursor: pointer; }
+.dashboard-card-action:focus { outline: 3px solid rgba(0,116,217,0.22); }
+
+@media (max-width: 700px) {
+  .dashboard-card-body { align-items: flex-start; text-align: left; padding-left: 0.6rem; }
+  .dashboard-card-title { font-size: 1rem; }
+  .dashboard-card-desc { font-size: 0.92rem; }
 }
 
 /* School Header */
@@ -1174,3 +1249,53 @@ td img {
   display: inline-block;
   vertical-align: middle;
 }
+
+/* ---------- Mobile improvements (<=720px) ---------- */
+@media (max-width: 720px) {
+  /* Collapse sidebar into a top hamburger-like area by hiding it visually but keeping accessible */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.8rem;
+    z-index: 1200;
+    background: linear-gradient(90deg,#00264d,#004080);
+  }
+  .sidebar ul { display: none; }
+  .school-header { display:flex; align-items:center; gap:0.6rem }
+
+  /* Make header compact and place controls below */
+  .dashboard-header { padding: 0.6rem 0.8rem; display:flex; align-items:center; gap:0.6rem }
+
+  /* Ensure main content has top padding to avoid overlap with fixed sidebar/header */
+  .dashboard-main { padding-top: 5.25rem; }
+
+  /* Stack overview cards full width */
+  .dashboard-overview { grid-template-columns: 1fr !important; gap:0.6rem; }
+  .dashboard-card { min-height: 64px; padding:0.8rem; display:flex; align-items:center; gap:0.6rem }
+
+  /* Make tables scrollable horizontally and easier to read */
+  table { display:block; width:100%; overflow:auto; -webkit-overflow-scrolling:touch; }
+  th, td { white-space:nowrap; }
+
+  /* Mobile-friendly modals: full-screen panel */
+  .modal-content { width:100% !important; height:100%; max-width:100% !important; border-radius:0 !important; margin:0; padding:1rem; box-sizing:border-box }
+  .modal { align-items:flex-end; }
+
+  /* Bigger touch targets */
+  .btn, button { min-height:48px; padding:0.7rem 1rem; font-size:1rem }
+
+  /* Make form inputs full width and comfortable on mobile */
+  input, select, textarea { font-size:1rem; padding:0.6rem; }
+
+  /* Back-to-overview buttons visible and easy to reach */
+  .back-to-dashboard { display:inline-block; margin-bottom:0.8rem; }
+
+  /* If you want the sidebar navigation visible, show it as a collapsible section when tapped (JS can toggle .open) */
+  .sidebar.open ul { display:block; position:absolute; top:56px; left:0; right:0; background:#00345a; padding:0.6rem; }
+  .sidebar.open ul li { margin:0.4rem 0 }
+}
+
+/* ---------- End mobile improvements ---------- */

@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         // Define allowed schema fields for Supabase students table
-        // Match new schema: no full_name, require first_name and surname; dob/nhis/parent fields are optional
+        // Match new schema: no full_name, require first_name and surname, include area, dob, nhis_number
         const allowedFields = [
           'first_name', 'surname', 'area', 'dob', 'nhis_number',
           'gender', 'class', 'subclass', 'parent_name', 'parent_contact', 'username', 'pin', 'picture_url'
@@ -222,25 +222,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Map CSV headers to schema fields (case-insensitive)
         const headers = lines[0].split(/\t|,/).map(h => h.trim());
         const normalizedHeaders = headers.map(h => h.toLowerCase());
-        // Build a mapping from CSV header to schema field (support common aliases)
+        // Build a mapping from CSV header to schema field
         const headerToField = {};
         headers.forEach((h, idx) => {
           const norm = h.toLowerCase();
-          // Map common variations to schema fields (add sensible aliases)
-          if (norm === 'full name' || norm === 'fullname') headerToField[h] = 'full_name';
-          else if (norm === 'parent' || norm === 'parent name' || norm === 'guardian') headerToField[h] = 'parent_name';
-          else if (norm === 'contact' || norm === 'parent contact' || norm === 'guardian contact') headerToField[h] = 'parent_contact';
-          else if (norm === 'nhis number' || norm === 'nhis') headerToField[h] = 'nhis_number';
-          else if (norm === 'class' || norm === 'main class' || norm === 'class name' || norm === 'class_name') headerToField[h] = 'class';
-          else if (norm === 'subclass' || norm === 'sub class' || norm === 'sub-class' || norm === 'arm' || norm === 'section') headerToField[h] = 'subclass';
+          // Map common variations to schema fields
+          if (norm === 'full name') headerToField[h] = 'full_name';
+          else if (norm === 'parent') headerToField[h] = 'parent_name';
+          else if (norm === 'contact') headerToField[h] = 'parent_contact';
+          else if (norm === 'nhis number') headerToField[h] = 'nhis_number';
+          else if (norm === 'class') headerToField[h] = 'class';
+          else if (norm === 'subclass') headerToField[h] = 'subclass';
           else if (norm === 'gender') headerToField[h] = 'gender';
           else if (norm === 'area') headerToField[h] = 'area';
-          else if (norm === 'dob' || norm === 'date of birth') headerToField[h] = 'dob';
+          else if (norm === 'dob') headerToField[h] = 'dob';
           else if (norm === 'username') headerToField[h] = 'username';
           else if (norm === 'pin') headerToField[h] = 'pin';
-          else if (norm === 'picture url' || norm === 'picture') headerToField[h] = 'picture_url';
-          else if (norm === 'surname' || norm === 'last name') headerToField[h] = 'surname';
-          else if (norm === 'first name' || norm === 'firstname' || norm === 'given name') headerToField[h] = 'first_name';
+          else if (norm === 'picture url') headerToField[h] = 'picture_url';
+          else if (norm === 'surname') headerToField[h] = 'surname';
+          else if (norm === 'first name') headerToField[h] = 'first_name';
           else headerToField[h] = null; // ignore unknown columns
         });
   let successCount = 0, failCount = 0, duplicateRows = [], invalidRows = [];
@@ -251,8 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
           const studentData = {};
           let hasAllRequired = true;
           // Required fields for import (username and pin are always generated)
-          // DOB, NHIS number, parent name/contact are optional per request
-          const requiredFields = ['first_name', 'surname', 'gender', 'class'];
+          const requiredFields = ['first_name', 'surname', 'gender', 'class', 'parent_name', 'parent_contact'];
           // Fill studentData from CSV row (CSV uses Full Name, split to first_name/surname)
           headers.forEach((h, idx) => {
             const field = headerToField[h];
@@ -267,25 +266,10 @@ document.addEventListener('DOMContentLoaded', function() {
           // Always auto-generate username and pin
           studentData['username'] = generateUsername(studentData['first_name'], studentData['surname']);
           studentData['pin'] = generatePin();
-          // Normalize class/subclass: if `class` contains both (e.g. "JHS 1 A"), extract subclass
-          if (studentData['class']) {
-            const clsRaw = String(studentData['class']).trim();
-            // Match patterns like "JHS 1 A", "JHS1 A", "JHS 2A"
-            const m = clsRaw.match(/^(jhs\s*\d+)\s*([a-zA-Z])$/i) || clsRaw.match(/^(jhs\s*\d+)([a-zA-Z])$/i);
-            if (m) {
-              studentData['class'] = m[1].toUpperCase().replace(/\s+/g,' ').trim();
-              studentData['subclass'] = m[2].toUpperCase();
-            } else {
-              // Normalize spacing and casing for class only
-              studentData['class'] = clsRaw.toUpperCase().replace(/\s+/g,' ').trim();
-            }
-          }
-
-          // Fix subclass logic: ensure subclass is present for JHS 1/2; null for others
+          // Fix subclass logic: if class is JHS 1 or JHS 2, keep subclass; if JHS 3, set subclass to null
           if (studentData['class'] === 'JHS 1' || studentData['class'] === 'JHS 2') {
+            // If subclass is missing, set to empty string
             if (!('subclass' in studentData)) studentData['subclass'] = '';
-            // If subclass exists but is empty string, leave as '' (will be validated later)
-            if (studentData['subclass'] && typeof studentData['subclass'] === 'string') studentData['subclass'] = studentData['subclass'].toUpperCase();
           } else {
             studentData['subclass'] = null;
           }
@@ -423,12 +407,11 @@ document.addEventListener('submit', function(e) {
       const parentContact = studentForm.querySelector('[name="parent_contact"]');
       let combinedClass = '';
       // Validate required fields
-  if (!firstName.value.trim()) { notify('Please enter first name.', 'warning'); firstName.focus(); return; }
-  if (!surname.value.trim()) { notify('Please enter surname.', 'warning'); surname.focus(); return; }
-      // Area is optional now
-  // DOB is optional now
-  // if (!dob.value) { notify('Please enter date of birth.', 'warning'); dob.focus(); return; }
-  if (!gender.value) { notify('Please select gender.', 'warning'); gender.focus(); return; }
+      if (!firstName.value.trim()) { notify('Please enter first name.', 'warning'); firstName.focus(); return; }
+      if (!surname.value.trim()) { notify('Please enter surname.', 'warning'); surname.focus(); return; }
+      if (!area.value.trim()) { notify('Please enter area.', 'warning'); area.focus(); return; }
+      if (!dob.value) { notify('Please enter date of birth.', 'warning'); dob.focus(); return; }
+      if (!gender.value) { notify('Please select gender.', 'warning'); gender.focus(); return; }
       if (mainClass && mainClass.value) {
         if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
           subClass.required = true;
@@ -476,12 +459,7 @@ document.addEventListener('submit', function(e) {
       }
       // Passed validation — create student via JS flow
       console.log('studentForm validation passed, creating student...');
-  // Use centralized saveStudent which handles create and update
-  if (typeof window.saveStudent === 'function') {
-    window.saveStudent(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
-  } else {
-    createStudentFromForm(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
-  }
+  createStudentFromForm(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
       return;
     });
     // Wire up custom Save button to trigger form submit programmatically
@@ -497,22 +475,14 @@ document.addEventListener('submit', function(e) {
         // If event wasn't prevented, submit the form programmatically so server logic runs
         if (!ev.defaultPrevented) {
           // Use our own JS flow to insert the student to avoid native validation
-          if (typeof window.saveStudent === 'function') {
-            window.saveStudent(studentForm).catch(err => {
-              console.error('Student insert failed:', err);
-              try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
-            });
-          } else {
-            createStudentFromForm(studentForm).catch(err => {
-              console.error('Student insert failed:', err);
-              try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
-            });
-          }
+          createStudentFromForm(studentForm).catch(err => {
+            console.error('Student insert failed:', err);
+            try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
+          });
         }
       });
-              const requiredFields = ['first_name', 'surname', 'gender', 'class'];
+    }
   }
-}
 
 // Create student record from the provided form element (uploads picture, assigns register_id)
 async function createStudentFromForm(form) {
@@ -600,105 +570,68 @@ async function createStudentFromForm(form) {
     surname: surname,
     area: area || null,
     dob: dob || null,
-  nhis_number: nhis || null,
+    nhis_number: nhis || '',
     gender: gender || '',
   class: studentClass || '',
   subclass: subClass !== '' ? subClass : null,
-  parent_name: parentName || null,
-  parent_contact: parentContact || null,
+    parent_name: parentName || '',
+    parent_contact: parentContact || '',
     username: finalUsername,
     pin,
     picture_url: pictureUrl,
     register_id
   };
-
+  // If form contains student_id, perform update instead of insert to avoid duplicates
+  const studentId = form.querySelector('[name="student_id"]')?.value || null;
   if (!window.supabaseClient) throw new Error('Supabase client not available');
-  // Try inserting; on unique-constraint failure for username, retry with a new username
+
+  if (studentId) {
+    // Build update payload but preserve username, pin and register_id by not overwriting them
+    const updatePayload = {
+      first_name: firstName,
+      surname: surname,
+      area: area || null,
+      dob: dob || null,
+      nhis_number: nhis || '',
+      gender: gender || '',
+      class: studentClass || '',
+      subclass: subClass !== '' ? subClass : null,
+      parent_name: parentName || '',
+      parent_contact: parentContact || ''
+    };
+    if (pictureUrl) updatePayload.picture_url = pictureUrl;
+
+    const { error } = await window.supabaseClient.from('students').update(updatePayload).eq('id', studentId);
+    if (error) {
+      console.error('Failed to update student:', error);
+      throw error;
+    }
+    try { showToast('Student updated!', 'info', 3500); } catch (e) { /* fallback */ }
+    if (typeof loadStudents === 'function') loadStudents();
+    closeModal('studentModal');
+    return;
+  }
+
+  // No studentId -> create new student record (insert). Try inserting and retry on username conflict.
   let insertError = null;
   const maxInsertAttempts = 6;
   for (let attempt = 0; attempt < maxInsertAttempts; attempt++) {
     const { error } = await window.supabaseClient.from('students').insert([payload]);
     if (!error) { insertError = null; break; }
     insertError = error;
-    // If the error looks like a unique constraint on username, pick a new username and retry
     const errMsg = (error && (error.message || error.details || '')).toString();
     const isUsernameConflict = errMsg.toLowerCase().includes('username') || (error.code && error.code === '23505');
-    if (!isUsernameConflict) break; // other error — don't retry
-    // generate a new username candidate and update payload
+    if (!isUsernameConflict) break;
     const suffix = '_' + Math.floor(1000 + Math.random() * 9000);
     finalUsername = `${baseUsername}${suffix}`;
     payload.username = finalUsername;
     console.warn(`Username conflict detected, retrying insert with username=${finalUsername} (attempt ${attempt + 1})`);
-    // small delay (non-blocking) — optional, here we just continue
   }
   if (insertError) throw insertError;
   try { showToast(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info', 6000); } catch (e) { alert(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`); }
-  // reset and close
   if (typeof loadStudents === 'function') loadStudents();
   closeModal('studentModal');
 }
-// Centralized saveStudent wrapper: handles create and update consistently.
-// Preserves username and pin on updates and reuses createStudentFromForm behaviour for inserts.
-window.saveStudent = async function saveStudent(form) {
-  if (!form) throw new Error('Form is required');
-  const studentId = form.querySelector('[name="student_id"]')?.value || '';
-  // If updating, build payload similar to create but avoid changing username and pin
-  if (studentId) {
-    // Build update payload from form fields
-    const payload = {};
-    const fields = ['first_name','surname','area','dob','nhis_number','gender','parent_name','parent_contact','picture_url','register_id'];
-    fields.forEach(f => {
-      const el = form.querySelector('[name="' + f + '"]');
-      if (el) payload[f] = el.value || null;
-    });
-    // class and subclass handling: use hidden composite if present
-    const classEl = form.querySelector('[name="class"]');
-    const mainClassEl = form.querySelector('[name="main_class_select"]');
-    const subClassEl = form.querySelector('[name="sub_class_select"]');
-    let computedClass = '';
-    let computedSub = null;
-    if (classEl && classEl.value) {
-      computedClass = classEl.value;
-    } else if (mainClassEl && mainClassEl.value) {
-      computedClass = mainClassEl.value + (subClassEl && subClassEl.value ? ' ' + subClassEl.value : '');
-    }
-    if (computedClass) payload.class = computedClass;
-    // determine subclass: only JHS1/JHS2
-    if (/^JHS\s*1$/i.test(computedClass) || /^JHS\s*2$/i.test(computedClass)) {
-      // try explicit sub select then hidden
-      let sc = (subClassEl && subClassEl.value) ? subClassEl.value : null;
-      if (!sc && classEl && classEl.value) {
-        const m = String(classEl.value).trim().match(/JHS\s*\d+\s*([A-Za-z])/i);
-        sc = m ? m[1].toUpperCase() : null;
-      }
-      payload.subclass = sc ? String(sc).toUpperCase() : '';
-    } else {
-      payload.subclass = null;
-    }
-    // Prevent updating username or pin
-    // If picture file present, upload it first
-    const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
-    if (pictureFile && window.supabaseClient) {
-      try {
-        const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
-        const { data: uploadData, error: uploadError } = await window.supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
-        if (!uploadError && uploadData && uploadData.path) {
-          const publicUrlResult = window.supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
-          payload.picture_url = publicUrlResult?.data?.publicUrl || publicUrlResult?.publicUrl || null;
-        }
-      } catch (err) { console.warn('Picture upload failed during update', err); }
-    }
-    // Apply update
-    const { error } = await window.supabaseClient.from('students').update(payload).eq('id', studentId);
-    if (error) throw error;
-    if (typeof loadStudents === 'function') loadStudents();
-    closeModal('studentModal');
-    try { showToast('Student updated!', 'info'); } catch (e) {}
-    return;
-  }
-  // Insert: reuse createStudentFromForm to handle picture upload, username uniqueness and register_id
-  return createStudentFromForm(form);
-};
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
     try { notify('No student data to export.', 'warning'); } catch (e) { alert('No student data to export.'); }

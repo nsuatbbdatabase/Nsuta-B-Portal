@@ -527,7 +527,7 @@ document.getElementById('sendResultBtn').onclick = async function() {
   const select = document.getElementById('studentSelect');
   const studentId = select.value;
   if (!studentId) {
-    alert('Please select a student first.');
+  try { notify('Please select a student first.', 'warning'); } catch (e) { alert('Please select a student first.'); }
     return;
   }
   // Fetch student info

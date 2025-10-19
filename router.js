@@ -79,7 +79,7 @@ function routeUser() {
   } else if (adminId) {
     window.location.href = 'admin.html';
   } else {
-    window.location.href = 'login.html';
+    window.location.href = 'index.html';
   }
 }
 
@@ -88,14 +88,14 @@ function logout() {
   localStorage.removeItem('studentId');
   localStorage.removeItem('teacherId');
   localStorage.removeItem('adminId');
-  window.location.href = 'login.html';
+  window.location.href = 'index.html';
 }
 
 // 🧭 Protect dashboard access
 function protectRoute(role) {
   const id = localStorage.getItem(`${role}Id`);
   if (!id) {
-    try { notify('Access denied. Please log in.', 'error'); } catch (e) { alert('Access denied. Please log in.'); }
-    window.location.href = 'login.html';
+  try { notify('Access denied. Please log in.', 'error'); } catch (e) { alert('Access denied. Please log in.'); }
+    window.location.href = 'index.html';
   }
 }

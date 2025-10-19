@@ -31,7 +31,8 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!studentId) {
           statusDiv.textContent = 'Session expired. Please log in again.';
           setTimeout(() => {
-            window.location.href = 'login.html';
+            try { localStorage.setItem('openLoginRole', 'student'); } catch (e) {}
+            window.location.href = 'index.html';
           }, 2000);
           return;
         }
@@ -43,7 +44,8 @@ window.addEventListener('DOMContentLoaded', () => {
         if (error || !data) {
           statusDiv.textContent = 'Session expired. Please log in again.';
           setTimeout(() => {
-            window.location.href = 'login.html';
+            try { localStorage.setItem('openLoginRole', 'student'); } catch (e) {}
+            window.location.href = 'index.html';
           }, 2000);
           return;
         }
@@ -59,7 +61,7 @@ window.addEventListener('DOMContentLoaded', () => {
       try {
         const { data, error } = await supabaseClient
           .from('students')
-          .update({ pin: newPin, forcepinchange: false })
+          .update({ pin: newPin, forcePinChange: false })
           .eq('id', student.id);
         if (error) {
           statusDiv.textContent = 'Failed to update PIN. Please try again.';
@@ -67,7 +69,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         // Update local session
         student.pin = newPin;
-        student.forcepinchange = false;
+  // reflect database column naming: use camelCase forcePinChange
+  student.forcePinChange = false;
         localStorage.setItem('studentSession', JSON.stringify(student));
         statusDiv.style.color = 'green';
         statusDiv.textContent = 'PIN changed successfully!';
@@ -141,7 +144,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // Prevent access if not logged in as student
   const studentId = localStorage.getItem('studentId');
   if (!studentId) {
-    window.location.href = 'login.html';
+    try { localStorage.setItem('openLoginRole', 'student'); } catch (e) {}
+    window.location.href = 'index.html';
     return;
   }
   const backBtn = document.getElementById('backToDashboardBtn');

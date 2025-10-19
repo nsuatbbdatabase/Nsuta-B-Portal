@@ -128,7 +128,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Report Card Promotion Pass Mark</div>
             <div class="dashboard-card-stat" data-stat-key="promotionPassMark">—</div>
-            <div class="dashboard-card-desc">Set the minimum total marks used for promoting students on report cards.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:promotionPassMarkModal">Edit</button></div>
           </div>
         </div>
@@ -139,7 +139,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Promotion Exams</div>
             <div class="dashboard-card-stat" data-stat-key="promotionExamsCount">—</div>
-            <div class="dashboard-card-desc">Create, schedule and manage promotion exams.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="link:promotion-exam-admin.html">Open</button></div>
           </div>
         </div>
@@ -150,7 +150,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Reports</div>
             <div class="dashboard-card-stat" data-stat-key="reportsCount">—</div>
-            <div class="dashboard-card-desc">View school reports and analytics.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="link:report.html">View</button></div>
           </div>
         </div>
@@ -161,7 +161,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Events</div>
             <div class="dashboard-card-stat" data-stat-key="upcomingEvents">—</div>
-            <div class="dashboard-card-desc">Add and manage school events and calendar items.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:eventsModal">Add</button></div>
           </div>
         </div>
@@ -172,7 +172,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">School Dates</div>
             <div class="dashboard-card-stat" data-stat-key="vacationDates">—</div>
-            <div class="dashboard-card-desc">Set vacation and reopening dates for the academic year.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:schoolDatesSection">Open</button></div>
           </div>
         </div>
@@ -183,7 +183,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Students</div>
             <div class="dashboard-card-stat" data-stat-key="studentsCount">—</div>
-            <div class="dashboard-card-desc">Register and manage student records.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:students">Manage</button></div>
           </div>
         </div>
@@ -194,7 +194,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Teachers</div>
             <div class="dashboard-card-stat" data-stat-key="teachersCount">—</div>
-            <div class="dashboard-card-desc">Add and manage teacher records and assignments.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:teachers">Manage</button></div>
           </div>
         </div>
@@ -205,7 +205,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Admins</div>
             <div class="dashboard-card-stat" data-stat-key="adminsCount">—</div>
-            <div class="dashboard-card-desc">Manage admin accounts and permissions.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:admins">Manage</button></div>
           </div>
         </div>
@@ -216,7 +216,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Interest & Conduct</div>
             <div class="dashboard-card-stat" data-stat-key="interestRecords">—</div>
-            <div class="dashboard-card-desc">Record student interests and conduct notes.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:interestConduct">Open</button></div>
           </div>
         </div>
@@ -227,7 +227,7 @@
           <div class="dashboard-card-body">
             <div class="dashboard-card-title">Interest Update</div>
             <div class="dashboard-card-stat" data-stat-key="interestUpdates">—</div>
-            <div class="dashboard-card-desc">Bulk update student interests and assignments.</div>
+            
             <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:interestUpdate">Open</button></div>
           </div>
         </div>
@@ -449,12 +449,12 @@
         <label for="register_id">Student ID</label>
         <input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly style="background:#f7f7fa;" />
         <input type="hidden" name="student_id" />
-  <label for="student_dob">Date of Birth</label>
-  <input type="date" id="student_dob" name="dob" />
+        <label for="student_dob">Date of Birth</label>
+        <input type="date" id="student_dob" name="dob" required />
         <input type="text" name="nhis_number" placeholder="NHIS Number" />
         <input type="text" name="first_name" placeholder="First Name" required />
         <input type="text" name="surname" placeholder="Surname" required />
-        <input type="text" name="area" placeholder="Area" />
+        <input type="text" name="area" placeholder="Area" required />
         <select name="gender" required title="Gender">
           <option value="">Select Gender</option>
           <option value="Male">Male</option>

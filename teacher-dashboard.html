@@ -81,6 +81,13 @@
             <select id="attendanceClassSelect">
               <option value="">-- Select Class --</option>
             </select>
+            <label for="attendanceTerm">Term:</label>
+            <select id="attendanceTerm">
+              <option value="">-- Select Term --</option>
+              <option value="1st Term">1st Term</option>
+              <option value="2nd Term">2nd Term</option>
+              <option value="3rd Term">3rd Term</option>
+            </select>
             <label for="attendanceDate">Date:</label>
             <input type="date" id="attendanceDate" />
           </div>
@@ -92,7 +99,6 @@
                   Status<br>
                   <input type="checkbox" id="checkAllPresent" title="Check all as Present" /> Present (Check All)
                 </th>
-                <th>Late</th>
               </tr>
             </thead>
             <tbody id="attendanceTableBody"></tbody>
@@ -362,6 +368,7 @@
 
   <!-- Supabase + Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="toasts.js"></script>
   <script src="teacher-dashboard.js"></script>
   <script src="router.js"></script>
 

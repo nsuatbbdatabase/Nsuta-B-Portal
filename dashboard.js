@@ -270,18 +270,18 @@ window.addEventListener('DOMContentLoaded', function() {
     studentForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.target;
-      if (typeof window.saveStudent === 'function') {
+      // Delegate to central create/update routine defined in admin.js to avoid duplicate insert/update
+      if (typeof createStudentFromForm === 'function') {
         try {
-          await window.saveStudent(form);
+          await createStudentFromForm(form);
         } catch (err) {
-          console.error('saveStudent error:', err);
-          notify('Failed to save student: ' + (err.message || err), 'error');
+          console.error('createStudentFromForm error:', err);
+          notify('Failed to save student. See console for details.', 'error');
         }
       } else {
-        // Fallback: retain existing dashboard logic if central function not present
-        // (kept for backward compatibility)
-        console.warn('saveStudent not found, using fallback insert/update logic');
-        // existing logic preserved below (simplified): trigger native submit to let existing code handle
+        // Fallback: if createStudentFromForm not available, log and notify
+        console.warn('createStudentFromForm not found; student save skipped.');
+        notify('Student save routine not available. Please reload the page.', 'error');
       }
     });
   }
@@ -356,12 +356,12 @@ function importCSV() {
           surname = '';
         }
       }
-          // Only require register_id (optional), first_name, gender, and class
-          if (!first_name || !gender || !studentClass) {
-            failCount++;
-            errorRows.push(i+1); // CSV is 1-based
-            continue;
-          }
+      // Only require register_id, first_name, gender, and class
+      if (!register_id || !first_name || !gender || !studentClass) {
+        failCount++;
+        errorRows.push(i+1); // CSV is 1-based
+        continue;
+      }
       // Attempt to extract subclass if the Class column includes it (e.g. "JHS 1 A")
       // Prefer explicit Subclass column when provided; otherwise pull last token if it's a short code/letter.
       let parsedSubclass = subclass && subclass.trim() !== '' ? subclass.trim().toUpperCase() : null;
@@ -370,20 +370,6 @@ function importCSV() {
         if (m) {
           studentClass = m[1];
           parsedSubclass = m[2].toUpperCase();
-        }
-      }
-      // Normalize class string (e.g. "jhs 1" -> "JHS 1") and ensure JHS 3 never uses a subclass
-      if (studentClass && typeof studentClass === 'string') {
-        studentClass = studentClass.trim().toUpperCase().replace(/\s+/g, ' ').trim();
-        // For JHS 3, ignore any subclass — it should not be required or stored
-        if (/^JHS\s*3$/i.test(studentClass)) {
-          parsedSubclass = null;
-        } else if (/^JHS\s*1$/i.test(studentClass) || /^JHS\s*2$/i.test(studentClass)) {
-          // For JHS 1/2, normalize subclass if present; otherwise leave it null/empty for later handling
-          if (parsedSubclass && typeof parsedSubclass === 'string') parsedSubclass = parsedSubclass.toUpperCase();
-        } else {
-          // Non-JHS classes should not have subclass
-          parsedSubclass = null;
         }
       }
 
@@ -395,14 +381,14 @@ function importCSV() {
       const studentPayload = {
         first_name,
         surname,
-        area: area || null,
+        area: area || '',
         dob: dob && dob.trim() !== '' ? dob : null,
-        nhis_number: nhis_number && nhis_number.trim() !== '' ? nhis_number : null,
+        nhis_number: nhis_number || '',
         gender,
         class: studentClass,
         subclass: parsedSubclass || null,
-        parent_name: parent_name && parent_name.trim() !== '' ? parent_name : null,
-        parent_contact: parent_contact && parent_contact.trim() !== '' ? parent_contact : null,
+        parent_name: parent_name || '',
+        parent_contact: parent_contact || '',
         username,
         pin,
         register_id
