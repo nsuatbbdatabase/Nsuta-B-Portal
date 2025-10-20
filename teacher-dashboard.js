@@ -47,7 +47,7 @@ function setupAttendanceSection() {
   // and lock the attendance selector to that class (including subclass if present).
   try {
     if (teacher && teacher.responsibility === 'Class Teacher' && teacher.class_teacher_class) {
-      // Normalize (e.g. 'JHS 1 A')
+      // Lock to assigned class/subclass
       const tt = teacher.class_teacher_class.trim();
       if (attendanceClassSelect) {
         attendanceClassSelect.innerHTML = '';
@@ -56,11 +56,9 @@ function setupAttendanceSection() {
         opt.textContent = tt;
         attendanceClassSelect.appendChild(opt);
         attendanceClassSelect.value = tt;
-        attendanceClassSelect.disabled = true; // class teacher should not switch class
+        attendanceClassSelect.disabled = true;
       }
-      // Immediately load students for this class_teacher_class
       setTimeout(loadAttendanceStudents, 30);
-      // Immediately load students for this class_teacher_class
       return;
     }
   } catch (e) { console.warn('setupAttendanceSection class teacher lock failed', e); }
@@ -100,26 +98,20 @@ async function loadAttendanceStudents() {
     subclassOnly = m[2].toUpperCase();
   }
 
-  // If the teacher is a Class Teacher and their class_teacher_class includes a subclass,
-  // ensure we only load students for that subclass to prevent other subclass students from appearing.
+  // Always strictly filter by the class teacher's assignment if present
+  let query = supabaseClient.from('students').select('id, first_name, surname, class, subclass');
   let teacherClassFilter = null;
   try { if (teacher && teacher.responsibility === 'Class Teacher' && teacher.class_teacher_class) teacherClassFilter = teacher.class_teacher_class.trim(); } catch (e) {}
-
-  // Build query: if subclassOnly exists (either selected or teacherClassFilter includes it), filter by subclass column as well
-  let query = supabaseClient.from('students').select('id, first_name, surname, class, subclass');
-  if (subclassOnly) {
-    // Filter by both class and subclass
-    query = query.eq('class', classOnly).eq('subclass', subclassOnly);
-  } else if (teacherClassFilter) {
-    // teacherClassFilter might be like 'JHS 1 A' or 'JHS 1'
+  if (teacherClassFilter) {
     const tm = teacherClassFilter.match(/^(.+?)\s+([A-Za-z])$/);
     if (tm) {
       query = query.eq('class', tm[1]).eq('subclass', tm[2].toUpperCase());
     } else {
       query = query.eq('class', teacherClassFilter);
     }
+  } else if (subclassOnly) {
+    query = query.eq('class', classOnly).eq('subclass', subclassOnly);
   } else {
-    // fallback: match class ignoring case
     query = query.or(`class.ilike.${classOnly},class.eq.${classOnly}`);
   }
 
@@ -853,13 +845,20 @@ async function loadStudents(section = 'sba') {
   }
   const { data, error } = await supabaseClient
     .from('students')
-    .select('id, first_name, surname')
+    .select('id, first_name, surname, register_id')
     .eq('class', selectedClass);
   if (error) {
     console.error('Failed to load students:', error.message);
     students = [];
   } else {
-    students = data;
+    // Sort students by register_id (roll number)
+    students = (data || []).slice().sort((a, b) => {
+      if (!a.register_id || !b.register_id) return 0;
+      const [ac, an] = a.register_id.split('_');
+      const [bc, bn] = b.register_id.split('_');
+      if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+      return ac.localeCompare(bc);
+    });
   }
   // Only load marks if subject, term, and year are selected
   let marksMap = {};
@@ -1320,15 +1319,23 @@ async function loadStudentList() {
   let error = null;
   if (selectedClass) {
     // Only fetch students for the selected class
-    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number').eq('class', selectedClass);
+    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number, register_id').eq('class', selectedClass);
     studentsData = data || [];
     error = err;
   } else {
     // Fetch students for all assigned classes
-    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number').in('class', teacher.classes);
+    const { data, error: err } = await supabaseClient.from('students').select('first_name, surname, class, gender, dob, parent_name, parent_contact, nhis_number, register_id').in('class', teacher.classes);
     studentsData = data || [];
     error = err;
   }
+  // Sort students by register_id (roll number)
+  studentsData = studentsData.slice().sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
   tbody.innerHTML = '';
   if (error || !Array.isArray(studentsData) || studentsData.length === 0) {
     tbody.innerHTML = `<tr><td colspan="7">${selectedClass ? 'No students found in this class.' : 'No students found.'}</td></tr>`;
@@ -1344,6 +1351,7 @@ async function loadStudentList() {
       <td>${student.parent_name || ''}</td>
       <td>${student.parent_contact || ''}</td>
       <td>${student.nhis_number || ''}</td>
+      <td>${student.register_id || ''}</td>
     `;
     tbody.appendChild(row);
   });

@@ -5,6 +5,14 @@ window.filterStudentDropdown = function filterStudentDropdown() {
   let filtered = classValue
     ? allStudents.filter(s => (s.class || '').trim().toUpperCase() === classValue)
     : allStudents;
+  // Sort by register_id (roll number)
+  filtered = filtered.slice().sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
   if (search) {
     filtered = filtered.filter(s => {
       const name = ((s.first_name || '') + ' ' + (s.surname || '')).toLowerCase();
@@ -266,11 +274,12 @@ document.addEventListener('DOMContentLoaded', function() {
           // Always auto-generate username and pin
           studentData['username'] = generateUsername(studentData['first_name'], studentData['surname']);
           studentData['pin'] = generatePin();
-          // Fix subclass logic: if class is JHS 1 or JHS 2, keep subclass; if JHS 3, set subclass to null
+          // Subclass logic for import: JHS 1/2 require subclass, JHS 3 omits
           if (studentData['class'] === 'JHS 1' || studentData['class'] === 'JHS 2') {
-            // If subclass is missing, set to empty string
-            if (!('subclass' in studentData)) studentData['subclass'] = '';
-          } else {
+            if (!('subclass' in studentData) || !studentData['subclass']) {
+              studentData['subclass'] = '';
+            }
+          } else if (studentData['class'] === 'JHS 3') {
             studentData['subclass'] = null;
           }
           // Check for required fields
@@ -285,8 +294,8 @@ document.addEventListener('DOMContentLoaded', function() {
             invalidRows.push(i+1);
             continue;
           }
-          // Prevent duplicate by username/class
-          const { data: existing, error: existErr } = await supabaseClient.from('students').select('id').eq('username', studentData.username).eq('class', studentData.class);
+          // Prevent duplicate by username/class/subclass
+          const { data: existing, error: existErr } = await supabaseClient.from('students').select('id').eq('username', studentData.username).eq('class', studentData.class).eq('subclass', studentData.subclass);
           if (existing && existing.length) {
             failCount++;
             duplicateRows.push(i+1);
@@ -297,6 +306,16 @@ document.addEventListener('DOMContentLoaded', function() {
           allowedFields.forEach(f => {
             if (studentData[f] !== undefined) insertData[f] = studentData[f];
           });
+          // Auto-assign register_id if missing (JHS1_1, JHS2_1, JHS3_1, etc.)
+          if (!insertData.register_id) {
+            const { data: classStudents } = await supabaseClient.from('students').select('register_id').eq('class', studentData.class);
+            let nextNum = 1;
+            if (classStudents && classStudents.length > 0) {
+              const nums = classStudents.map(s => { const m = (s.register_id||'').match(/_(\d+)$/); return m ? parseInt(m[1],10) : 0; });
+              nextNum = Math.max(...nums, 0) + 1;
+            }
+            insertData.register_id = studentData.class.replace(/\s+/g,'').toUpperCase() + '_' + nextNum;
+          }
           const { error } = await supabaseClient.from('students').insert([insertData]);
           if (error) {
             failCount++;
@@ -395,23 +414,19 @@ document.addEventListener('submit', function(e) {
       // Always prevent browser default submit/validation; we manage everything in JS
       e.preventDefault();
       console.log('studentForm submit handler invoked');
-      // Validate all required fields
+      // Validate only truly required fields
       const mainClass = studentForm.querySelector('[name="main_class_select"]');
       const subClass = studentForm.querySelector('[name="sub_class_select"]');
       const firstName = studentForm.querySelector('[name="first_name"]');
       const surname = studentForm.querySelector('[name="surname"]');
-      const area = studentForm.querySelector('[name="area"]');
       const dob = studentForm.querySelector('[name="dob"]');
       const gender = studentForm.querySelector('[name="gender"]');
-      const parentName = studentForm.querySelector('[name="parent_name"]');
-      const parentContact = studentForm.querySelector('[name="parent_contact"]');
       let combinedClass = '';
-      // Validate required fields
-      if (!firstName.value.trim()) { notify('Please enter first name.', 'warning'); firstName.focus(); return; }
-      if (!surname.value.trim()) { notify('Please enter surname.', 'warning'); surname.focus(); return; }
-      if (!area.value.trim()) { notify('Please enter area.', 'warning'); area.focus(); return; }
-      if (!dob.value) { notify('Please enter date of birth.', 'warning'); dob.focus(); return; }
-      if (!gender.value) { notify('Please select gender.', 'warning'); gender.focus(); return; }
+      // Only these are required:
+  if (!firstName.value.trim()) { notify('Please enter first name.', 'warning'); firstName.focus(); return; }
+  if (!surname.value.trim()) { notify('Please enter surname.', 'warning'); surname.focus(); return; }
+  // Date of birth is now optional
+  if (!gender.value) { notify('Please select gender.', 'warning'); gender.focus(); return; }
       if (mainClass && mainClass.value) {
         if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
           subClass.required = true;
@@ -499,9 +514,18 @@ async function createStudentFromForm(form) {
   const parentContact = (form.querySelector('[name="parent_contact"]')?.value || '').trim();
   const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
 
-  // Only JHS 1 and JHS 2 have subclass, JHS 3 should be null
-  if (mainClass === 'JHS 3') subClass = null;
-  const studentClass = (mainClass && subClass) ? `${mainClass} ${subClass}` : (mainClass || '');
+  // Subclass logic: JHS 1 and JHS 2 require subclass, JHS 3 omits subclass
+  let studentClass = mainClass;
+  if (mainClass === 'JHS 1' || mainClass === 'JHS 2') {
+    if (!subClass) {
+      notify('Please select subclass (A or B) for ' + mainClass, 'warning');
+      return;
+    }
+    studentClass = mainClass;
+  } else if (mainClass === 'JHS 3') {
+    subClass = null;
+    studentClass = mainClass;
+  }
 
   // Generate username & pin
   const firstPart = (firstName || '').split(/\s+/)[0] || '';
@@ -546,9 +570,10 @@ async function createStudentFromForm(form) {
     }
   }
 
-  // Determine next register_id for this class
+  // Determine next register_id for this class (JHS1_1, JHS2_1, JHS3_1, etc.)
   let register_id = form.querySelector('[name="register_id"]')?.value || '';
   if (!register_id && window.supabaseClient) {
+    // Only count by main class (not subclass)
     const { data: classStudents } = await window.supabaseClient.from('students').select('register_id').eq('class', studentClass);
     let nextNum = 1;
     if (classStudents && classStudents.length > 0) {
@@ -572,8 +597,8 @@ async function createStudentFromForm(form) {
     dob: dob || null,
     nhis_number: nhis || '',
     gender: gender || '',
-  class: studentClass || '',
-  subclass: subClass !== '' ? subClass : null,
+    class: studentClass || '',
+    subclass: (mainClass === 'JHS 1' || mainClass === 'JHS 2') ? subClass : null,
     parent_name: parentName || '',
     parent_contact: parentContact || '',
     username: finalUsername,
@@ -637,7 +662,7 @@ function exportStudentsCSV() {
     try { notify('No student data to export.', 'warning'); } catch (e) { alert('No student data to export.'); }
     return;
   }
-  // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Subclass, Parent Name, Parent Contact
+  // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Subclass (JHS 1/2 only), Parent Name, Parent Contact
   const headers = [
     'Student ID', 'Full Name', 'Area', 'DOB', 'NHIS Number', 'Gender', 'Class', 'Subclass', 'Parent Name', 'Parent Contact'
   ];
@@ -649,7 +674,7 @@ function exportStudentsCSV() {
     s.nhis_number || '',
     s.gender || '',
     s.class || '',
-    s.subclass || '',
+    (s.class === 'JHS 1' || s.class === 'JHS 2') ? (s.subclass || '') : '',
     s.parent_name || '',
     s.parent_contact || ''
   ]);
@@ -697,7 +722,15 @@ function showSelectedStudent() {
     tbody.appendChild(row);
     return;
   }
-  const student = allStudents.find(s => s.id == studentId);
+  // Find student in sorted order for consistency
+  const sortedStudents = allStudents.slice().sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
+  const student = sortedStudents.find(s => s.id == studentId);
   if (!student) return;
   const name = (student.first_name && student.surname)
     ? student.first_name + ' ' + student.surname

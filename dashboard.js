@@ -461,11 +461,30 @@ async function loadStudents() {
   const tbody = document.querySelector('#studentTable tbody');
   const select = document.getElementById('studentSelect');
   tbody.innerHTML = '';
-  // Sort students by register_id (natural order)
-  let sorted = (data && Array.isArray(data)) ? [...data] : [];
+  // Restrict to class teacher's class/subclass if set
+  let filtered = (data && Array.isArray(data)) ? [...data] : [];
+  let classTeacherClass = null;
+  try {
+    classTeacherClass = localStorage.getItem('class_teacher_class') || null;
+  } catch (e) {}
+  if (classTeacherClass) {
+    // Parse e.g. 'JHS 2 A' or 'JHS 1 B' or 'JHS 3'
+    const parts = classTeacherClass.trim().split(/\s+/);
+    const mainClass = parts.slice(0, 2).join(' ');
+    const subClass = parts[2] || null;
+    filtered = filtered.filter(s => {
+      if (!s.class) return false;
+      if (subClass) {
+        return s.class === mainClass && (s.subclass || '').toUpperCase() === subClass.toUpperCase();
+      } else {
+        return s.class === mainClass;
+      }
+    });
+  }
+  // Sort by register_id (natural order)
+  let sorted = filtered;
   sorted.sort((a, b) => {
     if (!a.register_id || !b.register_id) return 0;
-    // Split e.g. JHS1_1 into [JHS1, 1]
     const [ac, an] = a.register_id.split('_');
     const [bc, bn] = b.register_id.split('_');
     if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
