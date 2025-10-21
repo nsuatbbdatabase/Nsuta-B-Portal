@@ -44,16 +44,80 @@ window.filterStudentDropdown = function filterStudentDropdown() {
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    console.log('openModal:', modalId, 'found modal element, removing hidden class');
     modal.classList.remove('hidden');
-    modal.style.display = '';
+    // Force visible display and bring to front in case CSS rules conflict
+    modal.style.display = 'flex';
+    try { modal.style.zIndex = '99999'; } catch(e) {}
+    // Diagnostic: log computed styles and bounding rects for the modal and its content
+    try {
+      const cs = window.getComputedStyle(modal);
+      console.log('openModal: computed style for', modalId, {
+        display: cs.display,
+        visibility: cs.visibility,
+        opacity: cs.opacity,
+        pointerEvents: cs.pointerEvents,
+        zIndex: cs.zIndex,
+        position: cs.position,
+        transform: cs.transform
+      });
+      const rect = modal.getBoundingClientRect();
+      console.log('openModal: boundingClientRect for', modalId, rect);
+      const content = modal.querySelector('.modal-content');
+      if (content) {
+        const cs2 = window.getComputedStyle(content);
+        console.log('openModal: computed style for .modal-content', {
+          display: cs2.display,
+          visibility: cs2.visibility,
+          opacity: cs2.opacity,
+          pointerEvents: cs2.pointerEvents,
+          zIndex: cs2.zIndex,
+          position: cs2.position,
+          transform: cs2.transform
+        });
+        console.log('openModal: boundingClientRect for .modal-content', content.getBoundingClientRect());
+      } else {
+        console.warn('openModal: no .modal-content child found inside', modalId);
+      }
+      // Inspect parent stacking context
+      let p = modal.parentElement; let depth = 0;
+      while (p && depth < 6) {
+        const pcs = window.getComputedStyle(p);
+        console.log('openModal: ancestor', depth, p.tagName, p.id || p.className, { position: pcs.position, zIndex: pcs.zIndex, opacity: pcs.opacity, overflow: pcs.overflow });
+        p = p.parentElement; depth++;
+      }
+    } catch (diagErr) {
+      console.error('openModal: diagnostic logging failed', diagErr);
+    }
+    // Practical fix: ensure modal is appended to document.body so it's not constrained by ancestors
+    try {
+      if (modal.parentElement !== document.body) {
+        console.log('openModal: moving modal', modalId, 'to document.body to avoid stacking/overflow issues');
+        document.body.appendChild(modal);
+      }
+      const content = modal.querySelector('.modal-content');
+      if (content) {
+        // Force visible state in case CSS animation or cascade left it at opacity:0 or transform off-screen
+        content.style.opacity = '1';
+        content.style.transform = 'none';
+        content.style.visibility = 'visible';
+      }
+      // Ensure modal occupies viewport
+      modal.style.width = modal.style.width || '100%';
+      modal.style.height = modal.style.height || '100%';
+    } catch (moveErr) {
+      console.error('openModal: failed to move/force-visual modal', moveErr);
+    }
   }
 }
 
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+    console.log('closeModal:', modalId, 'hiding modal');
     modal.classList.add('hidden');
     modal.style.display = 'none';
+    try { modal.style.zIndex = ''; } catch(e) {}
   }
   // Always show dashboard overview after closing key modals
   if (modalId === 'promotionPassMarkModal' || modalId === 'eventsModal') {
@@ -198,6 +262,115 @@ document.addEventListener('DOMContentLoaded', function() {
         promotionPassMarkStatus.style.color = 'red';
       }
       setTimeout(() => { promotionPassMarkStatus.textContent = ''; }, 2000);
+    };
+  }
+
+  // --- Site Announcement UI Logic ---
+  const announcementForm = document.getElementById('announcementForm');
+  const announcementText = document.getElementById('announcementText');
+  const announcementStatus = document.getElementById('announcementStatus');
+  const announcementStatEl = document.querySelector('[data-stat-key="siteAnnouncement"]');
+  if (announcementText && announcementForm) {
+    // Load current announcement from settings
+    (async function() {
+      try {
+        const { data, error } = await supabaseClient
+          .from('settings')
+          .select('id, announcement')
+          .order('id', { ascending: true })
+          .limit(1);
+        if (!error && data && data.length && typeof data[0].announcement === 'string') {
+          announcementText.value = data[0].announcement;
+          if (announcementStatEl) announcementStatEl.textContent = data[0].announcement || '—';
+        } else {
+          announcementText.value = '';
+          if (announcementStatEl) announcementStatEl.textContent = '—';
+        }
+      } catch (e) {
+        announcementText.value = '';
+        if (announcementStatEl) announcementStatEl.textContent = '—';
+      }
+    })();
+
+    announcementForm.onsubmit = async function(e) {
+      e.preventDefault();
+      const text = announcementText.value.trim();
+      announcementStatus.textContent = 'Saving...';
+      try {
+        const { data: existing, error: fetchErr } = await supabaseClient
+          .from('settings')
+          .select('id')
+          .order('id', { ascending: true })
+          .limit(1);
+        let upsertData;
+        if (!fetchErr && existing && existing.length) {
+          upsertData = { id: existing[0].id, announcement: text };
+        } else {
+          upsertData = { announcement: text };
+        }
+        // Use explicit onConflict target to ensure upsert behaves predictably.
+        const { data: upsertResponse, error: upsertErr } = await supabaseClient.from('settings').upsert([upsertData], { onConflict: 'id' });
+        if (!upsertErr) {
+          announcementStatus.textContent = 'Saved!';
+          announcementStatus.style.color = 'green';
+          if (announcementStatEl) announcementStatEl.textContent = text || '—';
+          // Also update homepage if open in another tab using localStorage event
+          try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
+        } else {
+          // Detailed logging for debugging
+          console.error('Announcement upsert failed', upsertErr, upsertResponse);
+          // Detect common case where the column doesn't exist and surface a helpful message
+          const errMsg = (upsertErr && (upsertErr.message || upsertErr.details || upsertErr.code)) ? (upsertErr.message || upsertErr.details || String(upsertErr.code)) : 'Unknown error';
+          if (/column\s+"announcement"\s+does not exist/i.test(errMsg) || /invalid column reference/i.test(errMsg)) {
+            announcementStatus.textContent = 'DB schema missing `announcement` column. Run migration (see console).';
+            announcementStatus.style.color = 'red';
+            console.error('Likely cause: `settings` table does not have an `announcement` column. Example migration SQL: ALTER TABLE settings ADD COLUMN announcement text;');
+          } else {
+            // Try fallback: update existing row (if we discovered an id earlier), otherwise insert
+            try {
+              if (existing && existing.length && existing[0].id) {
+                console.warn('Attempting fallback UPDATE for settings.id=', existing[0].id);
+                const { error: updateErr, data: updateResp } = await supabaseClient.from('settings').update({ announcement: text }).eq('id', existing[0].id);
+                if (!updateErr) {
+                  announcementStatus.textContent = 'Saved (update fallback).'; announcementStatus.style.color = 'green';
+                  if (announcementStatEl) announcementStatEl.textContent = text || '—';
+                  try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
+                } else {
+                  console.error('Fallback UPDATE failed', updateErr);
+                  // Try insert as last resort
+                  const { error: insertErr } = await supabaseClient.from('settings').insert([{ announcement: text }]);
+                  if (!insertErr) {
+                    announcementStatus.textContent = 'Saved (insert fallback).'; announcementStatus.style.color = 'green';
+                    if (announcementStatEl) announcementStatEl.textContent = text || '—';
+                    try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
+                  } else {
+                    console.error('Fallback INSERT also failed', insertErr);
+                    announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+                  }
+                }
+              } else {
+                console.warn('No existing settings row found; attempting INSERT fallback');
+                const { error: insertErr } = await supabaseClient.from('settings').insert([{ announcement: text }]);
+                if (!insertErr) {
+                  announcementStatus.textContent = 'Saved (insert fallback).'; announcementStatus.style.color = 'green';
+                  if (announcementStatEl) announcementStatEl.textContent = text || '—';
+                  try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
+                } else {
+                  console.error('Fallback INSERT failed', insertErr);
+                  announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+                }
+              }
+            } catch (fallbackErr) {
+              console.error('Announcement fallback path failed', fallbackErr);
+              announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+            }
+          }
+        }
+      } catch (err) {
+        announcementStatus.textContent = 'Error saving.';
+        announcementStatus.style.color = 'red';
+      }
+      setTimeout(() => { if (announcementStatus) announcementStatus.textContent = ''; }, 2000);
     };
   }
   // Prevent access if not logged in as admin

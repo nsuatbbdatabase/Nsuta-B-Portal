@@ -9,6 +9,110 @@
   <link rel="stylesheet" href="index.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="toasts.js"></script>
+
+  <!-- Admin Dashboard Custom Styles -->
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .nav-bar {
+      background: #333;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      margin-bottom: 2rem;
+    }
+    .nav-bar a {
+      color: #fff;
+      text-decoration: none;
+      margin: 0 0.5rem;
+      font-weight: bold;
+    }
+    .admin-dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      padding: 0 2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: #333;
+    }
+    .card p {
+      color: #666;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+    }
+  </style>
+
+  <!-- Professional Admin Dashboard Redesign -->
+  <style>
+  body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+  }
+  .sidebar {
+    width: 240px;
+    background-color: #2f3e46;
+    color: #fff;
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 1rem;
+  }
+  .sidebar h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .sidebar a {
+    color: #fff;
+    text-decoration: none;
+    display: block;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+  }
+  .sidebar a:hover {
+    background-color: #354f52;
+  }
+  .header {
+    height: 60px;
+    background-color: #fff;
+    display: flex;
+    align-items: center;
+    padding-left: 260px; /* account for sidebar width + spacing */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .content {
+    margin-left: 260px;
+    padding: 2rem;
+  }
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+  }
+</style>
 </head>
 <body class="index-dashboard-bg">
     <div class="dashboard-bg-overlay"></div>
@@ -63,8 +167,8 @@
         <div class="quick-links">
           <div class="quick-card">
             <div>
-              <h4>Latest Announcement</h4>
-              <p>All Subjects teachers can now enter the first term just ended Class Test using your dashboard. You counter any challengers, contact the admin</p>
+            <h4>Latest Announcement</h4>
+            <p id="latestAnnouncement">Loading announcement...</p>
             </div>
           </div>
           <div class="quick-card">
@@ -76,7 +180,7 @@
           <div class="quick-card">
             <div>
               <h4>Contact</h4>
-              <p> Tel: +233-544706983</p>
+              <p>For any info, please contact support. Sir Nii (0545706983)</p>
             </div>
           </div>
         </div>
@@ -154,6 +258,42 @@
           document.getElementById('toastWarn').addEventListener('click', ()=> { try { notify('This is a warning', 'warning'); } catch(e){ alert('Warn'); } });
         }
       });
+    </script>
+    <script>
+      // Load site announcement from settings table and update the homepage
+      (function() {
+        const el = document.getElementById('latestAnnouncement');
+        if (!el) return;
+        // Use existing supabaseClient if present, otherwise try to create one
+        const tryLoad = async () => {
+          try {
+            let client = window.supabaseClient || null;
+            if (!client && typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
+              client = window.supabase.createClient('https://omhmahhfeduejykrxflx.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo');
+            }
+            if (!client) {
+              el.textContent = 'No announcement available.';
+              return;
+            }
+            const { data, error } = await client.from('settings').select('announcement').order('id', { ascending: true }).limit(1);
+            if (!error && data && data.length && typeof data[0].announcement === 'string' && data[0].announcement.trim()) {
+              el.textContent = data[0].announcement;
+            } else {
+              el.textContent = 'No announcements at this time.';
+            }
+          } catch (e) {
+            console.warn('Failed to load announcement', e);
+            el.textContent = 'No announcements at this time.';
+          }
+        };
+        tryLoad();
+        // Listen for updates signalled via localStorage from admin page
+        window.addEventListener('storage', function(e) {
+          if (e.key === 'siteAnnouncementUpdatedAt') {
+            tryLoad();
+          }
+        });
+      })();
     </script>
     <script>
   // Supabase client for inline login
@@ -648,5 +788,4 @@
       })();
     </script>
   </body>
-
 </html>

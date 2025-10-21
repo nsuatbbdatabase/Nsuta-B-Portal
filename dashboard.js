@@ -674,6 +674,62 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
 
 // 📝 Edit Teacher
 async function editTeacher(id) {
+
+  // Helper: safely obtain createAssignmentRow function (falls back to a lightweight implementation
+  // if the admin inline script hasn't been loaded yet). This prevents "createAssignmentRow is not defined" errors.
+  function getCreateAssignmentRow() {
+    if (typeof window !== 'undefined' && typeof window.createAssignmentRow === 'function') return window.createAssignmentRow;
+    // Minimal fallback implementation matching the expected signature
+    return function(selectedClass = '', selectedSubject = '', selectedArea = '') {
+      const SUBJECT_OPTIONS = ['Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'];
+      const CLASS_OPTIONS = ['JHS 1','JHS 2','JHS 3'];
+      const row = document.createElement('div');
+      row.className = 'assignment-row';
+      row.style.display = 'flex';
+      row.style.gap = '0.5rem';
+      const classSelect = document.createElement('select');
+      classSelect.name = 'assignment_class[]';
+      classSelect.required = true;
+      classSelect.innerHTML = '<option value="">Class</option>' + CLASS_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
+      classSelect.value = selectedClass;
+      const subjectSelect = document.createElement('select');
+      subjectSelect.name = 'assignment_subject[]';
+      subjectSelect.required = true;
+      subjectSelect.innerHTML = '<option value="">Subject</option>' + SUBJECT_OPTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
+      subjectSelect.value = selectedSubject;
+      const areaSelectWrapper = document.createElement('div');
+      areaSelectWrapper.style.display = 'none';
+      areaSelectWrapper.style.flex = '1';
+      const areaSelect = document.createElement('select');
+      areaSelect.name = 'assignment_career_area[]';
+      areaSelect.innerHTML = '<option value="">Select Area</option>' + ['Home Economics','Pre Technical'].map(a => `<option value="${a}">${a}</option>`).join('');
+      areaSelectWrapper.appendChild(areaSelect);
+      if (selectedArea) areaSelect.value = selectedArea;
+      subjectSelect.addEventListener('change', function() {
+        if (subjectSelect.value === 'Career Tech') {
+          areaSelectWrapper.style.display = '';
+          areaSelect.required = true;
+        } else {
+          areaSelectWrapper.style.display = 'none';
+          areaSelect.required = false;
+          areaSelect.value = '';
+        }
+      });
+      if (selectedSubject === 'Career Tech') {
+        areaSelectWrapper.style.display = '';
+        areaSelect.required = true;
+      }
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.onclick = () => row.remove();
+      row.appendChild(classSelect);
+      row.appendChild(subjectSelect);
+      row.appendChild(areaSelectWrapper);
+      row.appendChild(removeBtn);
+      return row;
+    };
+  }
   const { data, error } = await supabaseClient.from('teachers').select('*').eq('id', id).single();
   if (error) return notify('Failed to load teacher.', 'error');
   const form = document.getElementById('teacherForm');
@@ -713,18 +769,40 @@ async function editTeacher(id) {
   const container = document.getElementById('assignmentRowsContainer');
   if (container) {
     container.innerHTML = '';
-    const { data: assignments } = await supabaseClient.from('teaching_assignments').select('class,subject,area').eq('teacher_id', id);
-    if (assignments && assignments.length) {
-      assignments.forEach(a => {
-        // Pass area as third argument if subject is Career Tech
-        if (a.subject === 'Career Tech') {
-          container.appendChild(createAssignmentRow(a.class, a.subject, a.area));
-        } else {
-          container.appendChild(createAssignmentRow(a.class, a.subject));
+    // defensive logging to help debug why the modal might not populate
+    try {
+      const { data: assignments, error: assignErr } = await supabaseClient.from('teaching_assignments').select('class,subject,area').eq('teacher_id', id);
+      if (assignErr) {
+        console.error('Failed to fetch teaching_assignments for teacher', id, assignErr);
+        notify('Failed to load teacher assignments. See console for details.', 'error');
+      }
+      console.log('editTeacher: fetched assignments for', id, assignments);
+      const createAssignmentRowFn = getCreateAssignmentRow();
+      if (!createAssignmentRowFn || typeof createAssignmentRowFn !== 'function') {
+        console.warn('createAssignmentRow function not available; using DOM fallback');
+      }
+      if (assignments && assignments.length) {
+        assignments.forEach(a => {
+          try {
+            if (a.subject === 'Career Tech') {
+              container.appendChild(createAssignmentRowFn(a.class, a.subject, a.area));
+            } else {
+              container.appendChild(createAssignmentRowFn(a.class, a.subject));
+            }
+          } catch (innerErr) {
+            console.error('Failed to append assignment row for assignment', a, innerErr);
+          }
+        });
+      } else {
+        try {
+          container.appendChild(createAssignmentRowFn());
+        } catch (innerErr) {
+          console.error('Failed to append default assignment row', innerErr);
         }
-      });
-    } else {
-      container.appendChild(createAssignmentRow());
+      }
+    } catch (err) {
+      console.error('Unexpected error while populating assignment rows for teacher', id, err);
+      notify('Unexpected error while preparing the teacher edit form. See console for details.', 'error');
     }
   }
 

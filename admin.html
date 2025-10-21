@@ -133,6 +133,16 @@
           </div>
         </div>
 
+        <!-- Card: Site Announcement -->
+        <div class="dashboard-card" data-section="siteAnnouncement" tabindex="0" role="button" aria-pressed="false" title="Site Announcement" data-action="modal:announcementModal">
+          <span class="dashboard-card-icon">📢</span>
+          <div class="dashboard-card-body">
+            <div class="dashboard-card-title">Site Announcement</div>
+            <div class="dashboard-card-stat" data-stat-key="siteAnnouncement">—</div>
+            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:announcementModal">Edit</button></div>
+          </div>
+        </div>
+
         <!-- Card: Promotion Exams -->
         <div class="dashboard-card" data-section="promotionExamAdminLink" tabindex="0" role="button" aria-pressed="false" title="Promotion Exams" data-action="link:promotion-exam-admin.html">
           <span class="dashboard-card-icon">🎓</span>
@@ -286,6 +296,23 @@
           <div class="form-actions">
             <button type="submit">Save</button>
             <button type="button" onclick="closeModal('schoolDatesModal')">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Announcement Modal -->
+    <div id="announcementModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Site Announcement</h3>
+        <p class="section-desc">Set the short announcement that appears on the homepage (keeps HTML stripped).</p>
+        <form id="announcementForm">
+          <label for="announcementText">Announcement (short)</label>
+          <textarea id="announcementText" name="announcement" rows="4" style="width:100%;padding:8px;border-radius:6px;border:1px solid #cbd5e1;"></textarea>
+          <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;align-items:center;">
+            <span id="announcementStatus" style="color:var(--muted)"></span>
+            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="button" class="btn btn-ghost" onclick="closeModal('announcementModal')">Cancel</button>
           </div>
         </form>
       </div>
@@ -554,6 +581,7 @@
   <script src="admin-section-toggle.js"></script>
   <!-- centralized scripts in admin.js/dashboard.js handle student subclass and responsibility logic -->
   <!-- --- Dynamic Class-Subject Assignment Rows --- -->
+  <script>
 const SUBJECT_OPTIONS = [
   'Maths','English','Science','Computing','Social Studies','RME','Creative Arts','Career Tech','Twi'
 ];
@@ -700,7 +728,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-  </select>
   <div id="attendanceNote" class="attendance-note">Attendance will be enabled for Class Teachers only.</div>
   <label for="denomination">Denomination</label>
   <select name="denomination" id="denomination" required>
