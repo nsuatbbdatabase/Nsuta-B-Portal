@@ -33,41 +33,19 @@ tbody tr:hover {
   background: #f7faff;
 }
 @media (max-width: 700px) {
-  table, .dashboard-container table {
-    display: block;
-    overflow-x: auto;
-    font-size: 0.98rem;
+  /* Enforce horizontal, scrollable tables for dashboard pages to match
+     the preferred UX. Disable stacked pseudo-labels that break table layout. */
+  table, .dashboard-container table, .grid-table-4-accent-3 {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  /* no -webkit-overflow-scrolling: touch to avoid lint warnings */
   }
-  thead {
-    display: none;
-  }
-  tbody tr {
-    display: block;
-    margin-bottom: 1.1rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    background: #fff;
-    padding: 0.7rem 0.2rem;
-  }
-  td {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: none;
-    padding: 0.45em 0.5em;
-    font-size: 0.98rem;
-    position: relative;
-    min-height: 36px;
-    word-break: break-word;
-  }
-  td:before {
-    content: attr(data-label);
-    font-weight: bold;
-    color: #555;
-    min-width: 90px;
-    margin-right: 0.7em;
-    display: inline-block;
-  }
+  thead { display: table-header-group !important; }
+  tbody tr { display: table-row !important; }
+  td { display: table-cell !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; padding: 0.55rem 0.6rem !important; }
+  td:before { display: none !important; content: none !important; }
 }
 @media (max-width: 700px) {
   .dashboard-container {
@@ -247,7 +225,6 @@ tbody tr:hover {
     border-bottom: 1px solid #e0e0e0;
   }
 }
-}
 .close {
   position: absolute;
   top: 1rem;
@@ -377,6 +354,7 @@ tbody tr:hover {
   position: relative;
   outline: none;
   border: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 .dashboard-card:hover, .dashboard-card:focus {
@@ -765,7 +743,7 @@ tbody tr:hover {
   padding-bottom: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
   background: #f8f9fa;
-  scrollbar-width: none;
+  /* scrollbar-width removed for compatibility across browsers */
 }
 .dashboard-tabs::-webkit-scrollbar { display: none; }
 .tab-btn {
@@ -953,6 +931,30 @@ table {
     color: #004080;
     content: attr(data-label);
   }
+}
+
+/* Override: keep dashboard tables horizontal/scrollable on mobile (prevent stacking) */
+@media (max-width: 700px) {
+  .dashboard-container table, table, .grid-table-4-accent-3 {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .dashboard-container thead, .dashboard-container tbody, .dashboard-container tr,
+  .grid-table-4-accent-3 thead, .grid-table-4-accent-3 tbody, .grid-table-4-accent-3 tr {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .dashboard-container th, .dashboard-container td, .grid-table-4-accent-3 th, .grid-table-4-accent-3 td {
+    display: table-cell !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
 }
 
 /* Hide table headers on mobile, add data-labels in JS if needed */

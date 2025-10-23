@@ -6,7 +6,7 @@ async function login() {
   const pin = document.getElementById('pin').value.trim();
 
   if (!role || !username) {
-    try { notify('Please select a role and enter your username.', 'warning'); } catch (e) { alert('Please select a role and enter your username.'); }
+  try { notify('Please select a role and enter your username.', 'warning'); } catch (e) { try { safeNotify('Please select a role and enter your username.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
 
@@ -18,7 +18,7 @@ async function login() {
       .eq('username', username)
       .single();
     if (error || !data) {
-      try { notify('Student not found.', 'error'); } catch (e) { alert('Student not found.'); }
+  try { notify('Student not found.', 'error'); } catch (e) { try { safeNotify('Student not found.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
       return;
     }
     if (data.forcePinChange) {
@@ -30,7 +30,7 @@ async function login() {
 
   // Continue with normal login
   if (!pin) {
-    try { notify('Please enter your PIN.', 'warning'); } catch (e) { alert('Please enter your PIN.'); }
+  try { notify('Please enter your PIN.', 'warning'); } catch (e) { try { safeNotify('Please enter your PIN.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
 
@@ -51,7 +51,7 @@ async function login() {
       query = { email: username, pin };
       break;
     default:
-  try { notify('Invalid role selected.', 'error'); } catch (e) { alert('Invalid role selected.'); }
+  try { notify('Invalid role selected.', 'error'); } catch (e) { try { safeNotify('Invalid role selected.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
       return;
   }
 
@@ -62,7 +62,7 @@ async function login() {
     .single();
 
   if (error || !data) {
-    try { notify('Login failed. Please check your credentials.', 'error'); } catch (e) { alert('Login failed. Please check your credentials.'); }
+  try { notify('Login failed. Please check your credentials.', 'error'); } catch (e) { try { safeNotify('Login failed. Please check your credentials.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
 

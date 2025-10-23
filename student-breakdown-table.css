@@ -1,4 +1,4 @@
-.student-breakdown-table {
+.admin-dashboard .student-breakdown-table {
   width: 100%;
   max-width: 400px;
   margin: 0 auto 1.5em auto;
@@ -9,30 +9,30 @@
   overflow: hidden;
   font-size: 1.05rem;
 }
-.student-breakdown-table th, .student-breakdown-table td {
+.admin-dashboard .student-breakdown-table th, .admin-dashboard .student-breakdown-table td {
   padding: 0.7em 0.5em;
   text-align: center;
 }
-.student-breakdown-table thead {
+.admin-dashboard .student-breakdown-table thead {
   background: #f7f7fa;
 }
-.student-breakdown-table tr:not(.grand-total-row):nth-child(even) {
+.admin-dashboard .student-breakdown-table tr:not(.grand-total-row):nth-child(even) {
   background: #f9f9fc;
 }
-.student-breakdown-table tr.grand-total-row {
+.admin-dashboard .student-breakdown-table tr.grand-total-row {
   background: #e8f0fe;
   font-weight: bold;
 }
-.student-breakdown-table th {
+.admin-dashboard .student-breakdown-table th {
   color: #4e79a7;
   font-weight: 600;
 }
 @media (max-width: 600px) {
-  .student-breakdown-table {
+  .admin-dashboard .student-breakdown-table {
     font-size: 0.98rem;
     max-width: 100%;
   }
-  .student-breakdown-table th, .student-breakdown-table td {
+  .admin-dashboard .student-breakdown-table th, .admin-dashboard .student-breakdown-table td {
     padding: 0.5em 0.2em;
   }
 }

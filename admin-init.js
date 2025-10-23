@@ -2,8 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof renderTeacherBreakdownSummary === 'function') renderTeacherBreakdownSummary();
   if (typeof renderDuplicateStudentsWarning === 'function') renderDuplicateStudentsWarning();
-  if (typeof renderStudentBreakdownSummary === 'function') renderStudentBreakdownSummary();
-  if (typeof renderStudentBreakdownChart === 'function') renderStudentBreakdownChart();
+  // Student breakdown preview is rendered when Overview is shown to keep it exclusive to Overview
   if (typeof renderPopulationChart === 'function') renderPopulationChart();
   if (typeof loadStudents === 'function') loadStudents();
   if (typeof loadTeachers === 'function') loadTeachers();

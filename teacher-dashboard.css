@@ -96,7 +96,7 @@ tbody tr:hover {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     grid-auto-rows: minmax(70px, 1fr);
     /* Avoid forcing full viewport height on mobile to prevent overflow issues */
-    min-height: auto;
+    /* min-height: auto removed for compatibility */
     height: auto;
     max-height: 100%;
     overflow-y: auto;
@@ -184,6 +184,7 @@ body {
   text-align: center;
   cursor: pointer;
   outline: none;
+  -webkit-user-select: none;
   user-select: none;
   aspect-ratio: 1 / 1;
   min-width: 180px;
@@ -286,7 +287,7 @@ body {
     gap: 0.2rem;
     padding-bottom: 0.2rem;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  /* -webkit-overflow-scrolling removed for lint/compatibility */
   }
   table, th, td {
     font-size: 0.89rem;
@@ -344,8 +345,8 @@ body {
   border-bottom: 1px solid #eaeaea;
   text-align: left;
   margin-left: 0.5rem;
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   position: relative;
   transition: background 0.2s, color 0.2s;
 }
@@ -1180,7 +1181,7 @@ button:hover {
 @media (max-width: 700px) {
   /* Prevent the overview from forcing a full viewport height on small screens */
   .dashboard-overview {
-    min-height: auto !important;
+  /* min-height: auto !important removed for compatibility */
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
@@ -1553,8 +1554,8 @@ button:hover {
 }
 
 #studentMessagesSection button, #resourceRequestsSection button, #motivationalMessagesSection button {
-  user-select: none;
   -webkit-user-select: none;
+  user-select: none;
   background: var(--color-accent);
   color: #fff;
   border: none;
@@ -1601,4 +1602,32 @@ button:hover {
   }
   /* Remove any accidental horizontal scroll from fixed elements */
   .teacher-dashboard-bg, .dashboard-bg-overlay { background-position: center center !important; background-size: cover !important; }
+}
+
+/* Prevent table stacking for dashboard tables on mobile — keep horizontal/scrollable */
+@media (max-width: 700px) {
+  /* Keep dashboard tables horizontal/scrollable on small screens and
+     explicitly disable stacked pseudo-labels that would otherwise force
+     a block/stacked layout. */
+  .dashboard-container table, table, .grid-table-4-accent-3 {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .dashboard-container thead, .dashboard-container tbody, .dashboard-container tr,
+  .grid-table-4-accent-3 thead, .grid-table-4-accent-3 tbody, .grid-table-4-accent-3 tr {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .dashboard-container th, .dashboard-container td, .grid-table-4-accent-3 th, .grid-table-4-accent-3 td {
+    display: table-cell !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
 }

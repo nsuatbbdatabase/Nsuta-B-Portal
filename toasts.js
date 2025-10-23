@@ -60,4 +60,154 @@
     window._originalAlert = window.alert.bind(window);
     window.alert = function(msg) { makeToast(String(msg), 'info', 5000); };
   } catch(e) {}
+  
+  // Accessible, promise-based confirmation modal.
+  // Usage: const ok = await window.showConfirm('Are you sure?', { title: 'Confirm delete' });
+  window.showConfirm = function(message, options = {}) {
+    return new Promise((resolve) => {
+      const title = options.title || 'Please confirm';
+      // Modal backdrop
+      const backdrop = document.createElement('div');
+      backdrop.className = 'app-confirm-backdrop';
+      backdrop.style.position = 'fixed';
+      backdrop.style.top = '0'; backdrop.style.left = '0'; backdrop.style.right = '0'; backdrop.style.bottom = '0';
+      backdrop.style.background = 'rgba(0,0,0,0.45)';
+      backdrop.style.zIndex = 100000;
+      backdrop.style.display = 'flex';
+      backdrop.style.alignItems = 'center';
+      backdrop.style.justifyContent = 'center';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'app-confirm-dialog';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'app-confirm-title');
+      dialog.style.background = '#fff';
+      dialog.style.color = '#052a3a';
+      dialog.style.padding = '1rem';
+      dialog.style.borderRadius = '8px';
+      dialog.style.minWidth = '320px';
+      dialog.style.maxWidth = '92%';
+      dialog.style.boxShadow = '0 10px 36px rgba(2,24,57,0.16)';
+
+      dialog.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:0.6rem">
+          <div id="app-confirm-title" style="font-weight:700;font-size:1rem">${String(title)}</div>
+          <div style="color:#334;margin-top:4px">${String(message).replace(/\n/g, '<br/>')}</div>
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
+            <button class="app-confirm-cancel" type="button">Cancel</button>
+            <button class="app-confirm-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">OK</button>
+          </div>
+        </div>`;
+
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+
+      // basic focus management
+      const okBtn = dialog.querySelector('.app-confirm-ok');
+      const cancelBtn = dialog.querySelector('.app-confirm-cancel');
+      const prevActive = document.activeElement;
+      try { okBtn.focus(); } catch (e) {}
+
+      function cleanup(result) {
+        try { document.body.removeChild(backdrop); } catch (e) {}
+        try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
+        resolve(Boolean(result));
+      }
+
+      okBtn.addEventListener('click', () => cleanup(true));
+      cancelBtn.addEventListener('click', () => cleanup(false));
+      backdrop.addEventListener('click', (ev) => { if (ev.target === backdrop) cleanup(false); });
+      // keyboard
+      dialog.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') { ev.preventDefault(); cleanup(false); }
+        if (ev.key === 'Enter') { ev.preventDefault(); cleanup(true); }
+      });
+    });
+  };
+
+  // Convenience alias used in codebase
+  window.askConfirm = async function(message, opts) { return await window.showConfirm(message, opts); };
+  
+  // Async prompt modal: returns the user's input string, or null if cancelled
+  // Usage: const val = await window.showPrompt('Enter name', { title: 'Delete class', placeholder: 'e.g., JHS 1', defaultValue: '' });
+  window.showPrompt = function(message, options = {}) {
+    return new Promise((resolve) => {
+      const title = options.title || 'Input required';
+      const placeholder = options.placeholder || '';
+      const defaultValue = options.defaultValue || '';
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'app-prompt-backdrop';
+      backdrop.style.position = 'fixed';
+      backdrop.style.top = '0'; backdrop.style.left = '0'; backdrop.style.right = '0'; backdrop.style.bottom = '0';
+      backdrop.style.background = 'rgba(0,0,0,0.45)';
+      backdrop.style.zIndex = 100000;
+      backdrop.style.display = 'flex';
+      backdrop.style.alignItems = 'center';
+      backdrop.style.justifyContent = 'center';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'app-prompt-dialog';
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'app-prompt-title');
+      dialog.style.background = '#fff';
+      dialog.style.color = '#052a3a';
+      dialog.style.padding = '1rem';
+      dialog.style.borderRadius = '8px';
+      dialog.style.minWidth = '320px';
+      dialog.style.maxWidth = '92%';
+      dialog.style.boxShadow = '0 10px 36px rgba(2,24,57,0.16)';
+
+      dialog.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:0.6rem">
+          <div id="app-prompt-title" style="font-weight:700;font-size:1rem">${String(title)}</div>
+          <div style="color:#334;margin-top:4px">${String(message).replace(/\n/g, '<br/>')}</div>
+          <input id="app-prompt-input" type="text" placeholder="${String(placeholder).replace(/"/g,'')}" value="${String(defaultValue).replace(/"/g,'') }" style="padding:0.5rem;border-radius:6px;border:1px solid rgba(0,0,0,0.12);width:100%" />
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
+            <button class="app-prompt-cancel" type="button">Cancel</button>
+            <button class="app-prompt-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">OK</button>
+          </div>
+        </div>`;
+
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+
+      const okBtn = dialog.querySelector('.app-prompt-ok');
+      const cancelBtn = dialog.querySelector('.app-prompt-cancel');
+      const input = dialog.querySelector('#app-prompt-input');
+      const prevActive = document.activeElement;
+      try { input.focus(); input.select(); } catch (e) {}
+
+      function cleanup(result) {
+        try { document.body.removeChild(backdrop); } catch (e) {}
+        try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
+        resolve(result);
+      }
+
+      okBtn.addEventListener('click', () => cleanup(String(input.value)));
+      cancelBtn.addEventListener('click', () => cleanup(null));
+      backdrop.addEventListener('click', (ev) => { if (ev.target === backdrop) cleanup(null); });
+      dialog.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape') { ev.preventDefault(); cleanup(null); }
+        if (ev.key === 'Enter') { ev.preventDefault(); cleanup(String(input.value)); }
+      });
+    });
+  };
+
+  // Convenience alias for prompt
+  window.askPrompt = async function(message, opts) { return await window.showPrompt(message, opts); };
+  // Safe notification helper: prefer in-page notify/showToast, fall back to original alert
+  window.safeNotify = function(message, type='info', duration) {
+    try {
+      if (typeof window.notify === 'function') return window.notify(message, type, duration);
+    } catch (e) {}
+    try {
+      if (typeof window.showToast === 'function') return window.showToast(message, type, duration);
+    } catch (e) {}
+    try { if (window._originalAlert) return window._originalAlert(String(message)); } catch (e) {}
+    // last resort
+    try { alert(String(message)); } catch (e) { console.log('Notification:', message); }
+  };
 })();

@@ -44,7 +44,7 @@ window.filterStudentDropdown = function filterStudentDropdown() {
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
-    console.log('openModal:', modalId, 'found modal element, removing hidden class');
+  // debug logging removed
     modal.classList.remove('hidden');
     // Force visible display and bring to front in case CSS rules conflict
     modal.style.display = 'flex';
@@ -52,47 +52,24 @@ function openModal(modalId) {
     // Diagnostic: log computed styles and bounding rects for the modal and its content
     try {
       const cs = window.getComputedStyle(modal);
-      console.log('openModal: computed style for', modalId, {
-        display: cs.display,
-        visibility: cs.visibility,
-        opacity: cs.opacity,
-        pointerEvents: cs.pointerEvents,
-        zIndex: cs.zIndex,
-        position: cs.position,
-        transform: cs.transform
-      });
+      // diagnostic logging removed
       const rect = modal.getBoundingClientRect();
-      console.log('openModal: boundingClientRect for', modalId, rect);
       const content = modal.querySelector('.modal-content');
       if (content) {
         const cs2 = window.getComputedStyle(content);
-        console.log('openModal: computed style for .modal-content', {
-          display: cs2.display,
-          visibility: cs2.visibility,
-          opacity: cs2.opacity,
-          pointerEvents: cs2.pointerEvents,
-          zIndex: cs2.zIndex,
-          position: cs2.position,
-          transform: cs2.transform
-        });
-        console.log('openModal: boundingClientRect for .modal-content', content.getBoundingClientRect());
+        // diagnostic logging removed for modal content
       } else {
         console.warn('openModal: no .modal-content child found inside', modalId);
       }
       // Inspect parent stacking context
-      let p = modal.parentElement; let depth = 0;
-      while (p && depth < 6) {
-        const pcs = window.getComputedStyle(p);
-        console.log('openModal: ancestor', depth, p.tagName, p.id || p.className, { position: pcs.position, zIndex: pcs.zIndex, opacity: pcs.opacity, overflow: pcs.overflow });
-        p = p.parentElement; depth++;
-      }
+      // ancestor diagnostic logging removed
     } catch (diagErr) {
       console.error('openModal: diagnostic logging failed', diagErr);
     }
     // Practical fix: ensure modal is appended to document.body so it's not constrained by ancestors
     try {
       if (modal.parentElement !== document.body) {
-        console.log('openModal: moving modal', modalId, 'to document.body to avoid stacking/overflow issues');
+  // moved modal to document.body to avoid stacking/overflow issues
         document.body.appendChild(modal);
       }
       const content = modal.querySelector('.modal-content');
@@ -114,7 +91,7 @@ function openModal(modalId) {
 function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
-    console.log('closeModal:', modalId, 'hiding modal');
+  // close modal
     modal.classList.add('hidden');
     modal.style.display = 'none';
     try { modal.style.zIndex = ''; } catch(e) {}
@@ -134,12 +111,24 @@ document.addEventListener('DOMContentLoaded', function() {
   var studentMainClass = document.getElementById('student_main_class_select');
   var studentSubClass = document.getElementById('student_sub_class_select');
   if (studentMainClass && studentSubClass) {
+    // Ensure initial state
+    if (!(studentMainClass.value === 'JHS 1' || studentMainClass.value === 'JHS 2')) {
+      studentSubClass.classList.add('hidden-select');
+      studentSubClass.required = false;
+      studentSubClass.value = '';
+    } else {
+      studentSubClass.classList.remove('hidden-select');
+      studentSubClass.required = true;
+    }
+
     studentMainClass.addEventListener('change', function() {
       if (studentMainClass.value === 'JHS 1' || studentMainClass.value === 'JHS 2') {
-        studentSubClass.style.display = '';
-        studentSubClass.value = '';
+        studentSubClass.classList.remove('hidden-select');
+        studentSubClass.required = true;
+        // leave value alone to allow editing; don't reset unless explicitly desired
       } else {
-        studentSubClass.style.display = 'none';
+        studentSubClass.classList.add('hidden-select');
+        studentSubClass.required = false;
         studentSubClass.value = '';
       }
     });
@@ -511,7 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function showToast(message, type = 'info', durationMs = 3500) {
   try {
     const container = document.getElementById('toastContainer');
-    if (!container) { console.log('Toast:', message); return; }
+  if (!container) { /* toast container missing */ return; }
     const toast = document.createElement('div');
     toast.className = 'app-toast app-toast-' + type;
     toast.style.pointerEvents = 'auto';
@@ -547,7 +536,7 @@ function showToast(message, type = 'info', durationMs = 3500) {
     // Make screen readers read it immediately
     try { toast.focus(); } catch (e) { /* ignore */ }
   } catch (e) {
-    console.log('Toast error:', e, message);
+    // toast creation error (kept as non-fatal)
   }
 }
 // Expose as the real showToast so other scripts can use it immediately
@@ -578,7 +567,7 @@ document.addEventListener('invalid', function(e) {
 
 // Capture any native submit events across the document for diagnostics.
 document.addEventListener('submit', function(e) {
-  console.log('Document-level submit captured for form:', e.target && (e.target.id || e.target.name) ? (e.target.id || e.target.name) : e.target);
+  // document-level submit captured (debug log removed)
 }, true);
   // Intercept student form submission to support full name splitting and proper required field validation
   const studentForm = document.getElementById('studentForm');
@@ -586,7 +575,7 @@ document.addEventListener('submit', function(e) {
     studentForm.addEventListener('submit', function(e) {
       // Always prevent browser default submit/validation; we manage everything in JS
       e.preventDefault();
-      console.log('studentForm submit handler invoked');
+  // student form submit handler invoked
       // Validate only truly required fields
       const mainClass = studentForm.querySelector('[name="main_class_select"]');
       const subClass = studentForm.querySelector('[name="sub_class_select"]');
@@ -640,14 +629,14 @@ document.addEventListener('submit', function(e) {
         const nameClass = (first_name + ' ' + surname + '|' + (classInput ? classInput.value : ''));
         window._studentNameClassSet = window._studentNameClassSet || new Set();
         if (window._studentNameClassSet.has(nameClass)) {
-    try { notify('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''), 'warning'); } catch (e) { alert('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : '')); }
+  try { notify('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''), 'warning'); } catch (e) { try { safeNotify('Duplicate student detected: ' + first_name + ' ' + surname + ' in class ' + (classInput ? classInput.value : ''), 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
           return;
         }
         window._studentNameClassSet.add(nameClass);
       }
       // Passed validation — create student via JS flow
-      console.log('studentForm validation passed, creating student...');
-  createStudentFromForm(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { alert('Failed to save student: ' + (err.message || err)); } });
+  // proceeding to create student
+  createStudentFromForm(studentForm).catch(err => { console.error(err); try { notify('Failed to save student: ' + (err.message || err), 'error'); } catch (e) { try { safeNotify('Failed to save student: ' + (err.message || err), 'error'); } catch (ee) { console.error('safeNotify failed', ee); } } });
       return;
     });
     // Wire up custom Save button to trigger form submit programmatically
@@ -665,7 +654,7 @@ document.addEventListener('submit', function(e) {
           // Use our own JS flow to insert the student to avoid native validation
           createStudentFromForm(studentForm).catch(err => {
             console.error('Student insert failed:', err);
-            try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { alert('Failed to save student. See console for details.'); }
+            try { notify('Failed to save student. See console for details.', 'error'); } catch (e) { try { safeNotify('Failed to save student. See console for details.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
           });
         }
       });
@@ -826,13 +815,13 @@ async function createStudentFromForm(form) {
     console.warn(`Username conflict detected, retrying insert with username=${finalUsername} (attempt ${attempt + 1})`);
   }
   if (insertError) throw insertError;
-  try { showToast(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info', 6000); } catch (e) { alert(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`); }
+  try { showToast(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info', 6000); } catch (e) { try { safeNotify(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
   if (typeof loadStudents === 'function') loadStudents();
   closeModal('studentModal');
 }
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
-    try { notify('No student data to export.', 'warning'); } catch (e) { alert('No student data to export.'); }
+  try { notify('No student data to export.', 'warning'); } catch (e) { try { safeNotify('No student data to export.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
   // Export as: Student ID, Full Name, Area, DOB, NHIS Number, Gender, Class, Subclass (JHS 1/2 only), Parent Name, Parent Contact
@@ -891,7 +880,7 @@ function showSelectedStudent() {
   tbody.innerHTML = '';
   if (!studentId) {
     const row = document.createElement('tr');
-    row.innerHTML = '<td colspan="12" style="text-align:center;">No student selected</td>';
+    row.innerHTML = '<td colspan="12" class="center">No student selected</td>';
     tbody.appendChild(row);
     return;
   }
@@ -910,21 +899,21 @@ function showSelectedStudent() {
     : (student.first_name || student.surname || '[No Name]');
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td>${student.picture_url ? `<img src="${student.picture_url}" alt="pic" width="40">` : ''}</td>
-    <td>${name}</td>
-    <td>${student.area || ''}</td>
-    <td>${student.dob || ''}</td>
-    <td>${student.nhis_number || ''}</td>
-    <td>${student.gender || ''}</td>
-    <td>${student.class || ''}</td>
-    <td>${student.parent_name || ''}</td>
-    <td>${student.parent_contact || ''}</td>
-    <td>${student.username || ''}</td>
-  <td>${student.pin ? '••••' : ''}</td>
-    <td>
-      <button class="edit-btn" onclick="editStudent('${student.id}')">Edit</button>
-      <button class="delete-btn" onclick="deleteStudent('${student.id}')">Delete</button>
-        <button class="reset-pin-btn" onclick="resetStudentPin('${student.id}')">Reset PIN</button>
+    <td class="photo">${student.picture_url ? `<img src="${student.picture_url}" alt="pic" />` : ''}</td>
+    <td class="name">${name}</td>
+    <td class="mono">${student.area || ''}</td>
+    <td class="center">${student.dob || ''}</td>
+    <td class="mono">${student.nhis_number || ''}</td>
+    <td class="center">${student.gender || ''}</td>
+    <td class="center">${student.class || ''}</td>
+    <td class="mono">${student.parent_name || ''}</td>
+    <td class="mono">${student.parent_contact || ''}</td>
+    <td class="mono">${student.username || ''}</td>
+    <td class="center">${student.pin ? '••••' : ''}</td>
+    <td class="actions">
+      <button class="btn" onclick="editStudent('${student.id}')">Edit</button>
+      <button class="btn" onclick="deleteStudent('${student.id}')">Delete</button>
+      <button class="btn" onclick="resetStudentPin('${student.id}')">Reset PIN</button>
     </td>
   `;
   tbody.appendChild(row);
@@ -937,7 +926,7 @@ let allStudents = [];
 async function resetStudentPin(studentId) {
   if (!studentId) return;
   if (!window.supabaseClient) {
-  try { notify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (e) { alert('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.'); }
+  try { notify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (e) { try { safeNotify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
     // Optionally disable the button to prevent further attempts
     const btn = document.querySelector(`button.reset-pin-btn[onclick*="${studentId}"]`);
     if (btn) {
@@ -954,7 +943,7 @@ async function resetStudentPin(studentId) {
     .update({ pin: '1234', forcePinChange: true })
     .eq('id', studentId);
   if (error) {
-  try { notify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (e) { alert('Failed to reset PIN. Please check your Supabase connection and schema.'); }
+  try { notify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (e) { try { safeNotify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
   // Log out student if currently logged in
@@ -975,7 +964,7 @@ async function resetStudentPin(studentId) {
   } catch (e) {
     // Ignore errors
   }
-  try { notify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (e) { alert('Student PIN has been reset. The student will be required to change their PIN on next login.'); }
+  try { notify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (e) { try { safeNotify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
   // Optionally refresh student view
   if (typeof showSelectedStudent === 'function') showSelectedStudent();
 }
@@ -1015,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reopen_date = document.getElementById('reopen_date').value;
       const attendance_total_days = parseInt(document.getElementById('attendance_total_days').value, 10);
       if (isNaN(attendance_total_days) || attendance_total_days < 1) {
-      try { notify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (e) { alert('Please enter a valid number for Actual Attendance Days.'); }
+      try { notify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (e) { try { safeNotify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
         return;
       }
       // Upsert (insert or update latest row)
@@ -1024,8 +1013,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .upsert([
           { vacation_date, reopen_date, attendance_total_days }
         ]);
-      if (error) {
-  try { notify('Failed to save dates', 'error'); } catch (e) { alert('Failed to save dates'); }
+    if (error) {
+  try { notify('Failed to save dates', 'error'); } catch (e) { try { safeNotify('Failed to save dates', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
         return;
       }
       closeModal('schoolDatesModal');
@@ -1046,8 +1035,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const { error } = await supabaseClient.from('events').insert([
         { title, date, details, type }
       ]);
-      if (error) {
-  try { notify('Failed to save event', 'error'); } catch (e) { alert('Failed to save event'); }
+    if (error) {
+  try { notify('Failed to save event', 'error'); } catch (e) { try { safeNotify('Failed to save event', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
         return;
       }
       closeModal('eventsModal');
@@ -1084,10 +1073,13 @@ async function fetchAndRenderEvents() {
 
 // Delete event by id
 async function deleteEvent(eventId) {
-  if (!confirm('Delete this event?')) return;
+  try {
+    const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Delete this event?', { title: 'Delete event' }) : confirm('Delete this event?');
+    if (!ok) return;
+  } catch (e) { return; }
   const { error } = await supabaseClient.from('events').delete().eq('id', eventId);
   if (error) {
-  try { notify('Failed to delete event', 'error'); } catch (e) { alert('Failed to delete event'); }
+  try { notify('Failed to delete event', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to delete event', 'error'); else if (window._originalAlert) window._originalAlert('Failed to delete event'); else console.log('Failed to delete event'); } catch(err){ console.log('Failed to delete event'); } }
     return;
   }
   fetchAndRenderEvents();
@@ -1102,7 +1094,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function fetchAndRenderStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   if (error) {
-  try { notify('Failed to fetch students', 'error'); } catch (e) { alert('Failed to fetch students'); }
+  try { notify('Failed to fetch students', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to fetch students', 'error'); else if (window._originalAlert) window._originalAlert('Failed to fetch students'); else console.log('Failed to fetch students'); } catch(err){ console.log('Failed to fetch students'); } }
     return;
   }
   // Sort students by register_id (natural order: class, then number)
@@ -1124,4 +1116,85 @@ function filterStudentsByClass() {
   const row = document.createElement('tr');
   row.innerHTML = '<td colspan="12" style="text-align:center;">No student selected</td>';
   tbody.appendChild(row);
+}
+
+/* ------------------------------------------------------------------
+   Mobile stacked table support (admin tables)
+   -----------------------------------------------------------
+   Many global styles convert tables into stacked blocks on small viewports
+   and use `td:before { content: attr(data-label); }` to show the header label
+   beside each value. To support that pattern reliably for admin tables we
+   programmatically set `data-label` on each `td` from the corresponding
+   `thead th` text and observe the tbody for changes so newly-inserted rows
+   also receive labels.
+*/
+function setTableDataLabels(table) {
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  if (!thead) return;
+  const headers = Array.from(thead.querySelectorAll('th')).map(h => h.textContent.trim());
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+    const cells = Array.from(tr.children).filter(el => el.tagName && el.tagName.toLowerCase() === 'td');
+    for (let i = 0; i < cells.length; i++) {
+      const hdr = headers[i] || '';
+      if (hdr) {
+        cells[i].setAttribute('data-label', hdr);
+      } else {
+        // remove stale attribute if header not available
+        cells[i].removeAttribute('data-label');
+      }
+    }
+  });
+}
+
+function observeTableForDataLabels(table) {
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+  // apply once now
+  setTableDataLabels(table);
+  // avoid duplicating observers
+  if (tbody._dataLabelObserver) return;
+  const mo = new MutationObserver(mutations => {
+    let changed = false;
+    for (const m of mutations) {
+      if (m.type === 'childList' && (m.addedNodes.length || m.removedNodes.length)) { changed = true; break; }
+      if (m.type === 'attributes' && m.attributeName === 'class') { changed = true; break; }
+    }
+    if (changed) setTableDataLabels(table);
+  });
+  mo.observe(tbody, { childList: true, subtree: false, attributes: true, attributeFilter: ['class'] });
+  tbody._dataLabelObserver = mo;
+}
+
+function initAdminTableDataLabels() {
+  // target admin-scoped grid tables
+  const tables = document.querySelectorAll('.admin-dashboard .grid-table-4-accent-3');
+  tables.forEach(t => observeTableForDataLabels(t));
+  // Watch for tables added later under .admin-dashboard
+  const root = document.querySelector('.admin-dashboard');
+  if (!root) return;
+  if (root._adminTableObserver) return;
+  const rootMo = new MutationObserver(muts => {
+    let added = false;
+    for (const m of muts) {
+      if (m.type === 'childList' && m.addedNodes.length) { added = true; break; }
+    }
+    if (added) {
+      const tables = document.querySelectorAll('.admin-dashboard .grid-table-4-accent-3');
+      tables.forEach(t => observeTableForDataLabels(t));
+    }
+  });
+  rootMo.observe(root, { childList: true, subtree: true });
+  root._adminTableObserver = rootMo;
+}
+
+// Initialize on DOMContentLoaded so headers exist. Also call once now in case
+// this script executes after DOMContentLoaded.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAdminTableDataLabels);
+} else {
+  setTimeout(initAdminTableDataLabels, 0);
 }

@@ -2,8 +2,14 @@
 // Fetches and displays boys, girls, and class counts in a compact, responsive layout
 
 async function renderStudentBreakdownSummary() {
-  const container = document.getElementById('studentBreakdownSummary');
+  // prefer an overview-target container if present, otherwise fallback to the section container
+  let container = document.getElementById('studentBreakdownSummaryOverview');
+  if (!container) container = document.getElementById('studentBreakdownSummary');
   if (!container) return;
+  // show loader
+  let loader = container.querySelector('.chart-loader');
+  if (!loader) { loader = document.createElement('span'); loader.className = 'chart-loader'; container.appendChild(loader); }
+  try {
   // Fetch all students
   const { data: students, error } = await supabaseClient.from('students').select('gender, class');
   if (error) {
@@ -30,13 +36,16 @@ async function renderStudentBreakdownSummary() {
     grandTotal++;
   });
   // Build HTML table
-  let table = `<table class="student-breakdown-table"><thead><tr><th>Class</th><th>Boys</th><th>Girls</th><th>Total</th></tr></thead><tbody>`;
+  let table = `<table class="grid-table-4-accent-3 student-breakdown-table"><thead><tr><th>Class</th><th>Boys</th><th>Girls</th><th>Total</th></tr></thead><tbody>`;
   classes.forEach(cls => {
     table += `<tr><td>${cls}</td><td>${breakdown[cls].boys}</td><td>${breakdown[cls].girls}</td><td>${breakdown[cls].total}</td></tr>`;
   });
   table += `<tr class="grand-total-row"><td><strong>Grand Total</strong></td><td><strong>${grandBoys}</strong></td><td><strong>${grandGirls}</strong></td><td><strong>${grandTotal}</strong></td></tr>`;
   table += '</tbody></table>';
   container.innerHTML = table;
+  } finally {
+    try { if (loader && loader.parentNode) loader.parentNode.removeChild(loader); } catch(e){}
+  }
 }
 // Call this after DOMContentLoaded
 // renderStudentBreakdownSummary();

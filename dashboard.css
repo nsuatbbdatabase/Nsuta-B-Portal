@@ -58,11 +58,31 @@ button {
   }
 }
 /* Responsive Design for Mobile and Tablet */
-@media (max-width: 900px) {
-  .dashboard-container {
-    padding: 0.5rem;
-    max-width: 100%;
+@media (max-width: 700px) {
+  /* Ensure dashboard-specific tables remain horizontal on mobile and
+     do not adopt the global stacked/table-label behavior. */
+  .dashboard-container table, .grid-table-4-accent-3 {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
   }
+  .dashboard-container thead, .dashboard-container tbody, .dashboard-container tr,
+  .grid-table-4-accent-3 thead, .grid-table-4-accent-3 tbody, .grid-table-4-accent-3 tr {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .dashboard-container th, .dashboard-container td, .grid-table-4-accent-3 th, .grid-table-4-accent-3 td {
+    display: table-cell !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
+}
   .dashboard-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -88,7 +108,7 @@ button {
   .school-header h1 {
     font-size: 1.1rem;
   }
-}
+ 
 
 @media (max-width: 600px) {
   .dashboard-tabs {
@@ -310,4 +330,28 @@ body {
     font-size: 0.9rem;
     padding: 0.5rem;
   }
+}
+
+/* Dashboard-level mobile override: keep tables horizontal and scrollable */
+@media (max-width: 700px) {
+  .dashboard-container table, table, .grid-table-4-accent-3 {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .dashboard-container thead, .dashboard-container tbody, .dashboard-container tr,
+  .grid-table-4-accent-3 thead, .grid-table-4-accent-3 tbody, .grid-table-4-accent-3 tr {
+    display: table !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+  .dashboard-container th, .dashboard-container td, .grid-table-4-accent-3 th, .grid-table-4-accent-3 td {
+    display: table-cell !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 0.45rem 0.6rem !important;
+  }
+  .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
 }

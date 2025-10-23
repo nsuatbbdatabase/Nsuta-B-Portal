@@ -7,7 +7,14 @@ function logout() {
 }
 
 // Notification helper: prefer in-page toast if available
-const notify = (msg, type='info') => { try { if (window.showToast) return window.showToast(msg, type); alert(msg); } catch (e) { console.log('Notify fallback:', msg); } };
+const notify = (msg, type='info') => {
+  try {
+    if (window.showToast) return window.showToast(msg, type);
+    if (window.safeNotify) return window.safeNotify(msg, type);
+    if (window._originalAlert) return window._originalAlert(String(msg));
+    console.log('Notify:', msg);
+  } catch (e) { console.log('Notify fallback:', msg); }
+};
 
 window.addEventListener('DOMContentLoaded', function() {
   // Prevent access if not logged in as teacher

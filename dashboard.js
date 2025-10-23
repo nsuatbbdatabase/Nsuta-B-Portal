@@ -40,8 +40,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-// Notification helper: prefer in-page toast if available
-const notify = (msg, type='info') => { try { if (window.showToast) return window.showToast(msg, type); alert(msg); } catch (e) { console.log('Notify fallback:', msg); } };
+// Notification helper: prefer in-page toast if available; fall back to safeNotify or original alert
+const notify = (msg, type='info') => {
+  try {
+    if (window.showToast) return window.showToast(msg, type);
+    if (window.safeNotify) return window.safeNotify(msg, type);
+    if (window._originalAlert) return window._originalAlert(String(msg));
+      // fallback: nothing else to do; keep silent in production
+    } catch (e) { /* swallow notify errors silently */ }
+};
 // Utility: Create a test teacher user for login
 async function createTestTeacher() {
   // Check if test user already exists
@@ -95,14 +102,20 @@ async function createTestTeacher() {
 // createTestTeacher();
 // 🗑️ Delete Teacher
 async function deleteTeacher(id) {
-  if (!confirm('Are you sure you want to delete this teacher?')) return;
+  try {
+    const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this teacher?', { title: 'Delete teacher' }) : confirm('Are you sure you want to delete this teacher?');
+    if (!ok) return;
+  } catch (e) { return; }
   const { error } = await supabaseClient.from('teachers').delete().eq('id', id);
   if (error) notify('Delete failed.', 'error');
   else loadTeachers();
 }
 // 🗑️ Delete Admin
 async function deleteAdmin(id) {
-  if (!confirm('Are you sure you want to delete this admin?')) return;
+  try {
+    const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this admin?', { title: 'Delete admin' }) : confirm('Are you sure you want to delete this admin?');
+    if (!ok) return;
+  } catch (e) { return; }
   const { error } = await supabaseClient.from('admins').delete().eq('id', id);
   if (error) notify('Delete failed.', 'error');
   else loadAdmins();
@@ -135,13 +148,13 @@ async function loadAdmins() {
   data.forEach(admin => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${admin.full_name || ''}</td>
-      <td>${admin.email || ''}</td>
-      <td>${admin.phone || ''}</td>
-      <td>${admin.pin ? '••••' : ''}</td>
-      <td>
-        <button onclick="editAdmin('${admin.id}')">Edit</button>
-        <button onclick="deleteAdmin('${admin.id}')">Delete</button>
+      <td class="name">${admin.full_name || ''}</td>
+      <td class="mono">${admin.email || ''}</td>
+      <td class="mono">${admin.phone || ''}</td>
+      <td class="center">${admin.pin ? '••••' : ''}</td>
+      <td class="actions">
+        <button class="btn" onclick="editAdmin('${admin.id}')">Edit</button>
+        <button class="btn" onclick="deleteAdmin('${admin.id}')">Delete</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -202,23 +215,23 @@ window.showSelectedTeacher = function showSelectedTeacher() {
     if (error || !data) return;
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${data.name}</td>
-      <td>${data.gender}</td>
-      <td>${data.dob}</td>
-      <td>${data.staff_id}</td>
-      <td>${data.ntc}</td>
-      <td>${data.registered_number}</td>
-      <td>${data.ssnit}</td>
-      <td>${data.ghana_card}</td>
-      <td>${data.contact}</td>
-      <td>${data.rank}</td>
-      <td>${data.qualification}</td>
-      <td>${data.classes?.join(', ') || ''}</td>
-      <td>${data.subjects?.join(', ') || ''}</td>
-      <td>${data.pin ? '••••' : ''}</td>
-      <td>
-        <button onclick="editTeacher('${data.id}')">Edit</button>
-        <button onclick="deleteTeacher('${data.id}')">Delete</button>
+      <td class="name">${data.name}</td>
+      <td class="center">${data.gender}</td>
+      <td class="center">${data.dob}</td>
+      <td class="mono">${data.staff_id}</td>
+      <td class="mono">${data.ntc}</td>
+      <td class="mono">${data.registered_number}</td>
+      <td class="mono">${data.ssnit}</td>
+      <td class="mono">${data.ghana_card}</td>
+      <td class="mono">${data.contact}</td>
+      <td class="center">${data.rank}</td>
+      <td class="mono">${data.qualification}</td>
+      <td class="mono">${data.classes?.join(', ') || ''}</td>
+      <td class="mono">${data.subjects?.join(', ') || ''}</td>
+      <td class="center">${data.pin ? '••••' : ''}</td>
+      <td class="actions">
+        <button class="btn" onclick="editTeacher('${data.id}')">Edit</button>
+        <button class="btn" onclick="deleteTeacher('${data.id}')">Delete</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -428,7 +441,42 @@ async function editStudent(id) {
   form.dob.value = data.dob || '';
   form.nhis_number.value = data.nhis_number || '';
   form.gender.value = data.gender || '';
+  // Populate main class and subclass selects (so subclass is editable)
   form.class.value = data.class || '';
+  try {
+    const mainSelect = form.querySelector('[name="main_class_select"]');
+    const subSelect = form.querySelector('[name="sub_class_select"]');
+    // If database has a separate `subclass` column, use it; otherwise try to parse from class string
+    const dbSubclass = (data.subclass || '').toString().trim();
+    // Set main select to the stored main class
+    if (mainSelect) {
+      mainSelect.value = data.class || '';
+      // Trigger any change handlers that show/hide the subclass control
+      try { mainSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) { /* ignore */ }
+    }
+    if (subSelect) {
+      if (dbSubclass) subSelect.value = dbSubclass;
+      else {
+        // attempt to parse subclass from class value like "JHS 1 A"
+        const m = (data.class || '').toString().trim().match(/^(.+?)\s+([A-Za-z])$/);
+        if (m) {
+          // set main select to the parsed main class and subclass to the parsed letter
+          if (mainSelect) mainSelect.value = m[1];
+          subSelect.value = m[2].toUpperCase();
+          try { mainSelect.dispatchEvent(new Event('change', { bubbles: true })); } catch (e) {}
+        }
+      }
+    }
+    // Ensure the combined hidden class field matches main + subclass where applicable
+    const combinedField = form.querySelector('[name="class"]');
+    if (combinedField) {
+      const mainVal = (mainSelect && mainSelect.value) ? mainSelect.value : (data.class || '');
+      const subVal = (subSelect && subSelect.value) ? subSelect.value : dbSubclass || '';
+      combinedField.value = subVal ? (mainVal + ' ' + subVal) : mainVal;
+    }
+  } catch (e) {
+    console.warn('Failed to populate class/subclass selects in editStudent:', e);
+  }
   form.parent_name.value = data.parent_name || '';
   form.parent_contact.value = data.parent_contact || '';
   form.register_id.value = data.register_id || '';
@@ -437,7 +485,10 @@ async function editStudent(id) {
 
 // 🗑️ Delete Student
 async function deleteStudent(id) {
-  if (!confirm('Are you sure you want to delete this student?')) return;
+  try {
+    const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this student?', { title: 'Delete student' }) : confirm('Are you sure you want to delete this student?');
+    if (!ok) return;
+  } catch (e) { return; }
   const { error } = await supabaseClient.from('students').delete().eq('id', id);
   if (error) notify('Delete failed.', 'error');
   else loadStudents();
@@ -446,9 +497,20 @@ async function deleteStudent(id) {
 // 📋 Load Students
 // TEMP: Delete all students in a class (for re-import/testing)
 window.deleteClassStudents = async function deleteClassStudents() {
-  const className = prompt('Enter the class name to delete all students (e.g., JHS 1):');
+  // Use async prompt modal instead of blocking prompt()
+  let className = null;
+  try {
+    if (typeof window.showPrompt === 'function') {
+      className = await window.showPrompt('Enter the class name to delete all students (e.g., JHS 1):', { title: 'Delete class', placeholder: 'e.g., JHS 1' });
+    } else {
+      className = prompt('Enter the class name to delete all students (e.g., JHS 1):');
+    }
+  } catch (e) { className = null; }
   if (!className) return notify('No class entered.', 'warning');
-  if (!confirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.')) return;
+  try {
+    const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.', { title: 'Delete all students' }) : confirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.');
+    if (!ok) return;
+  } catch (e) { return; }
   const { error } = await supabaseClient.from('students').delete().eq('class', className);
   if (error) notify('Delete failed: ' + error.message, 'error');
   else {
@@ -776,7 +838,7 @@ async function editTeacher(id) {
         console.error('Failed to fetch teaching_assignments for teacher', id, assignErr);
         notify('Failed to load teacher assignments. See console for details.', 'error');
       }
-      console.log('editTeacher: fetched assignments for', id, assignments);
+  // fetched assignments for teacher (debug logging removed)
       const createAssignmentRowFn = getCreateAssignmentRow();
       if (!createAssignmentRowFn || typeof createAssignmentRowFn !== 'function') {
         console.warn('createAssignmentRow function not available; using DOM fallback');
@@ -812,3 +874,156 @@ async function editTeacher(id) {
 loadStudents();
 loadTeachers();
 loadAdmins();
+
+// -------------------------------
+// Sidebar collapse / expand toggle
+// Appends a toggle button to the header, persists state in localStorage,
+// supports a slide-open behavior on small screens and accessibility keys.
+// -------------------------------
+(function(){
+  const SIDEBAR_KEY = 'nsuta_sidebar_collapsed_v1';
+  const sidebar = document.querySelector('.sidebar');
+  const header = document.querySelector('.dashboard-header') || document.body;
+  if (!sidebar || !header) return;
+
+  // Create toggle button
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'sidebar-toggle-btn';
+  btn.setAttribute('aria-pressed', 'false');
+  btn.setAttribute('aria-label', 'Toggle navigation');
+  btn.title = 'Toggle navigation';
+  btn.innerHTML = '<span aria-hidden="true">☰</span>';
+  // Insert at the start of header (keeps existing layout)
+  header.insertBefore(btn, header.firstChild);
+
+  // Inject minimal styles so we don't need to edit CSS files
+  const style = document.createElement('style');
+  style.textContent = `
+  /* Sidebar toggle styles (injected) */
+  .sidebar.collapsed { width: 72px !important; overflow: hidden; }
+  .sidebar.collapsed ul li a { justify-content: center; padding-left: 0.6rem; }
+  .sidebar.collapsed .school-title, .sidebar.collapsed .motto, .sidebar.collapsed .sidebar-text { display: none !important; }
+  body.sidebar-collapsed .dashboard-main { margin-left: 88px !important; }
+  .sidebar-toggle-btn { background: transparent; border: 1px solid rgba(0,0,0,0.06); border-radius: 8px; padding: 6px 8px; margin: 0 0.5rem; cursor: pointer; }
+  .sidebar-toggle-btn.active { background: var(--brand-500, #0b66b2); color: #fff; box-shadow: 0 8px 20px rgba(11,102,178,0.12); }
+  @media (max-width: 900px) {
+    .sidebar { left: -260px; transition: left .28s ease; }
+    .sidebar.open { left: 0; }
+    .sidebar.collapsed { left: 0; width: 220px; }
+    body.sidebar-collapsed .dashboard-main { margin-left: 220px !important; }
+  }
+  `;
+  document.head.appendChild(style);
+
+  function setCollapsed(v) {
+    if (v) {
+      sidebar.classList.add('collapsed');
+      document.body.classList.add('sidebar-collapsed');
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+    } else {
+      sidebar.classList.remove('collapsed');
+      document.body.classList.remove('sidebar-collapsed');
+      btn.classList.remove('active');
+      btn.setAttribute('aria-pressed', 'false');
+    }
+    try { localStorage.setItem(SIDEBAR_KEY, v ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
+  // Toggle behavior: on small screens open/close slide; on desktop collapse/expand
+  btn.addEventListener('click', function(e) {
+    const isMobile = window.matchMedia('(max-width:900px)').matches;
+    if (isMobile) {
+      // slide open/close
+      sidebar.classList.toggle('open');
+      return;
+    }
+    setCollapsed(!sidebar.classList.contains('collapsed'));
+  });
+
+  // Keyboard accessibility
+  btn.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); btn.click(); }
+  });
+
+  // Click outside to close mobile sidebar
+  document.addEventListener('click', function(e) {
+    const isMobile = window.matchMedia('(max-width:900px)').matches;
+    if (!isMobile) return;
+    if (!sidebar.classList.contains('open')) return;
+    if (e.target.closest('.sidebar')) return;
+    if (e.target.closest('.sidebar-toggle-btn')) return;
+    sidebar.classList.remove('open');
+  });
+
+  // Initialize from localStorage
+  try {
+    const saved = localStorage.getItem(SIDEBAR_KEY);
+    if (saved === '1') setCollapsed(true);
+  } catch (e) { /* ignore read errors */ }
+})();
+
+// Lightweight helpers: fill KPIs and recent activity
+(function(){
+  function setKPI(selector, value) {
+    const el = document.getElementById(selector);
+    if (el) el.textContent = String(value);
+  }
+  async function populateKPIs() {
+    try {
+      const [{ data: students }, { data: teachers }, { data: admins }] = await Promise.all([
+        supabaseClient.from('students').select('id', { count: 'exact' }),
+        supabaseClient.from('teachers').select('id', { count: 'exact' }),
+        supabaseClient.from('admins').select('id', { count: 'exact' })
+      ]);
+      setKPI('kpiStudents', students ? students.length : '—');
+      setKPI('kpiTeachers', teachers ? teachers.length : '—');
+    } catch (e) {
+      console.warn('populateKPIs error', e);
+    }
+  }
+  // Recent activity: append an item
+  function recordActivity(text) {
+    const list = document.getElementById('recentActivity');
+    if (!list) return;
+    const item = document.createElement('div');
+    item.className = 'activity-item';
+    item.textContent = (new Date()).toLocaleString() + ' — ' + text;
+    list.insertBefore(item, list.firstChild);
+    // trim list to 50
+    while (list.children.length > 50) list.removeChild(list.lastChild);
+  }
+  // Wire search to a simple action: focus search + record
+  document.addEventListener('DOMContentLoaded', function() {
+    const search = document.getElementById('adminSearch');
+    const searchBtn = document.getElementById('searchBtn');
+    if (search && searchBtn) {
+      searchBtn.addEventListener('click', function() {
+        const q = search.value.trim();
+        if (!q) { recordActivity('Opened quick search (empty)'); return; }
+        recordActivity('Searched: ' + q);
+        // Simple behavior: focus and show a toast
+        if (window.showToast) showToast('Search activated: ' + q, 'info');
+      });
+    }
+    populateKPIs();
+  });
+  // Export for other modules
+  window.recordActivity = recordActivity;
+})();
+
+  // Wire the announcement toolbar button and sidebar item clicks
+  document.addEventListener('DOMContentLoaded', function() {
+    const annBtn = document.getElementById('announcementBtn');
+    const annBtnSidebar = document.getElementById('announcementBtnSidebar');
+    function openAnnouncement() {
+      if (typeof openModal === 'function') openModal('announcementModal');
+      else document.getElementById('announcementModal') && document.getElementById('announcementModal').classList.remove('hidden');
+      recordActivity('Opened announcement editor');
+    }
+    if (annBtn) annBtn.addEventListener('click', openAnnouncement);
+    if (annBtnSidebar) annBtnSidebar.addEventListener('click', openAnnouncement);
+
+    // Sidebar item buttons use existing data-action handlers via delegated click in admin.html script
+  });

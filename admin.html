@@ -1,86 +1,78 @@
-<!-- Admin Modal -->
-  <div id="adminModal" class="modal hidden">
-    <div class="modal-content">
-      <h3>Register Admin</h3>
-      <form id="adminForm">
-        <input type="hidden" name="admin_id" />
-        <input type="text" name="full_name" placeholder="Name" required />
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="tel" name="phone" placeholder="Phone" required />
-        <input type="text" name="pin" placeholder="PIN" required />
-        <div class="form-actions">
-          <button type="submit">Save</button>
-          <button type="button" onclick="closeModal('adminModal')">Cancel</button>
-        </div>
-      </form>
-    </div>
-  </div>
-    <script>
-      (function(){
-        function activateAction(action) {
-          if (!action) return;
-          var parts = action.split(':');
-          var type = parts[0];
-          var target = parts.slice(1).join(':');
-          if (type === 'modal') {
-            var id = target;
-            if (typeof openModal === 'function') openModal(id);
-            else document.getElementById(id) && document.getElementById(id).classList.remove('hidden');
-          } else if (type === 'link') {
-            window.location.href = target;
-          } else if (type === 'section') {
-            var el = document.getElementById(target);
-            if (el) {
-              // use existing showSection if available
-              if (typeof showSection === 'function') showSection(target);
-              else { document.querySelectorAll('.dashboard-section').forEach(s => s.hidden = true); el.hidden = false; el.scrollIntoView({behavior:'smooth', block:'start'}); }
-            }
-          }
-        }
 
-        document.addEventListener('click', function(e){
-          var btn = e.target.closest('.dashboard-card-action');
-          if (btn && btn.dataset && btn.dataset.action) {
-            activateAction(btn.dataset.action);
-            e.stopPropagation();
-          }
-        });
-
-        // Activate when pressing Enter or Space on the card
-        document.addEventListener('keydown', function(e){
-          if (e.key === 'Enter' || e.key === ' ') {
-            var el = document.activeElement;
-            if (el && el.classList && el.classList.contains('dashboard-card')) {
-              var act = el.dataset.action;
-              if (act) { activateAction(act); e.preventDefault(); }
-            }
-          }
-        });
-
-        // Click on a card triggers its primary action
-        document.addEventListener('click', function(e){
-          var card = e.target.closest('.dashboard-card');
-          if (card && card.dataset && card.dataset.action) {
-            activateAction(card.dataset.action);
-          }
-        });
-
-      })();
-    </script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | School Management</title>
-  <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="dashboard-cards.css" />
   <link rel="stylesheet" href="student-breakdown.css" />
   <link rel="stylesheet" href="student-breakdown-table.css" />
   <link rel="stylesheet" href="student-duplicates-warning.css" />
   <link rel="stylesheet" href="teacher-breakdown.css" />
+  <!-- Inline override to ensure dashboard tables stay horizontal on small screens -->
+  <style>
+    @media (max-width: 700px) {
+      /* Target admin/student/teacher dashboard tables specifically */
+      .admin-dashboard .table-wrap table,
+      .admin-dashboard .grid-table-4-accent-3,
+      .student-dashboard .grid-table-4-accent-3,
+      .teacher-dashboard .grid-table-4-accent-3 {
+        display: block !important;
+        overflow-x: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      /* Preserve table semantics so columns don't stack */
+      .admin-dashboard .grid-table-4-accent-3 thead,
+      .admin-dashboard .grid-table-4-accent-3 tbody,
+      .admin-dashboard .grid-table-4-accent-3 tr,
+      .student-dashboard .grid-table-4-accent-3 thead,
+      .student-dashboard .grid-table-4-accent-3 tbody,
+      .student-dashboard .grid-table-4-accent-3 tr,
+      .teacher-dashboard .grid-table-4-accent-3 thead,
+      .teacher-dashboard .grid-table-4-accent-3 tbody,
+      .teacher-dashboard .grid-table-4-accent-3 tr {
+        display: table !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+      }
+
+      .admin-dashboard .grid-table-4-accent-3 th,
+      .admin-dashboard .grid-table-4-accent-3 td,
+      .student-dashboard .grid-table-4-accent-3 th,
+      .student-dashboard .grid-table-4-accent-3 td,
+      .teacher-dashboard .grid-table-4-accent-3 th,
+      .teacher-dashboard .grid-table-4-accent-3 td {
+        display: table-cell !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding: 0.45rem 0.6rem !important;
+      }
+
+      /* Keep header visible and usable */
+      .admin-dashboard .grid-table-4-accent-3 thead { display: table-header-group !important; position: sticky !important; top: 0 !important; z-index: 60 !important; background: inherit !important; }
+
+      /* Disable stacked pseudo-labels for dashboard tables */
+      .admin-dashboard .grid-table-4-accent-3 td:before,
+      .student-dashboard .grid-table-4-accent-3 td:before,
+      .teacher-dashboard .grid-table-4-accent-3 td:before {
+        display: none !important;
+        content: none !important;
+      }
+
+      /* Ensure action buttons remain visible */
+      .admin-dashboard .grid-table-4-accent-3 td.actions,
+      .student-dashboard .grid-table-4-accent-3 td.actions,
+      .teacher-dashboard .grid-table-4-accent-3 td.actions { width: 150px !important; }
+      .admin-dashboard .grid-table-4-accent-3 td.actions .btn,
+      .admin-dashboard .grid-table-4-accent-3 td.actions button { min-width: 56px !important; padding: 6px 8px !important; }
+    }
+  </style>
 </head>
-<body>
+<body class="admin-dashboard">
 
   <div class="admin-bg-overlay"></div>
 
@@ -88,12 +80,83 @@
   <img src="Badge.png" alt="School Logo" class="school-logo" />
   <h1 class="school-title">Nkawkaw Nsuta M/A 'B' Basic School</h1>
     <p class="motto">"Knowledge is Power"</p>
-  <button id="logoutBtn" class="logout-btn">Logout</button>
   </header>
+
+  <script>
+    // Sliding motto and static Ghana holidays population
+    (function(){
+      // Sliding motto: rotate a small set of mottos
+      var mottos = ["Knowledge is Power","Learning Today, Leading Tomorrow","Character and Scholarship","Grow, Learn, Serve"];
+      var mottoEl = document.querySelector('.dashboard-header .motto');
+      if (mottoEl) {
+        var idx = 0;
+        setInterval(function(){ idx = (idx+1) % mottos.length; mottoEl.textContent = mottos[idx]; }, 4200);
+      }
+
+      // Insert a small static Ghana holiday list into the Dashboard Overview; used as preview
+      var holidayTarget = document.getElementById('studentBreakdownSummaryOverview');
+      if (holidayTarget) {
+        var holidays = [
+          { date: '2025-01-01', name: 'New Year\'s Day' },
+          { date: '2025-03-06', name: 'Independence Day' },
+          { date: '2025-05-01', name: 'Workers\' Day' },
+          { date: '2025-07-01', name: 'Republic Day' },
+          { date: '2025-12-25', name: 'Christmas Day' }
+        ];
+        var wrap = document.createElement('div');
+        wrap.className = 'holidays-list';
+        var title = document.createElement('h3'); title.textContent = 'Upcoming Holidays'; title.style.margin='0 0 8px 0'; wrap.appendChild(title);
+        holidays.slice(0,5).forEach(function(h){
+          var it = document.createElement('div'); it.className = 'holiday-item';
+          var d = document.createElement('div'); d.textContent = h.name; var dd = document.createElement('div'); dd.textContent = new Date(h.date).toLocaleDateString(); dd.style.opacity=0.8; it.appendChild(d); it.appendChild(dd); wrap.appendChild(it);
+        });
+        holidayTarget.appendChild(wrap);
+      }
+    })();
+  </script>
+
 
 
 
   <main class="dashboard-main">
+    <!-- New Admin Toolbar: Search, KPIs, Profile -->
+  <div class="admin-toolbar">
+      <div class="toolbar-left">
+        <input id="adminSearch" type="search" class="search-input" placeholder="Search students, teachers, reports..." />
+        <button id="searchBtn" class="btn">Search</button>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi">
+          <div class="kpi-label">Students</div>
+          <div id="kpiStudents" class="kpi-value">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Teachers</div>
+          <div id="kpiTeachers" class="kpi-value">—</div>
+        </div>
+        <div>
+          <div class="profile">
+            <img id="profileAvatar" src="Badge.png" alt="profile" class="profile-avatar" />
+            <div class="profile-text"><div id="profileName" class="profile-name">Admin</div><div class="profile-role">Super Admin</div></div>
+          </div>
+          <button id="announcementBtn" class="btn" title="View announcement">📢</button>
+          <button id="logoutBtn" class="logout-btn">Logout</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent activity panel -->
+    <div class="dashboard-section recent-activity-section">
+      <div class="section-header">
+        <div>
+          <h2>Recent Activity</h2>
+          <p class="section-desc">Latest actions and system events</p>
+        </div>
+      </div>
+      <div id="recentActivity" class="recent-activity-list">
+        <div class="activity-item">No recent activity</div>
+      </div>
+    </div>
     <!-- Student Breakdown Summary -->
     <section id="studentBreakdown" class="dashboard-section enhanced-section">
       <div class="section-header">
@@ -103,6 +166,51 @@
       <div id="studentBreakdownSummary"></div>
   <div id="teacherBreakdownSummary"></div>
     </section>
+    <script>
+      // Ensure overview cards open their target sections reliably
+      (function(){
+        var overview = document.getElementById('dashboardOverviewCards');
+        if (!overview) return;
+
+        function openSectionById(id){
+          if (!id) return;
+          var el = document.getElementById(id);
+          if (!el) return;
+          if (typeof showSection === 'function') return showSection(id);
+          document.querySelectorAll('.dashboard-section').forEach(function(s){ s.hidden = true; });
+          el.hidden = false;
+          try{ el.scrollIntoView({behavior:'smooth', block:'start'}); }catch(e){}
+        }
+
+        overview.addEventListener('click', function(e){
+          var card = e.target.closest('.dashboard-card');
+          if (!card) return;
+          var act = card.dataset && card.dataset.action;
+          if (!act) return;
+          var parts = act.split(':');
+          if (parts[0] === 'section') openSectionById(parts.slice(1).join(':'));
+          else if (parts[0] === 'modal') {
+            var id = parts.slice(1).join(':');
+            var m = document.getElementById(id);
+            if (m) m.classList.remove('hidden');
+          } else if (parts[0] === 'link') {
+            window.location.href = parts.slice(1).join(':');
+          }
+        });
+
+        // keyboard accessibility: Enter/Space on focused card
+        overview.addEventListener('keydown', function(e){
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          var el = document.activeElement;
+          if (!el || !el.classList || !el.classList.contains('dashboard-card')) return;
+          e.preventDefault();
+          var act = el.dataset && el.dataset.action;
+          if (!act) return;
+          var parts = act.split(':');
+          if (parts[0] === 'section') openSectionById(parts.slice(1).join(':'));
+        });
+      })();
+    </script>
     <!-- Population Chart Overview -->
     <!-- Report Card Promotion Pass Mark Modal -->
     <div id="promotionPassMarkModal" class="modal hidden">
@@ -119,130 +227,89 @@
         <button type="button" onclick="closeModal('promotionPassMarkModal')">Back to Dashboard</button>
       </div>
     </div>
-    <!-- Dashboard Overview Cards (rich content for desktop & mobile) -->
-    <div class="dashboard-cards-bg">
-      <div id="dashboardOverview" class="dashboard-overview" aria-label="Admin quick actions and overview">
-        <!-- Card: Promotion Pass Mark -->
-        <div class="dashboard-card" data-section="promotionPassMarkSection" tabindex="0" role="button" aria-pressed="false" title="Report Card Promotion Pass Mark" data-action="modal:promotionPassMarkModal">
-          <span class="dashboard-card-icon">🏆</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Report Card Promotion Pass Mark</div>
-            <div class="dashboard-card-stat" data-stat-key="promotionPassMark">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:promotionPassMarkModal">Edit</button></div>
-          </div>
+    <!-- Sidebar nav converted from cards -->
+    <aside class="sidebar" aria-label="Quick navigation">
+      <ul class="sidebar-nav">
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:dashboardOverview">🏠 <span>Overview</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="modal:promotionPassMarkModal">🏆 <span>Promotion Pass Mark</span></button></li>
+        <li><button id="announcementBtnSidebar" class="dashboard-card-action sidebar-item" data-action="modal:announcementModal">📢 <span>Announcement</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="link:promotion-exam-admin.html">🎓 <span>Promotion Exams</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="link:report.html">📈 <span>Reports</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="modal:eventsModal">📅 <span>Events</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:schoolDatesSection">📆 <span>School Dates</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:students">👨‍🎓 <span>Students</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:teachers">👩‍🏫 <span>Teachers</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:admins">🛡️ <span>Admins</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:interestConduct">⭐ <span>Interest & Conduct</span></button></li>
+        <li><button class="dashboard-card-action sidebar-item" data-action="section:interestUpdate">🔄 <span>Interest Update</span></button></li>
+      </ul>
+    </aside>
+    <!-- Dashboard (replaces Overview) -->
+    <section id="dashboardOverview" class="dashboard-section dashboard-overview-section">
+      <div class="section-header">
+        <div class="section-title-group">
+          <h2>Dashboard</h2>
+          <p class="section-desc">Key summaries and quick actions</p>
         </div>
-
-        <!-- Card: Site Announcement -->
-        <div class="dashboard-card" data-section="siteAnnouncement" tabindex="0" role="button" aria-pressed="false" title="Site Announcement" data-action="modal:announcementModal">
-          <span class="dashboard-card-icon">📢</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Site Announcement</div>
-            <div class="dashboard-card-stat" data-stat-key="siteAnnouncement">—</div>
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:announcementModal">Edit</button></div>
+        <div class="section-kpis">
+          <div class="kpi">
+            <div class="kpi-label">Students</div>
+            <div id="kpiStudentsTop" class="kpi-value">—</div>
           </div>
-        </div>
-
-        <!-- Card: Promotion Exams -->
-        <div class="dashboard-card" data-section="promotionExamAdminLink" tabindex="0" role="button" aria-pressed="false" title="Promotion Exams" data-action="link:promotion-exam-admin.html">
-          <span class="dashboard-card-icon">🎓</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Promotion Exams</div>
-            <div class="dashboard-card-stat" data-stat-key="promotionExamsCount">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="link:promotion-exam-admin.html">Open</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Reports -->
-        <div class="dashboard-card" data-section="reports" tabindex="0" role="button" aria-pressed="false" title="Reports" data-action="link:report.html">
-          <span class="dashboard-card-icon">📈</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Reports</div>
-            <div class="dashboard-card-stat" data-stat-key="reportsCount">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="link:report.html">View</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Events -->
-        <div class="dashboard-card" data-section="events" tabindex="0" role="button" aria-pressed="false" title="Events" data-action="modal:eventsModal">
-          <span class="dashboard-card-icon">📅</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Events</div>
-            <div class="dashboard-card-stat" data-stat-key="upcomingEvents">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="modal:eventsModal">Add</button></div>
-          </div>
-        </div>
-
-        <!-- Card: School Dates -->
-        <div class="dashboard-card" data-section="schoolDatesSection" tabindex="0" role="button" aria-pressed="false" title="School Dates" data-action="section:schoolDatesSection">
-          <span class="dashboard-card-icon">📆</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">School Dates</div>
-            <div class="dashboard-card-stat" data-stat-key="vacationDates">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:schoolDatesSection">Open</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Students -->
-        <div class="dashboard-card" data-section="students" tabindex="0" role="button" aria-pressed="false" title="Students" data-action="section:students">
-          <span class="dashboard-card-icon">👨‍🎓</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Students</div>
-            <div class="dashboard-card-stat" data-stat-key="studentsCount">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:students">Manage</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Teachers -->
-        <div class="dashboard-card" data-section="teachers" tabindex="0" role="button" aria-pressed="false" title="Teachers" data-action="section:teachers">
-          <span class="dashboard-card-icon">👩‍🏫</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Teachers</div>
-            <div class="dashboard-card-stat" data-stat-key="teachersCount">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:teachers">Manage</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Admins -->
-        <div class="dashboard-card" data-section="admins" tabindex="0" role="button" aria-pressed="false" title="Admins" data-action="section:admins">
-          <span class="dashboard-card-icon">🛡️</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Admins</div>
-            <div class="dashboard-card-stat" data-stat-key="adminsCount">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:admins">Manage</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Interest & Conduct -->
-        <div class="dashboard-card" data-section="interestConduct" tabindex="0" role="button" aria-pressed="false" title="Interest & Conduct" data-action="section:interestConduct">
-          <span class="dashboard-card-icon">⭐</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Interest & Conduct</div>
-            <div class="dashboard-card-stat" data-stat-key="interestRecords">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:interestConduct">Open</button></div>
-          </div>
-        </div>
-
-        <!-- Card: Interest Update -->
-        <div class="dashboard-card" data-section="interestUpdate" tabindex="0" role="button" aria-pressed="false" title="Interest Update" data-action="section:interestUpdate">
-          <span class="dashboard-card-icon">🔄</span>
-          <div class="dashboard-card-body">
-            <div class="dashboard-card-title">Interest Update</div>
-            <div class="dashboard-card-stat" data-stat-key="interestUpdates">—</div>
-            
-            <div class="dashboard-card-actions"><button class="dashboard-card-action" data-action="section:interestUpdate">Open</button></div>
+          <div class="kpi">
+            <div class="kpi-label">Teachers</div>
+            <div id="kpiTeachersTop" class="kpi-value">—</div>
           </div>
         </div>
       </div>
-    </div>
+
+      <!-- Dashboard cards grid -->
+      <div id="dashboardOverviewCards" class="dashboard-cards">
+        <div class="dashboard-card" tabindex="0" data-action="section:studentBreakdown">
+          <div class="card-icon card-icon--accent">📊</div>
+          <div class="card-body"><div class="card-title">Population</div><div class="card-desc">Students & teachers population chart</div></div>
+        </div>
+
+        <div class="dashboard-card" tabindex="0" data-action="section:studentBreakdown">
+          <div class="card-icon card-icon--gold">👥</div>
+          <div class="card-body"><div class="card-title">Gender Breakdown</div><div class="card-desc">Male / Female distribution</div></div>
+        </div>
+
+        <div class="dashboard-card" tabindex="0" data-action="modal:announcementModal">
+          <div class="card-icon card-icon--warn">📢</div>
+          <div class="card-body"><div class="card-title">Announcement</div><div class="card-desc">Create or update site announcement</div></div>
+        </div>
+
+        <div class="dashboard-card" tabindex="0" data-action="section:schoolDatesSection">
+          <div class="card-icon card-icon--calendar">📆</div>
+          <div class="card-body"><div class="card-title">Term & Calendar</div><div class="card-desc">School dates and term information</div></div>
+        </div>
+
+        <div class="dashboard-card" tabindex="0" data-action="section:reports">
+          <div class="card-icon card-icon--reports">📈</div>
+          <div class="card-body"><div class="card-title">Reports</div><div class="card-desc">View promotion & performance reports</div></div>
+        </div>
+
+        <div class="dashboard-card" tabindex="0" data-action="section:schoolDatesSection">
+          <div class="card-icon card-icon--holiday">🏖️</div>
+          <div class="card-body"><div class="card-title">Public Holidays</div><div class="card-desc">Upcoming Ghana public holidays</div></div>
+        </div>
+      </div>
+
+      <!-- Small visual previews below the cards -->
+      <div id="studentBreakdownOverview" class="dashboard-overview-preview preview-grid">
+        <div class="preview-panel">
+          <h3 class="preview-title">Population Chart</h3>
+          <canvas id="studentGenderChartOverview" class="preview-canvas"></canvas>
+        </div>
+        <div class="preview-panel">
+          <h3 class="preview-title">Class Distribution</h3>
+          <canvas id="studentClassChartOverview" class="preview-canvas"></canvas>
+        </div>
+      </div>
+
+  <div id="studentBreakdownSummaryOverview" class="preview-summary" ></div>
+    </section>
     <!-- Student Interest & Conduct Subdashboard -->
     <section id="interestConduct" class="dashboard-section">
       <h2>Student Interest & Conduct</h2>
@@ -308,9 +375,9 @@
         <p class="section-desc">Set the short announcement that appears on the homepage (keeps HTML stripped).</p>
         <form id="announcementForm">
           <label for="announcementText">Announcement (short)</label>
-          <textarea id="announcementText" name="announcement" rows="4" style="width:100%;padding:8px;border-radius:6px;border:1px solid #cbd5e1;"></textarea>
-          <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end;align-items:center;">
-            <span id="announcementStatus" style="color:var(--muted)"></span>
+          <textarea id="announcementText" name="announcement" rows="4" class="announcement-textarea"></textarea>
+          <div class="announcement-controls">
+            <span id="announcementStatus" class="announcement-status"></span>
             <button type="submit" class="btn btn-primary">Save</button>
             <button type="button" class="btn btn-ghost" onclick="closeModal('announcementModal')">Cancel</button>
           </div>
@@ -352,7 +419,7 @@
       <button onclick="importCSV()">Import CSV</button>
   <button onclick="exportStudentsCSV()">Export CSV</button>
   <div class="student-filter-row">
-  <button style="background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;margin-bottom:8px;" onclick="deleteClassStudents()">Delete All Students in Class (TEMP)</button>
+  <button class="btn-danger" onclick="deleteClassStudents()">Delete All Students in Class (TEMP)</button>
         <label for="classFilter">Class:</label>
         <select id="classFilter">
           <option value="">-- All Classes --</option>
@@ -367,7 +434,9 @@
           <option value="">-- Select Student --</option>
         </select>
       </div>
-      <table id="studentTable">
+  <div class="table-wrap">
+  <table id="studentTable" class="grid-table-4-accent-3" aria-label="Students table">
+    <caption class="sr-only">List of registered students</caption>
         <thead>
           <tr>
             <th>Picture</th>
@@ -386,6 +455,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </section>
 
     <!-- Teachers Section -->
@@ -403,7 +473,9 @@
           <option value="">-- Select Teacher --</option>
         </select>
       </div>
-      <table id="teacherTable">
+  <div class="table-wrap">
+  <table id="teacherTable" class="grid-table-4-accent-3" aria-label="Teachers table">
+    <caption class="sr-only">List of registered teachers</caption>
         <thead>
           <tr>
             <th>Name</th><th>Gender</th><th>DOB</th><th>Staff ID</th><th>NTC</th><th>Reg #</th><th>SSNIT</th><th>Ghana Card</th><th>Contact</th><th>Rank</th><th>Qualification</th><th>Classes</th><th>Subjects</th><th>PIN (hidden)</th><th>Actions</th>
@@ -411,6 +483,7 @@
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </section>
 
     <!-- Admins Section -->
@@ -423,7 +496,9 @@
         </div>
       </div>
       <button onclick="openModal('adminModal')">Add Admin</button>
-      <table id="adminTable">
+  <div class="table-wrap">
+  <table id="adminTable" class="grid-table-4-accent-3" aria-label="Admins table">
+    <caption class="sr-only">List of admin users with contact details</caption>
         <thead>
           <tr>
             <th>Name</th><th>Email</th><th>Phone</th><th>PIN (hidden)</th><th>Actions</th>
@@ -431,21 +506,12 @@
         </thead>
         <tbody></tbody>
       </table>
+      </div>
     </section>
   <!-- Toast container for in-page notifications -->
-  <div id="toastContainer" aria-live="polite" aria-atomic="true" style="position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;"></div>
+  <div id="toastContainer" aria-live="polite" aria-atomic="true" class="toast-container"></div>
 
   <script>
-    // Inject minimal toast CSS for better visuals
-    (function(){
-      const css = `
-        .app-toast { font-family: 'Segoe UI', Arial, sans-serif; font-size:0.95rem; }
-        .app-toast-info { background: #f0f9ff; color: #0b2740; }
-        .app-toast-warning { background: #fff7ed; color: #92400e; }
-        .app-toast-error { background: #fee2e2; color: #7f1d1d; }
-      `;
-      const s = document.createElement('style'); s.appendChild(document.createTextNode(css)); document.head.appendChild(s);
-    })();
     // Minimal showToast shim so alert() calls on this page render as toasts
     if (!window.showToast) {
       window._toastQueue = window._toastQueue || [];
@@ -474,7 +540,7 @@
       <h3>Register Student</h3>
   <form id="studentForm" enctype="multipart/form-data" novalidate>
         <label for="register_id">Student ID</label>
-        <input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly style="background:#f7f7fa;" />
+  <input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly class="input-readonly" />
         <input type="hidden" name="student_id" />
         <label for="student_dob">Date of Birth</label>
         <input type="date" id="student_dob" name="dob" required />
@@ -496,7 +562,7 @@
                 <option value="JHS 2">JHS 2</option>
                 <option value="JHS 3">JHS 3</option>
               </select>
-              <select name="sub_class_select" id="student_sub_class_select" style="display:none;" title="Subclass">
+          <select name="sub_class_select" id="student_sub_class_select" class="hidden-select" title="Subclass (hidden)">
                 <option value="">Select Subclass</option>
                 <option value="A">A</option>
                 <option value="B">B</option>
@@ -519,6 +585,73 @@
     </div>
   </div>
 
+  <!-- Admin Modal -->
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-content">
+      <h3>Register Admin</h3>
+      <form id="adminForm">
+        <input type="hidden" name="admin_id" />
+        <input type="text" name="full_name" placeholder="Name" required />
+        <input type="email" name="email" placeholder="Email" required />
+        <input type="tel" name="phone" placeholder="Phone" required />
+        <input type="text" name="pin" placeholder="PIN" required />
+        <div class="form-actions">
+          <button type="submit">Save</button>
+          <button type="button" onclick="closeModal('adminModal')">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <script>
+    (function(){
+      function activateAction(action) {
+        if (!action) return;
+        var parts = action.split(':');
+        var type = parts[0];
+        var target = parts.slice(1).join(':');
+        if (type === 'modal') {
+          var id = target;
+          if (typeof openModal === 'function') openModal(id);
+          else document.getElementById(id) && document.getElementById(id).classList.remove('hidden');
+        } else if (type === 'link') {
+          window.location.href = target;
+        } else if (type === 'section') {
+          var el = document.getElementById(target);
+          if (el) {
+            if (typeof showSection === 'function') showSection(target);
+            else { document.querySelectorAll('.dashboard-section').forEach(s => s.hidden = true); el.hidden = false; el.scrollIntoView({behavior:'smooth', block:'start'}); }
+          }
+        }
+      }
+
+      document.addEventListener('click', function(e){
+        var btn = e.target.closest('.dashboard-card-action');
+        if (btn && btn.dataset && btn.dataset.action) {
+          activateAction(btn.dataset.action);
+          e.stopPropagation();
+        }
+      });
+
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') {
+          var el = document.activeElement;
+          if (el && el.classList && el.classList.contains('dashboard-card')) {
+            var act = el.dataset.action;
+            if (act) { activateAction(act); e.preventDefault(); }
+          }
+        }
+      });
+
+      document.addEventListener('click', function(e){
+        var card = e.target.closest('.dashboard-card');
+        if (card && card.dataset && card.dataset.action) {
+          activateAction(card.dataset.action);
+        }
+      });
+
+    })();
+  </script>
+
   <!-- Teacher Modal -->
   <div id="teacherModal" class="modal hidden">
     <div class="modal-content">
@@ -528,7 +661,7 @@
         <div class="modal-form-grid">
           <!-- ...existing form fields... -->
   <!-- Responsibility and Class Teacher Section at the bottom -->
-  <div class="form-group full-width" style="margin-top:1.5em;">
+  <div class="form-group full-width form-margin-top">
     <label for="responsibility">Responsibility</label>
     <select name="responsibility" id="responsibility" required>
       <option value="">Select Responsibility</option>
@@ -540,16 +673,16 @@
       <option value="Other">Other</option>
     </select>
   </div>
-  <div class="form-group full-width" id="classTeacherSection" style="display:none; margin: 0.5em 0 1em 0;">
+  <div class="form-group full-width form-margin-small" id="classTeacherSection">
     <label for="main_class_select">Class Responsible For</label>
     <div class="class-select-group">
-      <select name="main_class_select" id="main_class_select" style="margin-right:0.5em;">
+  <select name="main_class_select" id="main_class_select" class="form-inline-select">
         <option value="">Select Main Class</option>
         <option value="JHS 1">JHS 1</option>
         <option value="JHS 2">JHS 2</option>
         <option value="JHS 3">JHS 3</option>
       </select>
-      <select name="sub_class_select" id="sub_class_select" style="display:none;">
+  <select name="sub_class_select" id="sub_class_select" class="hidden-select" title="Subclass (hidden)">
         <option value="">Select Subclass</option>
         <option value="A">A</option>
         <option value="B">B</option>
@@ -878,16 +1011,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderDuplicateStudentsWarning === 'function') renderDuplicateStudentsWarning();
   });
 </script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof renderStudentBreakdownSummary === 'function') renderStudentBreakdownSummary();
-  });
-</script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    if (typeof renderStudentBreakdownChart === 'function') renderStudentBreakdownChart();
-  });
-</script>
+<!-- student breakdown summary rendering is now controlled by the Overview handler -->
+<!-- student breakdown rendering is invoked when Overview is shown to ensure it appears only in Overview by default -->
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     if (typeof renderPopulationChart === 'function') renderPopulationChart();

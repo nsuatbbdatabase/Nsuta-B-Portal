@@ -132,7 +132,7 @@ async function submitProfile() {
   const conduct = document.getElementById('conduct').value.trim();
 
   if (!studentId || !term || !year || isNaN(attendanceTotal) || !interest || !conduct) {
-  try { notify('Please fill in all fields correctly.', 'warning'); } catch (e) { alert('Please fill in all fields correctly.'); }
+  try { notify('Please fill in all fields correctly.', 'warning'); } catch (e) { try { safeNotify('Please fill in all fields correctly.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
 
@@ -169,7 +169,7 @@ async function submitProfile() {
   }
 
   if (result.error) {
-  try { notify('Error saving profile: ' + result.error.message, 'error'); } catch (e) { alert('Error saving profile: ' + result.error.message); }
+  try { notify('Error saving profile: ' + result.error.message, 'error'); } catch (e) { try { safeNotify('Error saving profile: ' + result.error.message, 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
     // Extra logging for debugging
     console.error('Full Supabase error:', result.error);
     if (result.status) {
@@ -179,7 +179,7 @@ async function submitProfile() {
       console.error('Supabase response data:', result.data);
     }
   } else {
-  try { notify('Profile saved successfully.', 'info'); } catch (e) { alert('Profile saved successfully.'); }
+  try { notify('Profile saved successfully.', 'info'); } catch (e) { try { safeNotify('Profile saved successfully.', 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
     document.getElementById('term').value = '';
     document.getElementById('year').value = '';
     document.getElementById('attendanceTotal').value = '';
