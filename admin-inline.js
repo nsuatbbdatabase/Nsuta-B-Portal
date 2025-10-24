@@ -157,7 +157,7 @@
       window._toastQueue.push({ message: String(message), type, durationMs });
     };
     window._originalAlert = window.alert;
-    window.alert = function(msg) { try { window.showToast(String(msg), 'info'); } catch (e) { try { window._originalAlert(msg); } catch (ee) { console.log('alert:', msg); } } };
+    window.alert = function(msg) { try { window.showToast(String(msg), 'info'); } catch (e) { try { window._originalAlert(msg); } catch (ee) { /* alert fallback suppressed to avoid noisy logs */ } } };
   }
 
   // UI force-show helper (keeps dashboard cards visible if CSS hides them)

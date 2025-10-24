@@ -306,8 +306,7 @@ function showChangePinModal(studentId, username) {
         document.getElementById('loginError').textContent = 'Invalid role.';
         return;
       }
-      // Debug log
-      console.log('Supabase login:', { table, query });
+  // Debug log removed for production; keep error reporting below
       // Supabase client must be available globally
       if (typeof supabaseClient === 'undefined') {
         document.getElementById('loginError').textContent = 'Supabase client not found.';

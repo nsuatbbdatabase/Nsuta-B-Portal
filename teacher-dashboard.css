@@ -1666,3 +1666,48 @@ button:hover {
   .marks-toolbar { justify-content: stretch; flex-direction: column; gap: 0.45rem; }
   .marks-toolbar .small-btn { width: 100%; }
 }
+
+/* Panel action group (export/import buttons beside toggle) */
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  float: right;
+  margin-top: 4px;
+}
+.panel-actions .file-label {
+  display: inline-block;
+  margin: 0;
+}
+.hidden-file-input {
+  display: none;
+}
+
+/* Generic small row used for inline actions inside panels */
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+.row-actions--compact {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+/* Edit modal helpers */
+.edit-student-name {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.edit-note {
+  margin-top: 8px;
+}
+
+/* Generic hidden helper (used across HTML) */
+.hidden { display: none; }
+
+/* Error text helper for inline JS-inserted messages */
+.text-error { color: red; }

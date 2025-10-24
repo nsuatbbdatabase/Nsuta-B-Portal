@@ -1972,3 +1972,259 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('click', (ev) => { if (ev.target === modal) closeEditMarksModal(); });
   window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeEditMarksModal(); });
 });
+
+// ---------------- CSV Export / Import for SBA and Exams ----------------
+// Simple CSV generator and parser (handles quoted fields)
+function downloadCSV(filename, csvContent) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseCSV(text) {
+  const rows = [];
+  const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return rows;
+  const header = splitCSVLine(lines[0]).map(h => h.trim());
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line || !line.trim()) continue;
+    const cols = splitCSVLine(line);
+    const obj = {};
+    for (let j = 0; j < header.length; j++) {
+      obj[header[j]] = cols[j] !== undefined ? cols[j] : '';
+    }
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function splitCSVLine(line) {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i+1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
+      continue;
+    }
+    if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+// Export SBA marks to CSV
+async function exportSBAToCSV() {
+  const classVal = document.getElementById('classSelect')?.value;
+  const subject = document.getElementById('subjectSelect')?.value;
+  const { term, year } = getTermYear();
+  if (!classVal || !subject || !term || !year) {
+    notify('Please select class, subject, term and year to export SBA marks.', 'warning');
+    return;
+  }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Preparing SBA CSV...') : null;
+  try {
+    if (loader) loader.update(10);
+    const { data: studentsData, error: studentsErr } = await supabaseClient.from('students').select('id, first_name, surname, register_id').eq('class', classVal);
+    if (studentsErr) throw studentsErr;
+    const studentIds = (studentsData || []).map(s => s.id);
+    if (loader) loader.update(30);
+    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, individual, "group", class_test, project, class_score, exam_score').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    if (resultsErr) throw resultsErr;
+    const resultsMap = {};
+    (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
+    if (loader) loader.update(70);
+    const header = ['register_id','student_id','first_name','surname','individual','group','class_test','project','class_score','exam_score'];
+    const lines = [header.join(',')];
+    (studentsData || []).forEach(s => {
+      const r = resultsMap[s.id] || {};
+      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.individual || 0, r['group'] || 0, r.class_test || 0, r.project || 0, r.class_score || 0, r.exam_score || 0];
+      const row = cols.map(c => (typeof c === 'string' && c.includes(',')) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',');
+      lines.push(row);
+    });
+    const csv = lines.join('\n');
+    downloadCSV(`${classVal}_${subject}_SBA_${term}_${year}.csv`, csv);
+    if (loader) loader.update(100);
+  } catch (err) {
+    console.error('exportSBAToCSV error', err);
+    notify('Failed to export SBA CSV: ' + (err.message || String(err)), 'error');
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
+}
+
+// Export Exam marks to CSV
+async function exportExamsToCSV() {
+  const classVal = document.getElementById('classSelectExam')?.value;
+  const subject = document.getElementById('subjectSelectExam')?.value;
+  const term = document.getElementById('termInputExam')?.value;
+  const year = document.getElementById('yearInputExam')?.value;
+  if (!classVal || !subject || !term || !year) { notify('Please select class, subject, term and year to export exam marks.', 'warning'); return; }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Preparing Exam CSV...') : null;
+  try {
+    if (loader) loader.update(10);
+    const { data: studentsData, error: studentsErr } = await supabaseClient.from('students').select('id, first_name, surname, register_id').eq('class', classVal);
+    if (studentsErr) throw studentsErr;
+    const studentIds = (studentsData || []).map(s => s.id);
+    if (loader) loader.update(30);
+    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, exam_score').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    if (resultsErr) throw resultsErr;
+    const resultsMap = {};
+    (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
+    if (loader) loader.update(70);
+    const header = ['register_id','student_id','first_name','surname','exam_score'];
+    const lines = [header.join(',')];
+    (studentsData || []).forEach(s => {
+      const r = resultsMap[s.id] || {};
+      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.exam_score || 0];
+      const row = cols.map(c => (typeof c === 'string' && c.includes(',')) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',');
+      lines.push(row);
+    });
+    const csv = lines.join('\n');
+    downloadCSV(`${classVal}_${subject}_Exams_${term}_${year}.csv`, csv);
+    if (loader) loader.update(100);
+  } catch (err) {
+    console.error('exportExamsToCSV error', err);
+    notify('Failed to export Exam CSV: ' + (err.message || String(err)), 'error');
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
+}
+
+// Import SBA CSV (file object)
+async function importSBAFromFile(file) {
+  if (!file) return notify('No file selected.', 'warning');
+  const classVal = document.getElementById('classSelect')?.value;
+  const subject = document.getElementById('subjectSelect')?.value;
+  const { term, year } = getTermYear();
+  if (!classVal || !subject || !term || !year) {
+    notify('Please select class, subject, term and year before importing.', 'warning');
+    return;
+  }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Importing SBA CSV...') : null;
+  try {
+    if (loader) loader.update(5);
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (!rows || rows.length === 0) { notify('CSV contains no rows.', 'warning'); return; }
+    if (loader) loader.update(20);
+    const { data: studentsData } = await supabaseClient.from('students').select('id, register_id, first_name, surname').eq('class', classVal);
+    const byId = {};
+    const byReg = {};
+    (studentsData || []).forEach(s => { byId[s.id] = s; if (s.register_id) byReg[String(s.register_id).trim()] = s; });
+    const payloads = [];
+    const errors = [];
+    rows.forEach((r, idx) => {
+      const studentIdCol = r['student_id'] || r['id'] || r['studentId'] || '';
+      const regCol = r['register_id'] || r['reg'] || r['register'] || '';
+      let student = null;
+      if (studentIdCol && byId[studentIdCol]) student = byId[studentIdCol];
+      else if (regCol && byReg[String(regCol).trim()]) student = byReg[String(regCol).trim()];
+      if (!student) { errors.push(`Row ${idx+2}: student not found (student_id/register_id missing or mismatched)`); return; }
+      const getVal = keys => { for (const k of keys) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return ''; };
+      const individual = Number(getVal(['individual','ind','i'])) || 0;
+      const groupVal = Number(getVal(['group','grp','g'])) || 0;
+      const class_test = Number(getVal(['class_test','class test','ct'])) || 0;
+      const project = Number(getVal(['project','proj','p'])) || 0;
+      const total = Math.min(individual + groupVal + class_test + project, 60);
+      const class_score = Math.round((total / 60) * 50);
+      payloads.push({ student_id: student.id, subject, term, year, class_score, exam_score: 0, individual, "group": groupVal, class_test, project });
+    });
+    if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('SBA import errors:', errors); }
+    if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }
+    if (loader) loader.update(60);
+    const { error: upsertErr } = await supabaseClient.from('results').upsert(payloads, { onConflict: ['student_id','subject','term','year'] });
+    if (upsertErr) throw upsertErr;
+    if (loader) loader.update(100);
+    notify(`Imported ${payloads.length} SBA rows.`, 'info');
+    await loadStudents('sba');
+  } catch (err) {
+    console.error('importSBAFromFile error', err);
+    notify('Failed to import SBA CSV: ' + (err.message || String(err)), 'error');
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
+}
+
+// Import Exams CSV
+async function importExamsFromFile(file) {
+  if (!file) return notify('No file selected.', 'warning');
+  const classVal = document.getElementById('classSelectExam')?.value;
+  const subject = document.getElementById('subjectSelectExam')?.value;
+  const term = document.getElementById('termInputExam')?.value;
+  const year = document.getElementById('yearInputExam')?.value;
+  if (!classVal || !subject || !term || !year) { notify('Please select class, subject, term and year before importing.', 'warning'); return; }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Importing Exam CSV...') : null;
+  try {
+    if (loader) loader.update(5);
+    const text = await file.text();
+    const rows = parseCSV(text);
+    if (!rows || rows.length === 0) { notify('CSV contains no rows.', 'warning'); return; }
+    if (loader) loader.update(20);
+    const { data: studentsData } = await supabaseClient.from('students').select('id, register_id, first_name, surname').eq('class', classVal);
+    const byId = {};
+    const byReg = {};
+    (studentsData || []).forEach(s => { byId[s.id] = s; if (s.register_id) byReg[String(s.register_id).trim()] = s; });
+    const payloads = [];
+    const errors = [];
+    rows.forEach((r, idx) => {
+      const studentIdCol = r['student_id'] || r['id'] || r['studentId'] || '';
+      const regCol = r['register_id'] || r['reg'] || r['register'] || '';
+      let student = null;
+      if (studentIdCol && byId[studentIdCol]) student = byId[studentIdCol];
+      else if (regCol && byReg[String(regCol).trim()]) student = byReg[String(regCol).trim()];
+      if (!student) { errors.push(`Row ${idx+2}: student not found (student_id/register_id missing or mismatched)`); return; }
+      const exam_score = Number(r['exam_score'] || r['score'] || r['exam'] || 0) || 0;
+      payloads.push({ student_id: student.id, subject, term, year, exam_score });
+    });
+    if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('Exam import errors:', errors); }
+    if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }
+    if (loader) loader.update(60);
+    const upsertPayloads = [];
+    for (const p of payloads) {
+      const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project').eq('student_id', p.student_id).eq('subject', p.subject).eq('term', p.term).eq('year', p.year).single();
+      upsertPayloads.push({ student_id: p.student_id, subject: p.subject, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0 });
+    }
+    const { error: upsertErr } = await supabaseClient.from('results').upsert(upsertPayloads, { onConflict: ['student_id','subject','term','year'] });
+    if (upsertErr) throw upsertErr;
+    if (loader) loader.update(100);
+    notify(`Imported ${upsertPayloads.length} exam rows.`, 'info');
+    await loadStudents('exam');
+  } catch (err) {
+    console.error('importExamsFromFile error', err);
+    notify('Failed to import Exam CSV: ' + (err.message || String(err)), 'error');
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
+}
+
+// Wire file inputs and import buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const importSBAFile = document.getElementById('importSBAFile');
+  const importSBAButton = document.getElementById('importSBAButton');
+  if (importSBAFile && importSBAButton) {
+    importSBAButton.addEventListener('click', () => importSBAFile.click());
+    importSBAFile.addEventListener('change', (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (f) importSBAFromFile(f);
+      importSBAFile.value = '';
+    });
+  }
+  const importExamFile = document.getElementById('importExamFile');
+  const importExamButton = document.getElementById('importExamButton');
+  if (importExamFile && importExamButton) {
+    importExamButton.addEventListener('click', () => importExamFile.click());
+    importExamFile.addEventListener('change', (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (f) importExamsFromFile(f);
+      importExamFile.value = '';
+    });
+  }
+});
+
+// Expose functions for manual calls
+window.exportSBAToCSV = exportSBAToCSV;
+window.exportExamsToCSV = exportExamsToCSV;
+window.importSBAFromFile = importSBAFromFile;
+window.importExamsFromFile = importExamsFromFile;

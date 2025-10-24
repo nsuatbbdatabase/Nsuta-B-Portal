@@ -12,9 +12,9 @@ async function checkTestTeacher() {
     .eq('staff_id', 'TST001')
     .single();
   if (error || !data) {
-    console.log('Test teacher NOT found:', error ? error.message : 'No data');
+    // Test teacher not found (debug log removed)
   } else {
-    console.log('Test teacher FOUND:', data);
+    // Test teacher found (debug log removed)
   }
 }
 

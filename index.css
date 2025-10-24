@@ -83,5 +83,36 @@ html,body{height:100%;margin:0;font-family: 'Segoe UI', Roboto, system-ui, -appl
   .homepage-logo{width:56px;height:56px}
   .homepage-title{font-size:1.05rem}
 }
+/* Ensure layout remains usable when legacy inline sidebar/header styles exist in HTML
+   (some pages include desktop-only sidebar/header CSS inline). These overrides
+   collapse the sidebar and remove large left offsets on narrower viewports so
+   content is accessible on mobile. */
+@media (max-width:900px) {
+  .sidebar {
+    position: static !important;
+    width: 100% !important;
+    min-height: auto !important;
+    left: auto !important;
+    top: auto !important;
+    padding: 0.8rem !important;
+  }
+  .header {
+    padding-left: 0 !important;
+    position: relative !important;
+  }
+  .content {
+    margin-left: 0 !important;
+    padding: 1rem !important;
+  }
+  /* Homepage container should be full-width and stacked on mobile */
+  .homepage-container {
+    margin: 18px auto !important;
+    padding: 16px !important;
+    display: block !important;
+    gap: 12px !important;
+  }
+  /* Ensure any floated logout or similar buttons don't push content off-screen */
+  .logout-btn, #aboutMeBtn { float: none !important; display: inline-block !important; margin: 8px 0 !important; }
+}
 /* small utility */
 .center{display:flex;align-items:center;justify-content:center}
