@@ -1395,162 +1395,78 @@ async function sendAssignment() {
     notify('Please fill in all required fields.', 'warning');
     return;
   }
-  // Show loader for file upload / assignment creation
-  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Sending assignment...') : null;
+
   // Prevent sending assignment to class/subject not assigned to teacher
   const isAssigned = teacher.assignments && teacher.assignments.some(a => a.class === className && a.subject === subject);
   if (!isAssigned) {
     notify('You are not assigned to this class and subject. You cannot compose an assignment for it.', 'warning');
     return;
   }
+
+  // Show loader for file upload / assignment creation
+  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Sending assignment...') : null;
   let fileUrl = null;
-  if (file) {
-    const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-    const filePath = `teacher/${Date.now()}_${safeFileName}`;
-    const { data, error } = await supabaseClient.storage
-      .from('assignments')
-      .upload(filePath, file);
-    console.debug('Upload response:', data, error);
-    if (error) {
-      notify('File upload failed: ' + error.message, 'error');
-      return;
-    }
-    // Try to extract the file path from the response
-    let uploadedPath = null;
-    if (data) {
-      if (data.path) uploadedPath = data.path;
-      else if (data.Key) uploadedPath = data.Key;
-      else if (data.id) uploadedPath = data.id;
-      else if (typeof data === 'string') uploadedPath = data;
-  }
-  console.debug('Extracted uploadedPath:', uploadedPath);
-    if (uploadedPath) {
-      const publicUrlResult = supabaseClient.storage
-        .from('assignments')
-        .getPublicUrl(uploadedPath);
+  try {
+    if (file) {
       try {
-        console.debug('getPublicUrl result:', JSON.stringify(publicUrlResult));
-      } catch (e) {
-        console.debug('getPublicUrl result (raw):', publicUrlResult);
-      }
-      fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
-      if (!fileUrl) {
-        notify('File uploaded but public URL could not be generated.', 'error');
-        return;
-      }
-    } else {
-      notify('File uploaded but no path returned.', 'error');
-      return;
-    }
-  }
-  if (file) {
-    try {
-      if (loader) loader.update(10);
-      const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-      const filePath = `teacher/${Date.now()}_${safeFileName}`;
-      const { data, error } = await supabaseClient.storage
-        .from('assignments')
-        .upload(filePath, file);
-      console.debug('Upload response:', data, error);
-      if (error) {
-        notify('File upload failed: ' + error.message, 'error');
-        try { if (loader) loader.close(); } catch(e) {}
-        return;
-      }
-      if (loader) loader.update(60);
-      // Try to extract the file path from the response
-      let uploadedPath = null;
-      if (data) {
-        if (data.path) uploadedPath = data.path;
-        else if (data.Key) uploadedPath = data.Key;
-        else if (data.id) uploadedPath = data.id;
-        else if (typeof data === 'string') uploadedPath = data;
-      }
-      let fileUrl = null;
-      if (uploadedPath) {
-        const publicUrlResult = supabaseClient.storage
-          .from('assignments')
-          .getPublicUrl(uploadedPath);
-        try { if (loader) loader.update(80); } catch(e) {}
-        try {
-          console.debug('getPublicUrl result:', JSON.stringify(publicUrlResult));
-        } catch (e) {
-          console.debug('getPublicUrl result (raw):', publicUrlResult);
-        }
+        if (loader) loader.update(5);
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+        const filePath = `teacher/${Date.now()}_${safeFileName}`;
+        const { data, error } = await supabaseClient.storage.from('assignments').upload(filePath, file);
+        console.debug('Upload response:', data, error);
+        if (error) throw error;
+        if (loader) loader.update(50);
+
+        const uploadedPath = data && (data.path || data.Key || data.id) ? (data.path || data.Key || data.id) : (typeof data === 'string' ? data : null);
+        if (!uploadedPath) throw new Error('No storage path returned from upload');
+
+        const publicUrlResult = supabaseClient.storage.from('assignments').getPublicUrl(uploadedPath);
+        try { if (loader) loader.update(80); } catch (e) {}
         fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
-        if (!fileUrl) {
-          notify('File uploaded but public URL could not be generated.', 'error');
-          try { if (loader) loader.close(); } catch(e) {}
-          return;
-        }
-      } else {
-        notify('File uploaded but no path returned.', 'error');
-        try { if (loader) loader.close(); } catch(e) {}
+        if (!fileUrl) throw new Error('Could not generate public URL for uploaded file');
+      } catch (e) {
+        console.error('Assignment upload failed:', e);
+        notify('File upload failed: ' + (e.message || String(e)), 'error');
         return;
       }
-    } catch (e) {
-      console.error('Assignment upload failed:', e);
-      notify('File upload failed: ' + (e.message || String(e)), 'error');
-      try { if (loader) loader.close(); } catch(e) {}
+    }
+
+    const payload = {
+      teacher_id: teacher.id,
+      class: className,
+      subject,
+      term,
+      year,
+      title,
+      instructions,
+      file_url: fileUrl || null,
+      created_at: new Date().toISOString()
+    };
+
+    if (loader) try { loader.update(90); } catch (e) {}
+    const { error } = await supabaseClient.from('assignments').insert([payload]);
+    if (error) {
+      notify('Assignment submission failed: ' + (error.message || String(error)), 'error');
       return;
     }
-  if (error) {
-  const payload = {
-  } else {
+
+    if (loader) try { loader.update(100); } catch (e) {}
     notify('Assignment sent successfully.', 'info');
     try {
       document.getElementById('assignTitle').value = '';
       document.getElementById('assignText').value = '';
       document.getElementById('assignFile').value = '';
       document.getElementById('assignClass').value = '';
-    file_url: fileUrl || null
+      document.getElementById('assignSubject').value = '';
       document.getElementById('assignTerm').value = '';
-  try {
-    if (loader) loader.update(90);
-    const { error } = await supabaseClient.from('assignments').insert([payload]);
-    if (error) {
-      notify('Assignment submission failed: ' + error.message, 'error');
-    } else {
-      if (loader) loader.update(100);
-      notify('Assignment sent successfully.', 'info');
-      try {
-        document.getElementById('assignTitle').value = '';
-        document.getElementById('assignText').value = '';
-        document.getElementById('assignFile').value = '';
-        document.getElementById('assignClass').value = '';
-        document.getElementById('assignSubject').value = '';
-        document.getElementById('assignTerm').value = '';
-        document.getElementById('assignYear').value = '';
-      } catch (e) {}
-      await loadAssignments();
-      await loadStudentSubmissions();
-    }
-  } finally { try { if (loader) loader.close(); } catch(e) {} }
-  if (error || !Array.isArray(data)) {
-    tbody.innerHTML = '<tr><td colspan="8">Error loading assignments.</td></tr>';
-    return;
+      document.getElementById('assignYear').value = '';
+    } catch (e) {}
+
+    await loadAssignments();
+    await loadStudentSubmissions();
+  } finally {
+    try { if (loader) loader.close(); } catch (e) {}
   }
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8">No assignments sent yet.</td></tr>';
-    return;
-  }
-  data.forEach(item => {
-    const downloadCell = item.file_url
-      ? `<a href="${item.file_url}" target="_blank">Download</a>`
-      : '<span style="color:gray;">No file</span>';
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${item.class}</td>
-      <td>${item.subject}</td>
-      <td>${item.title}</td>
-      <td>${item.term}</td>
-      <td>${item.year}</td>
-      <td>${item.instructions}</td>
-      <td>${downloadCell}</td>
-      <td>${new Date(item.created_at).toLocaleString()}</td>
-    `;
-    tbody.appendChild(row);
-  });
 }
 
 // 📬 Load student submissions for assignments sent by this teacher
@@ -1595,6 +1511,64 @@ async function loadStudentSubmissions() {
     tbody.appendChild(row);
   });
 }
+
+// Load assignments for teacher page (safe noop if elements not present)
+async function loadAssignments() {
+  try {
+    if (!teacher || !teacher.id) return;
+    const { data, error } = await supabaseClient
+      .from('assignments')
+      .select('id, title, subject, term, year, file_url, instructions, class, created_at')
+      .eq('teacher_id', teacher.id)
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.debug('loadAssignments (teacher) query error:', error);
+      return;
+    }
+    // If this page contains an inbox-like table for assignments, populate it
+    const teacherTbl = document.getElementById('teacherAssignmentsTableBody') || document.getElementById('assignmentTableBody');
+    if (teacherTbl) {
+      teacherTbl.innerHTML = '';
+      if (!Array.isArray(data) || data.length === 0) {
+        teacherTbl.innerHTML = '<tr><td colspan="7">No assignments found.</td></tr>';
+      } else {
+        data.forEach(item => {
+          const row = document.createElement('tr');
+          const fileCell = item.file_url ? `<a href="${item.file_url}" target="_blank">Download</a>` : 'No file';
+          row.innerHTML = `
+            <td>${item.class || ''}</td>
+            <td>${item.subject || ''}</td>
+            <td>${item.title || ''}</td>
+            <td>${item.term || ''}</td>
+            <td>${item.year || ''}</td>
+            <td>${item.instructions || ''}</td>
+            <td>${fileCell}</td>
+          `;
+          teacherTbl.appendChild(row);
+        });
+      }
+    }
+    // If there's a select element (student page compatibility), populate it too
+    const sel = document.getElementById('assignmentSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">-- Select Assignment --</option>';
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = `${item.subject} - ${item.title}`;
+          sel.appendChild(opt);
+        });
+      }
+    }
+    return data;
+  } catch (err) {
+    console.debug('loadAssignments (teacher) exception:', err);
+  }
+}
+
+// Expose for other scripts (compatibility)
+window.loadAssignments = loadAssignments;
 
 // Load students for Student List tab (read-only)
 async function loadStudentList() {
