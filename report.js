@@ -153,7 +153,7 @@ async function loadReportForStudent() {
     document.getElementById("reopenDate").textContent = "—";
     return;
   }
-  console.log('DEBUG: Selected studentId:', studentId, 'studentClass:', studentClass, 'term:', term, 'year:', year);
+  console.debug('DEBUG: Selected studentId:', studentId, 'studentClass:', studentClass, 'term:', term, 'year:', year);
   // Fetch vacation and reopening dates from school_dates table
   try {
     const { data, error } = await supabaseClient
@@ -184,7 +184,7 @@ async function loadReportForStudent() {
     .eq('term', term)
     .eq('year', year);
   const { data: results, error: resultError } = await query;
-  console.log('DEBUG: Student results:', results, 'Error:', resultError);
+  console.debug('DEBUG: Student results:', results, 'Error:', resultError);
 
   if (resultError) return console.error('Failed to load results:', resultError.message);
 
@@ -278,7 +278,7 @@ async function loadReportForStudent() {
     .from('students')
     .select('id')
     .eq('class', studentClass);
-  console.log('DEBUG: studentsInClass:', studentsInClass, 'Error:', studentsError);
+  console.debug('DEBUG: studentsInClass:', studentsInClass, 'Error:', studentsError);
   let classStudentIds = Array.isArray(studentsInClass) ? studentsInClass.map(s => s.id) : [];
   // Fetch all results for these students, this term and year
   const { data: allClassResults, error: allClassError } = await supabaseClient
@@ -287,7 +287,7 @@ async function loadReportForStudent() {
     .in('student_id', classStudentIds)
     .eq('term', term)
     .eq('year', year);
-  console.log('DEBUG: allClassResults:', allClassResults, 'Error:', allClassError);
+  console.debug('DEBUG: allClassResults:', allClassResults, 'Error:', allClassError);
   if (!allClassError && Array.isArray(allClassResults)) {
     subjects.forEach(subject => {
       // Get all students' total for this subject
@@ -302,7 +302,7 @@ async function loadReportForStudent() {
       const found = sorted.findIndex(([id]) => id === studentId);
       subjectPositionsMap[subject] = found >= 0 ? (found + 1) : '—';
     });
-    console.log('DEBUG: subjectPositionsMap:', subjectPositionsMap);
+  console.debug('DEBUG: subjectPositionsMap:', subjectPositionsMap);
   }
   subjects.forEach(subject => {
     if (subject === "Career Tech") {
@@ -381,7 +381,7 @@ async function loadReportForStudent() {
       .from('students')
       .select('id')
       .eq('class', studentClass);
-    console.log('DEBUG: studentsInClass (for position):', studentsInClass2, 'Error:', studentsError2);
+  console.debug('DEBUG: studentsInClass (for position):', studentsInClass2, 'Error:', studentsError2);
     if (!studentsError2 && Array.isArray(studentsInClass2)) {
       totalInClass = studentsInClass2.length;
     }
@@ -393,7 +393,7 @@ async function loadReportForStudent() {
       .in('student_id', classStudentIds2)
       .eq('term', term)
       .eq('year', year);
-    console.log('DEBUG: classResults:', classResults, 'Error:', classError);
+  console.debug('DEBUG: classResults:', classResults, 'Error:', classError);
     if (!classError && Array.isArray(classResults)) {
       // Calculate accumulated total score for each student
       const scores = {};
@@ -406,7 +406,7 @@ async function loadReportForStudent() {
       // Find position of current student
       const found = sorted.findIndex(([id]) => id === studentId);
       position = found >= 0 ? (found + 1) : '—';
-      console.log('DEBUG: Overall position:', position, 'Sorted:', sorted);
+  console.debug('DEBUG: Overall position:', position, 'Sorted:', sorted);
     }
   }
   document.getElementById("position").textContent = position;

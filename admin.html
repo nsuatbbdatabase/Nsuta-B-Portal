@@ -526,7 +526,7 @@
       // Override native alert to use showToast
       window._originalAlert = window.alert;
       window.alert = function(msg) {
-        try { window.showToast(String(msg), 'info'); } catch (e) { try { window._originalAlert(msg); } catch (ee) { console.log('alert:', msg); } }
+  try { window.showToast(String(msg), 'info'); } catch (e) { try { window._originalAlert(msg); } catch (ee) { console.debug('alert fallback:', msg); } }
       };
     }
   </script>
@@ -1066,7 +1066,7 @@ document.addEventListener('DOMContentLoaded', function() {
               c.classList.remove('hidden');
               c.classList.add('animate-in');
             });
-            console.log('Dashboard cards force-shown by admin fix script');
+            console.debug('Dashboard cards force-shown by admin fix script');
           }
         } catch (e) { console.warn('forceShowDashboardCards error', e); }
       }

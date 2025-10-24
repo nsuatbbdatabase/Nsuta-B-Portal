@@ -1,5 +1,20 @@
 // Dashboard Overview Back Button Logic
 window.addEventListener('DOMContentLoaded', () => {
+  // Alert shim for student dashboard: use toast/prompt system when available
+  try {
+    if (!window._originalAlert) window._originalAlert = window.alert.bind(window);
+    window.alert = function(msg) {
+      try {
+        if (typeof window.showToast === 'function') return window.showToast(String(msg), 'info');
+        if (typeof window.safeNotify === 'function') return window.safeNotify(String(msg), 'info');
+        if (window._originalAlert) return window._originalAlert(String(msg));
+        console.debug('alert fallback:', msg);
+      } catch (e) {
+        try { if (window._originalAlert) return window._originalAlert(String(msg)); } catch (ee) { console.debug('alert fallback error', ee); }
+      }
+    };
+  } catch (e) { /* ignore shim errors */ }
+
   // Removed force PIN change modal logic from student dashboard. Now handled on login page only.
   // Change PIN form logic
   const changePinForm = document.getElementById('changePinForm');
@@ -292,7 +307,7 @@ function renderStudentHeader() {
 // --- Load Assignments Section ---
 async function loadAssignments() {
   if (!window.student || !window.student.class) {
-    console.log('DEBUG: No student or student class found in window.student:', window.student);
+    console.debug('DEBUG: No student or student class found in window.student:', window.student);
     return;
   }
   // Query assignments where class matches exactly the student's class (no section logic)
@@ -310,7 +325,7 @@ async function loadAssignments() {
     .from('assignments')
     .select('id, title, subject, term, year, file_url, instructions, class, teacher_id')
     .eq('class', className);
-  console.log('DEBUG: Supabase assignments query result:', { data, error, studentClass: window.student.class });
+  console.debug('DEBUG: Supabase assignments query result:', { data, error, studentClass: window.student.class });
 
   const tbody = document.getElementById('assignmentTableBody');
   const select = document.getElementById('assignmentSelect');
@@ -597,17 +612,21 @@ async function submitAssignment() {
     return;
   }
 
-  console.log('DEBUG: Submitting assignment with assignmentId:', assignmentId);
+  console.debug('DEBUG: Submitting assignment with assignmentId:', assignmentId);
   const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
   const filePath = `student/${Date.now()}_${safeFileName}`;
+  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Uploading submission...') : null;
+  if (loader) loader.update(10);
   const { data, error } = await supabaseClient.storage
-    .from('submissions')
-    .upload(filePath, file);
-  console.log('Student upload response:', data, error);
-  if (error) {
-    notify('File upload failed: ' + error.message, 'error');
-    return;
-  }
+      .from('submissions')
+      .upload(filePath, file);
+    console.debug('Student upload response:', data, error);
+    if (error) {
+      notify('File upload failed: ' + error.message, 'error');
+      try { if (loader) loader.close(); } catch(e) {}
+      return;
+    }
+    if (loader) loader.update(60);
   // Try to extract the file path from the response
   let uploadedPath = null;
   if (data) {
@@ -624,10 +643,12 @@ async function submitAssignment() {
     fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
     if (!fileUrl) {
       notify('File uploaded but public URL could not be generated.', 'error');
+      try { if (loader) loader.close(); } catch(e) {}
       return;
     }
   } else {
     notify('File uploaded but no path returned.', 'error');
+    try { if (loader) loader.close(); } catch(e) {}
     return;
   }
   const submissionPayload = {
@@ -635,11 +656,15 @@ async function submitAssignment() {
     assignment_id: assignmentId,
     file_url: fileUrl
   };
-  console.log('DEBUG: Inserting into student_submissions:', submissionPayload);
-  await supabaseClient.from('student_submissions').insert([submissionPayload]);
-  notify('Assignment submitted successfully.', 'info');
-  fileInput.value = '';
-  await loadSubmissions();
+  console.debug('DEBUG: Inserting into student_submissions:', submissionPayload);
+  try {
+    if (loader) loader.update(85);
+    await supabaseClient.from('student_submissions').insert([submissionPayload]);
+    if (loader) loader.update(100);
+    notify('Assignment submitted successfully.', 'info');
+    fileInput.value = '';
+    await loadSubmissions();
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
 }
 
 // 📬 Load motivational messages

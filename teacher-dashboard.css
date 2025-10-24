@@ -1631,3 +1631,38 @@ button:hover {
   }
   .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
 }
+
+/* Marks toolbar styles (Save All / Draft buttons) */
+.marks-toolbar {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  justify-content: flex-end;
+  margin: 0.6rem 0 0.9rem 0;
+}
+.marks-toolbar .small-btn {
+  padding: 0.45rem 0.65rem;
+  font-size: 0.95rem;
+  border-radius: 8px;
+  min-height: 36px;
+  cursor: pointer;
+  border: none;
+}
+.marks-toolbar .save-draft-btn {
+  background: var(--color-accent);
+  color: #fff;
+}
+.marks-toolbar .save-all-btn {
+  background: var(--color-accent-dark);
+  color: #fff;
+}
+.marks-toolbar .row-save-btn, .marks-toolbar .row-edit-btn {
+  padding: 0.36rem 0.5rem;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  min-width: 56px;
+}
+@media (max-width: 700px) {
+  .marks-toolbar { justify-content: stretch; flex-direction: column; gap: 0.45rem; }
+  .marks-toolbar .small-btn { width: 100%; }
+}

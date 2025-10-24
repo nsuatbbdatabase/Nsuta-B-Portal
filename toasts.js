@@ -61,6 +61,80 @@
     window.alert = function(msg) { makeToast(String(msg), 'info', 5000); };
   } catch(e) {}
   
+  // Persistent loading / progress toast. Returns an object { update(percentOrText), close() }
+  window.showLoadingToast = function(initialMessage='Working...', options = {}) {
+    const toast = document.createElement('div');
+    toast.className = 'app-toast app-toast-loading';
+    toast.style.background = '#f0f5ff';
+    toast.style.color = '#062a5a';
+    toast.style.border = '1px solid rgba(0,0,0,0.06)';
+    toast.style.padding = '0.6rem';
+    toast.style.borderRadius = '8px';
+    toast.style.boxShadow = '0 8px 24px rgba(2,24,57,0.08)';
+    toast.style.fontFamily = 'Segoe UI, Roboto, Arial, sans-serif';
+    toast.style.fontSize = '13px';
+    toast.style.minWidth = '200px';
+    toast.style.display = 'flex';
+    toast.style.flexDirection = 'column';
+    toast.style.gap = '0.45rem';
+
+    const line = document.createElement('div');
+    line.textContent = String(initialMessage);
+    const progressWrap = document.createElement('div');
+    progressWrap.style.width = '100%';
+    progressWrap.style.background = 'rgba(0,0,0,0.04)';
+    progressWrap.style.borderRadius = '6px';
+    progressWrap.style.height = '8px';
+    const progressBar = document.createElement('div');
+    progressBar.style.width = '0%';
+    progressBar.style.height = '100%';
+    progressBar.style.background = options.color || '#0b66b2';
+    progressBar.style.borderRadius = '6px';
+    progressBar.style.transition = 'width 220ms linear';
+    progressWrap.appendChild(progressBar);
+
+    const footer = document.createElement('div');
+    footer.style.display = 'flex';
+    footer.style.justifyContent = 'space-between';
+    footer.style.alignItems = 'center';
+
+    const pct = document.createElement('div');
+    pct.textContent = '0%';
+    pct.style.fontSize = '12px';
+    pct.style.opacity = '0.85';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = '×';
+    closeBtn.style.border = 'none';
+    closeBtn.style.background = 'transparent';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.style.fontSize = '16px';
+
+    footer.appendChild(pct);
+    footer.appendChild(closeBtn);
+
+    toast.appendChild(line);
+    toast.appendChild(progressWrap);
+    toast.appendChild(footer);
+    container.appendChild(toast);
+
+    function update(v) {
+      if (typeof v === 'number') {
+        const clamped = Math.max(0, Math.min(100, Math.round(v)));
+        progressBar.style.width = clamped + '%';
+        pct.textContent = clamped + '%';
+      } else if (typeof v === 'string') {
+        line.textContent = v;
+      }
+    }
+    function close() {
+      try { container.removeChild(toast); } catch (e) {}
+    }
+    closeBtn.addEventListener('click', () => close());
+    return { update, close };
+  };
+  
   // Accessible, promise-based confirmation modal.
   // Usage: const ok = await window.showConfirm('Are you sure?', { title: 'Confirm delete' });
   window.showConfirm = function(message, options = {}) {
@@ -208,6 +282,6 @@
     } catch (e) {}
     try { if (window._originalAlert) return window._originalAlert(String(message)); } catch (e) {}
     // last resort
-    try { alert(String(message)); } catch (e) { console.log('Notification:', message); }
+    try { alert(String(message)); } catch (e) { console.debug('Notification fallback:', message); }
   };
 })();

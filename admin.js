@@ -1079,7 +1079,7 @@ async function deleteEvent(eventId) {
   } catch (e) { return; }
   const { error } = await supabaseClient.from('events').delete().eq('id', eventId);
   if (error) {
-  try { notify('Failed to delete event', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to delete event', 'error'); else if (window._originalAlert) window._originalAlert('Failed to delete event'); else console.log('Failed to delete event'); } catch(err){ console.log('Failed to delete event'); } }
+  try { notify('Failed to delete event', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to delete event', 'error'); else if (window._originalAlert) window._originalAlert('Failed to delete event'); else console.debug('Failed to delete event'); } catch(err){ console.debug('Failed to delete event'); } }
     return;
   }
   fetchAndRenderEvents();
@@ -1094,7 +1094,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 async function fetchAndRenderStudents() {
   const { data, error } = await supabaseClient.from('students').select('*');
   if (error) {
-  try { notify('Failed to fetch students', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to fetch students', 'error'); else if (window._originalAlert) window._originalAlert('Failed to fetch students'); else console.log('Failed to fetch students'); } catch(err){ console.log('Failed to fetch students'); } }
+  try { notify('Failed to fetch students', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to fetch students', 'error'); else if (window._originalAlert) window._originalAlert('Failed to fetch students'); else console.debug('Failed to fetch students'); } catch(err){ console.debug('Failed to fetch students'); } }
     return;
   }
   // Sort students by register_id (natural order: class, then number)

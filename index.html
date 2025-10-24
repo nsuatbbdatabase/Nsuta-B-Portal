@@ -254,8 +254,8 @@
           demo.innerHTML = `<div><h4>Notifications</h4><p style="margin:6px 0 8px 0;color:var(--muted);font-size:0.9rem">Test UI notifications</p>
             <div style="display:flex;gap:8px"><button class="btn btn-primary" id="toastInfo">Info</button><button class="btn btn-ghost" id="toastWarn">Warn</button></div></div>`;
           demoContainer.appendChild(demo);
-          document.getElementById('toastInfo').addEventListener('click', ()=> { try { notify('This is an info toast', 'info'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Info', 'info'); else if (window.showToast) window.showToast('Info', 'info'); else if (window._originalAlert) window._originalAlert('Info'); else console.log('Info'); } catch(err){ console.log('Info'); } } });
-          document.getElementById('toastWarn').addEventListener('click', ()=> { try { notify('This is a warning', 'warning'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Warn', 'warning'); else if (window.showToast) window.showToast('Warn', 'warning'); else if (window._originalAlert) window._originalAlert('Warn'); else console.log('Warn'); } catch(err){ console.log('Warn'); } } });
+          document.getElementById('toastInfo').addEventListener('click', ()=> { try { notify('This is an info toast', 'info'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Info', 'info'); else if (window.showToast) window.showToast('Info', 'info'); else if (window._originalAlert) window._originalAlert('Info'); else console.debug('Info'); } catch(err){ console.debug('Info'); } } });
+          document.getElementById('toastWarn').addEventListener('click', ()=> { try { notify('This is a warning', 'warning'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Warn', 'warning'); else if (window.showToast) window.showToast('Warn', 'warning'); else if (window._originalAlert) window._originalAlert('Warn'); else console.debug('Warn'); } catch(err){ console.debug('Warn'); } } });
         }
       });
     </script>
@@ -614,10 +614,10 @@
           }
           const status = document.getElementById('inlineLoginStatus');
           const remember = document.getElementById('rememberMe').checked;
-          if (!username || !pin) { try { notify('Please enter your credentials.', 'warning'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Please enter your credentials.', 'warning'); else if (window.showToast) window.showToast('Please enter your credentials.', 'warning'); else if (window._originalAlert) window._originalAlert('Please enter your credentials.'); else console.log('Please enter your credentials.'); } catch(err){ console.log('Please enter your credentials.'); } } return; }
+          if (!username || !pin) { try { notify('Please enter your credentials.', 'warning'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Please enter your credentials.', 'warning'); else if (window.showToast) window.showToast('Please enter your credentials.', 'warning'); else if (window._originalAlert) window._originalAlert('Please enter your credentials.'); else console.debug('Please enter your credentials.'); } catch(err){ console.debug('Please enter your credentials.'); } } return; }
           if (!supabaseClient) {
             // Show a helpful inline banner with retry and contact info instead of a generic toast
-            try { showSupabaseUnavailable(); } catch(e){ try { notify('Supabase client unavailable', 'error'); } catch(n){ try { if (window.safeNotify) window.safeNotify('Supabase client unavailable', 'error'); else if (window.showToast) window.showToast('Supabase client unavailable', 'error'); else if (window._originalAlert) window._originalAlert('Supabase client unavailable'); else console.log('Supabase client unavailable'); } catch(err){ console.log('Supabase client unavailable'); } } }
+            try { showSupabaseUnavailable(); } catch(e){ try { notify('Supabase client unavailable', 'error'); } catch(n){ try { if (window.safeNotify) window.safeNotify('Supabase client unavailable', 'error'); else if (window.showToast) window.showToast('Supabase client unavailable', 'error'); else if (window._originalAlert) window._originalAlert('Supabase client unavailable'); else console.debug('Supabase client unavailable'); } catch(err){ console.debug('Supabase client unavailable'); } } }
             return;
           }
           status.textContent = 'Signing in...';
@@ -663,11 +663,11 @@
               // Distinguish not found vs wrong password where possible
               const msg = (error && error.message) ? error.message : 'No matching account found.';
               if (/no rows|not found|empty/i.test(msg)) {
-                try { notify('Account not found. Please check your username.', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Account not found.', 'error'); else if (window.showToast) window.showToast('Account not found.', 'error'); else if (window._originalAlert) window._originalAlert('Account not found.'); else console.log('Account not found.'); } catch(err){ console.log('Account not found.'); } }
+                try { notify('Account not found. Please check your username.', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Account not found.', 'error'); else if (window.showToast) window.showToast('Account not found.', 'error'); else if (window._originalAlert) window._originalAlert('Account not found.'); else console.debug('Account not found.'); } catch(err){ console.debug('Account not found.'); } }
               } else if (/password|pin|credentials|invalid/i.test(msg)) {
-                try { notify('Wrong credentials. Please check PIN/Password.', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Wrong credentials.', 'error'); else if (window.showToast) window.showToast('Wrong credentials.', 'error'); else if (window._originalAlert) window._originalAlert('Wrong credentials.'); else console.log('Wrong credentials.'); } catch(err){ console.log('Wrong credentials.'); } }
+                try { notify('Wrong credentials. Please check PIN/Password.', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Wrong credentials.', 'error'); else if (window.showToast) window.showToast('Wrong credentials.', 'error'); else if (window._originalAlert) window._originalAlert('Wrong credentials.'); else console.debug('Wrong credentials.'); } catch(err){ console.debug('Wrong credentials.'); } }
               } else {
-                try { notify('Login failed. ' + msg, 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Login failed.', 'error'); else if (window.showToast) window.showToast('Login failed.', 'error'); else if (window._originalAlert) window._originalAlert('Login failed.'); else console.log('Login failed.'); } catch(err){ console.log('Login failed.'); } }
+                try { notify('Login failed. ' + msg, 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Login failed.', 'error'); else if (window.showToast) window.showToast('Login failed.', 'error'); else if (window._originalAlert) window._originalAlert('Login failed.'); else console.debug('Login failed.'); } catch(err){ console.debug('Login failed.'); } }
               }
               status.textContent = '';
               submitBtn.disabled = false; submitBtn.removeAttribute('aria-disabled');
@@ -695,7 +695,7 @@
             }
           } catch (err) {
             console.error('Inline login error:', err);
-            try { notify('Unexpected error during login.', 'error'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Unexpected error', 'error'); else if (window.showToast) window.showToast('Unexpected error', 'error'); else if (window._originalAlert) window._originalAlert('Unexpected error'); else console.log('Unexpected error'); } catch(err){ console.log('Unexpected error'); } }
+            try { notify('Unexpected error during login.', 'error'); } catch(e){ try { if (window.safeNotify) window.safeNotify('Unexpected error', 'error'); else if (window.showToast) window.showToast('Unexpected error', 'error'); else if (window._originalAlert) window._originalAlert('Unexpected error'); else console.debug('Unexpected error'); } catch(err){ console.debug('Unexpected error'); } }
             status.textContent = '';
             const submitBtn = form.querySelector('button[type="submit"]');
             submitBtn.disabled = false; submitBtn.removeAttribute('aria-disabled');

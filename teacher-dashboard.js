@@ -6,14 +6,30 @@ function logout() {
   window.location.href = 'index.html';
 }
 
+// Alert shim: prefer in-page toast/dialog when available, keep original as fallback
+try {
+  if (!window._originalAlert) window._originalAlert = window.alert.bind(window);
+  window.alert = function(msg) {
+    try {
+      if (typeof window.showToast === 'function') return window.showToast(String(msg), 'info');
+      if (typeof window.safeNotify === 'function') return window.safeNotify(String(msg), 'info');
+      if (window._originalAlert) return window._originalAlert(String(msg));
+      // last resort
+      console.debug('alert fallback:', msg);
+    } catch (e) {
+      try { if (window._originalAlert) return window._originalAlert(String(msg)); } catch (ee) { console.debug('alert fallback error', ee); }
+    }
+  };
+} catch (e) { /* ignore shim errors */ }
+
 // Notification helper: prefer in-page toast if available
 const notify = (msg, type='info') => {
   try {
     if (window.showToast) return window.showToast(msg, type);
     if (window.safeNotify) return window.safeNotify(msg, type);
     if (window._originalAlert) return window._originalAlert(String(msg));
-    console.log('Notify:', msg);
-  } catch (e) { console.log('Notify fallback:', msg); }
+    console.debug('Notify fallback (no toast available):', msg);
+  } catch (e) { console.debug('Notify exception fallback:', msg); }
 };
 
 window.addEventListener('DOMContentLoaded', function() {
@@ -92,7 +108,7 @@ function setupAttendanceSection() {
 async function loadAttendanceStudents() {
   let classVal = document.getElementById('attendanceClassSelect').value;
   classVal = classVal ? classVal.trim() : '';
-  console.log('[Attendance] Normalized class value:', classVal);
+  console.debug('[Attendance] Normalized class value:', classVal);
   const tbody = document.getElementById('attendanceTableBody');
   tbody.innerHTML = '';
   if (!classVal) return;
@@ -176,10 +192,13 @@ async function submitAttendance() {
     return;
   }
   // Upsert attendance records (one per student per date). Use onConflict to avoid duplicates.
-  const { error } = await supabaseClient
-    .from('attendance')
-    .upsert(records, { onConflict: ['student_id', 'date'] });
-  if (error) {
+  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting attendance...') : null;
+  try {
+    if (loader) loader.update(8);
+    const { error } = await supabaseClient
+      .from('attendance')
+      .upsert(records, { onConflict: ['student_id', 'date'] });
+    if (error) {
     // Detect commonly encountered schema-cache / missing column error and show actionable guidance
     const msg = error && error.message ? error.message : String(error);
     if (/present/i.test(msg) && /schema cache|could not find/i.test(msg.toLowerCase())) {
@@ -195,9 +214,11 @@ async function submitAttendance() {
     } else {
       notify('Failed to submit attendance: ' + msg, 'error');
     }
-  } else {
-    notify('Attendance submitted successfully!', 'info');
-  }
+    } else {
+      if (loader) loader.update(20);
+      notify('Attendance submitted successfully!', 'info');
+    }
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
   // After attendance is saved, recompute attendance totals per student for this term and upsert into profiles
   try {
     const studentIds = [...new Set(records.map(r => r.student_id))];
@@ -212,7 +233,7 @@ async function submitAttendance() {
       if (!sdErr && sd && sd.length) attendanceActual = sd[0].attendance_total_days || null;
     } catch (e) { attendanceActual = null; }
 
-    for (const sid of studentIds) {
+  for (const [i, sid] of studentIds.entries()) {
       // Count present days for this student in the selected term
       const { countData, countError } = await supabaseClient
         .from('attendance')
@@ -246,6 +267,7 @@ async function submitAttendance() {
         // Insert minimal profile row so the UI can display attendance_total (year omitted)
         await supabaseClient.from('profiles').insert([payload]);
       }
+      try { if (typeof window.showLoadingToast === 'function') { /* update visual progress if loader still exists */ if (loader) loader.update(20 + Math.round(((i+1)/studentIds.length) * 70)); } } catch(e) {}
     }
     // Notify other open pages (interest/conduct, etc.) that attendance changed so they can refresh
     try {
@@ -749,22 +771,28 @@ async function submitPromotionExam() {
     notify('No students to mark.', 'warning');
     return;
   }
+  let loader = null;
   try {
+    loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting promotion exam marks...') : null;
+    if (loader) loader.update(10);
     const { error, data } = await supabaseClient
       .from('promotion_exams')
       .upsert(records, { onConflict: ['student_id', 'class', 'subject', 'term', 'year'] });
-      if (error) {
+    if (error) {
       console.error('Promotion exam upsert error:', error);
       notify('Failed to submit promotion exam: ' + (error.message || JSON.stringify(error)), 'error');
     } else {
+      if (loader) loader.update(100);
       notify('Promotion exam submitted to admin!', 'info');
       document.getElementById('promotionExamTableBody').innerHTML = '';
       // Optionally reload students to repopulate form with latest marks
       loadPromotionExamStudents();
     }
-    } catch (err) {
+  } catch (err) {
     console.error('Promotion exam upsert exception:', err);
     notify('Unexpected error: ' + err.message, 'error');
+  } finally {
+    try { if (loader) loader.close(); } catch(e) {}
   }
 }
 
@@ -873,18 +901,24 @@ async function loadStudents(section = 'sba') {
     const { term, year } = getTermYear();
     if (selectedSubject && term && year) {
       try {
+        // Fetch component-level SBA fields when available so we can edit them later
         const result = await supabaseClient
           .from('results')
-          .select('student_id, class_score')
+          .select('student_id, class_score, individual, "group", class_test, project')
           .eq('subject', selectedSubject)
           .eq('term', term)
           .eq('year', year);
         const marksData = result.data;
         if (Array.isArray(marksData)) {
           marksData.forEach(m => {
-            if (m.class_score !== undefined && m.class_score !== null) {
-              marksMap[m.student_id] = m.class_score;
-            }
+            // Normalize into an object with both scaled and component fields
+            marksMap[m.student_id] = {
+              class_score: (typeof m.class_score === 'number') ? m.class_score : null,
+              individual: (typeof m.individual === 'number') ? m.individual : null,
+              group: (typeof m["group"] === 'number') ? m["group"] : null,
+              class_test: (typeof m.class_test === 'number') ? m.class_test : null,
+              project: (typeof m.project === 'number') ? m.project : null
+            };
           });
         }
       } catch (err) {
@@ -928,7 +962,11 @@ function renderExamForm(examMarksMap = {}) {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td><input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" value="${examPrefill}" /></td>
+      <td style="display:flex;align-items:center;gap:8px">
+        <input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" value="${examPrefill}" style="width:80px" />
+        <button class="mark-save-btn" data-id="${student.id}" type="button">Save</button>
+        <button class="mark-edit-btn hidden" data-id="${student.id}" type="button">Edit</button>
+      </td>
       <td><span id="examScaled-${student.id}">${scaledPrefill}</span></td>
     `;
     tbody.appendChild(row);
@@ -940,6 +978,73 @@ function renderExamForm(examMarksMap = {}) {
       document.getElementById(`examScaled-${input.dataset.id}`).textContent = scaled;
     });
   });
+
+  // Wire per-row save/edit buttons and local draft storage
+  function getDraftKeyForExam() {
+    const classVal = document.getElementById('classSelectExam')?.value || '';
+    const subject = document.getElementById('subjectSelectExam')?.value || '';
+    const term = document.getElementById('termInputExam')?.value || '';
+    const year = document.getElementById('yearInputExam')?.value || '';
+    return `drafts:exam:${classVal}:${subject}:${term}:${year}`;
+  }
+  function loadDrafts(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
+  }
+  function saveDrafts(key, obj) {
+    try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
+  }
+  const draftKeyExam = getDraftKeyForExam();
+  const examDrafts = loadDrafts(draftKeyExam);
+  document.querySelectorAll('#examTableBody .mark-save-btn').forEach(btn => {
+    const id = btn.dataset.id;
+    const editBtn = document.querySelector(`#examTableBody .mark-edit-btn[data-id="${id}"]`);
+    if (examDrafts && examDrafts[id] !== undefined) {
+      btn.textContent = 'Saved';
+      btn.disabled = true;
+      if (editBtn) editBtn.classList.remove('hidden');
+    }
+    btn.addEventListener('click', () => {
+      const input = document.querySelector(`#examTableBody input[data-id="${id}"]`);
+      const value = parseInt(input.value) || 0;
+      examDrafts[id] = value;
+      saveDrafts(draftKeyExam, examDrafts);
+      btn.textContent = 'Saved';
+      btn.disabled = true;
+      if (editBtn) editBtn.classList.remove('hidden');
+    });
+    if (editBtn) {
+      // Open edit modal so teacher can edit even after submit
+      editBtn.addEventListener('click', () => {
+        openEditMarksModal(id, 'exam');
+      });
+    }
+  });
+
+  // Global Save All for exam section
+  const examToolbar = document.getElementById('examToolbar');
+  if (examToolbar) {
+    let saveAllBtn = examToolbar.querySelector('.save-all-exam-btn');
+    if (!saveAllBtn) {
+      saveAllBtn = document.createElement('button');
+      saveAllBtn.type = 'button';
+      saveAllBtn.className = 'save-all-exam-btn';
+      saveAllBtn.textContent = 'Save All (Draft)';
+      examToolbar.appendChild(saveAllBtn);
+    }
+    saveAllBtn.onclick = () => {
+      // Save all visible inputs to drafts
+      const inputs = document.querySelectorAll('#examTableBody input[data-type="exam"]');
+      inputs.forEach(inp => {
+        const id = inp.dataset.id;
+        const v = parseInt(inp.value) || 0;
+        examDrafts[id] = v;
+      });
+      saveDrafts(draftKeyExam, examDrafts);
+      notify('All marks saved locally as draft.', 'info');
+      // refresh buttons
+      document.querySelectorAll('#examTableBody .mark-save-btn').forEach(b => { b.textContent = 'Saved'; b.disabled = true; const eb = document.querySelector(`#examTableBody .mark-edit-btn[data-id="${b.dataset.id}"]`); if (eb) eb.classList.remove('hidden'); });
+    };
+  }
 }
 
 // 🧮 Calculate SBA scaled score
@@ -995,54 +1100,107 @@ async function submitSBA() {
     return;
   }
     const classVal = document.getElementById('classSelect').value;
+  // Check for local drafts and prefer them if present
+  const draftKey = `drafts:sba:${document.getElementById('classSelect')?.value || ''}:${document.getElementById('subjectSelect')?.value || ''}:${term}:${year}`;
+  let drafts = {};
+  try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
-  for (const student of students) {
-    const scaled = parseInt(document.getElementById(`scaled-${student.id}`).textContent);
-    if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-  notify(`Invalid SBA score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`, 'warning');
-      continue;
+  // If drafts exist, use their component breakdown to build submissions; otherwise read component inputs from DOM where possible
+  if (drafts && Object.keys(drafts).length > 0) {
+    for (const student of students) {
+      const d = drafts[student.id];
+      if (!d) continue;
+      const total = Math.min((d.individual||0) + (d.group||0) + (d.classTest||0) + (d.project||0), 60);
+      const scaled = Math.round((total / 60) * 50);
+      const rec = {
+        student_id: student.id,
+        subject,
+        term,
+        year,
+        class_score: scaled,
+        exam_score: 0,
+        individual: Number(d.individual || 0),
+        "group": Number(d.group || 0),
+        class_test: Number(d.classTest || 0),
+        project: Number(d.project || 0)
+      };
+      submissions.push(rec);
     }
-    // Fetch existing exam score for this student/subject/term/year
-    let exam_score = 0;
-    try {
-      const { data: existing } = await supabaseClient
-        .from('results')
-        .select('exam_score')
-        .eq('student_id', student.id)
-        .eq('subject', subject)
-        .eq('term', term)
-        .eq('year', year)
-        .single();
-      if (existing && typeof existing.exam_score === 'number') {
-        exam_score = existing.exam_score;
+  } else {
+    for (const student of students) {
+      // Try to read component inputs; fall back to scaled display if components not present
+      const indEl = document.querySelector(`#sbaTableBody input[data-id="${student.id}"][data-type="individual"]`);
+      const grpEl = document.querySelector(`#sbaTableBody input[data-id="${student.id}"][data-type="group"]`);
+      const ctEl = document.querySelector(`#sbaTableBody input[data-id="${student.id}"][data-type="classTest"]`);
+      const projEl = document.querySelector(`#sbaTableBody input[data-id="${student.id}"][data-type="project"]`);
+      let individual = indEl ? (parseInt(indEl.value, 10) || 0) : null;
+      let groupVal = grpEl ? (parseInt(grpEl.value, 10) || 0) : null;
+      let classTest = ctEl ? (parseInt(ctEl.value, 10) || 0) : null;
+      let project = projEl ? (parseInt(projEl.value, 10) || 0) : null;
+      // If component inputs are available, compute total and scaled
+      let scaled = null;
+      if (individual !== null && groupVal !== null && classTest !== null && project !== null) {
+        const total = Math.min(individual + groupVal + classTest + project, 60);
+        scaled = Math.round((total / 60) * 50);
+      } else {
+        // fall back to previously computed scaled value in DOM
+        scaled = parseInt(document.getElementById(`scaled-${student.id}`).textContent) || 0;
       }
-    } catch (e) {}
-    submissions.push({
-      student_id: student.id,
-      subject,
-      term,
-      year,
-      class_score: scaled,
-      exam_score
-    });
+      if (isNaN(scaled) || scaled < 0 || scaled > 50) {
+        notify(`Invalid SBA score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`, 'warning');
+        continue;
+      }
+      // Fetch existing exam score for this student/subject/term/year
+      let exam_score = 0;
+      try {
+        const { data: existing } = await supabaseClient
+          .from('results')
+          .select('exam_score')
+          .eq('student_id', student.id)
+          .eq('subject', subject)
+          .eq('term', term)
+          .eq('year', year)
+          .single();
+        if (existing && typeof existing.exam_score === 'number') exam_score = existing.exam_score;
+      } catch (e) {}
+      const rec = {
+        student_id: student.id,
+        subject,
+        term,
+        year,
+        class_score: scaled,
+        exam_score,
+        individual: Number(individual || 0),
+        "group": Number(groupVal || 0),
+        class_test: Number(classTest || 0),
+        project: Number(project || 0)
+      };
+      submissions.push(rec);
+    }
   }
   if (submissions.length === 0) {
   notify('No valid SBA scores to submit.', 'warning');
     return;
   }
-  const { data, error } = await supabaseClient
-    .from('results')
-    .upsert(submissions, {
-      onConflict: ['student_id', 'subject', 'term', 'year']
-    })
-    .select();
-  if (error) {
-    console.error('SBA upsert error:', error.message);
-  notify('Failed to submit SBA scores.', 'error');
-  } else {
-    console.log('SBA upserted:', data);
-  notify('SBA scores submitted successfully.', 'info');
-  }
+  if (submissions.length === 0) { notify('No valid SBA scores to submit.', 'warning'); return; }
+  // Show progress using loading toast and submit sequentially to give progressive feedback
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting SBA marks...') : null;
+  try {
+    for (let i = 0; i < submissions.length; i++) {
+      const rec = submissions[i];
+      if (loader) loader.update(Math.round((i / submissions.length) * 100));
+      // Upsert including component breakdown columns when present
+      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: ['student_id', 'subject', 'term', 'year'] });
+      if (error) throw error;
+    }
+    if (loader) loader.update(100);
+    // Clear drafts after successful submit
+    try { localStorage.removeItem(draftKey); } catch (e) {}
+    notify('SBA scores submitted successfully.', 'info');
+  } catch (err) {
+    console.error('SBA upsert error:', err);
+    notify('Failed to submit SBA scores: ' + (err.message || String(err)), 'error');
+  } finally { if (loader) loader.close(); }
 }
 
 // 🧪 Render Exam form
@@ -1056,28 +1214,95 @@ function renderSBAForm(marksMap = {}) {
     return;
   }
   students.forEach(student => {
-    // Pre-fill all SBA components if available
+    // Pre-fill all SBA components if available (prefer draft -> DB components -> scaled)
     let individual = 0, group = 0, classTest = 0, project = 0, scaledPrefill = 0, totalPrefill = 0;
-    if (typeof marksMap[student.id] === 'number') {
-      // Only class_score available
-      scaledPrefill = marksMap[student.id];
-      totalPrefill = Math.round((scaledPrefill / 50) * 60);
+    const mm = marksMap[student.id];
+    if (mm && typeof mm === 'object') {
+      if (mm.individual !== null && mm.individual !== undefined) individual = mm.individual;
+      if (mm.group !== null && mm.group !== undefined) group = mm.group;
+      if (mm.class_test !== null && mm.class_test !== undefined) classTest = mm.class_test;
+      if (mm.project !== null && mm.project !== undefined) project = mm.project;
+      if (mm.class_score !== null && mm.class_score !== undefined) {
+        scaledPrefill = mm.class_score;
+        totalPrefill = Math.round((scaledPrefill / 50) * 60);
+      } else if (individual || group || classTest || project) {
+        const totalComputed = Math.min(individual + group + classTest + project, 60);
+        totalPrefill = totalComputed;
+        scaledPrefill = Math.round((totalComputed / 60) * 50);
+      }
     }
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" value="${individual}" /></td>
-      <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" value="${group}" /></td>
-      <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" value="${classTest}" /></td>
-      <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" value="${project}" /></td>
+  <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" value="${individual}" class="sba-component" /></td>
+  <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" value="${group}" class="sba-component" /></td>
+  <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" value="${classTest}" class="sba-component" /></td>
+  <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" value="${project}" class="sba-component" /></td>
       <td><span id="total-${student.id}">${totalPrefill}</span></td>
       <td><span id="scaled-${student.id}">${scaledPrefill}</span></td>
+      <td style="display:flex;gap:6px"><button class="sba-save-btn" data-id="${student.id}" type="button">Save</button><button class="sba-edit-btn hidden" data-id="${student.id}" type="button">Edit</button></td>
     `;
     tbody.appendChild(row);
   });
-  document.querySelectorAll('#sbaTableBody input').forEach(input => {
+  document.querySelectorAll('#sbaTableBody input.sba-component').forEach(input => {
     input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
   });
+
+  // SBA draft storage and per-row save/edit wiring
+  function getDraftKeyForSBA() {
+    const classVal = document.getElementById('classSelect')?.value || '';
+    const subject = document.getElementById('subjectSelect')?.value || '';
+    const { term, year } = getTermYear();
+    return `drafts:sba:${classVal}:${subject}:${term}:${year}`;
+  }
+  const draftKeySBA = getDraftKeyForSBA();
+  function loadDraftsSBA() { try { return JSON.parse(localStorage.getItem(draftKeySBA) || '{}'); } catch (e) { return {}; } }
+  function saveDraftsSBA(obj) { try { localStorage.setItem(draftKeySBA, JSON.stringify(obj)); } catch (e) {} }
+  const sbaDrafts = loadDraftsSBA();
+  document.querySelectorAll('#sbaTableBody .sba-save-btn').forEach(btn => {
+    const id = btn.dataset.id;
+    const editBtn = document.querySelector(`#sbaTableBody .sba-edit-btn[data-id="${id}"]`);
+    if (sbaDrafts && sbaDrafts[id]) {
+      btn.textContent = 'Saved'; btn.disabled = true; if (editBtn) editBtn.classList.remove('hidden');
+    }
+    btn.addEventListener('click', () => {
+      // collect inputs for this student
+      const individual = parseInt(document.querySelector(`#sbaTableBody input[data-id="${id}"][data-type="individual"]`).value) || 0;
+      const group = parseInt(document.querySelector(`#sbaTableBody input[data-id="${id}"][data-type="group"]`).value) || 0;
+      const classTest = parseInt(document.querySelector(`#sbaTableBody input[data-id="${id}"][data-type="classTest"]`).value) || 0;
+      const project = parseInt(document.querySelector(`#sbaTableBody input[data-id="${id}"][data-type="project"]`).value) || 0;
+      sbaDrafts[id] = { individual, group, classTest, project };
+      saveDraftsSBA(sbaDrafts);
+      btn.textContent = 'Saved'; btn.disabled = true; if (editBtn) editBtn.classList.remove('hidden');
+    });
+    if (editBtn) editBtn.addEventListener('click', () => {
+      openEditMarksModal(id, 'sba');
+    });
+  });
+
+  // SBA Save All
+  const sbaToolbar = document.getElementById('sbaToolbar');
+  if (sbaToolbar) {
+    let sbaSaveAll = sbaToolbar.querySelector('.save-all-sba-btn');
+    if (!sbaSaveAll) {
+      sbaSaveAll = document.createElement('button'); sbaSaveAll.type = 'button'; sbaSaveAll.className = 'save-all-sba-btn'; sbaSaveAll.textContent = 'Save All (Draft)'; sbaToolbar.appendChild(sbaSaveAll);
+    }
+    sbaSaveAll.onclick = () => {
+      const rows = document.querySelectorAll('#sbaTableBody tr');
+      rows.forEach(row => {
+        const id = row.querySelector('input.sba-component')?.dataset.id;
+        if (!id) return;
+        const individual = parseInt(row.querySelector(`input[data-id="${id}"][data-type="individual"]`).value) || 0;
+        const group = parseInt(row.querySelector(`input[data-id="${id}"][data-type="group"]`).value) || 0;
+        const classTest = parseInt(row.querySelector(`input[data-id="${id}"][data-type="classTest"]`).value) || 0;
+        const project = parseInt(row.querySelector(`input[data-id="${id}"][data-type="project"]`).value) || 0;
+        sbaDrafts[id] = { individual, group, classTest, project };
+      });
+      saveDraftsSBA(sbaDrafts);
+      notify('All SBA marks saved locally as draft.', 'info');
+      document.querySelectorAll('#sbaTableBody .sba-save-btn').forEach(b => { b.textContent = 'Saved'; b.disabled = true; const eb = document.querySelector(`#sbaTableBody .sba-edit-btn[data-id="${b.dataset.id}"]`); if (eb) eb.classList.remove('hidden'); });
+    };
+  }
 }
 
 // ✅ Submit Exam scores
@@ -1090,58 +1315,71 @@ async function submitExams() {
     return;
   }
     const classVal = document.getElementById('classSelectExam').value;
+  const draftKey = `drafts:exam:${document.getElementById('classSelectExam')?.value || ''}:${document.getElementById('subjectSelectExam')?.value || ''}:${term}:${year}`;
+  let drafts = {};
+  try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
-  for (const student of students) {
-    const scaled = parseInt(document.getElementById(`examScaled-${student.id}`).textContent);
-    if (isNaN(scaled) || scaled < 0 || scaled > 50) {
-  notify(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 50.`, 'warning');
-      continue;
+  if (drafts && Object.keys(drafts).length > 0) {
+    for (const student of students) {
+      if (drafts[student.id] === undefined) continue;
+      submissions.push({ student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0 });
     }
-    // Fetch existing SBA score for this student/subject/term/year
-    let class_score = 0;
-    try {
-      const { data: existing } = await supabaseClient
-        .from('results')
-        .select('class_score')
-        .eq('student_id', student.id)
-        .eq('subject', subject)
-        .eq('term', term)
-        .eq('year', year)
-        .single();
-      if (existing && typeof existing.class_score === 'number') {
-        class_score = existing.class_score;
-      }
-    } catch (e) {}
-    submissions.push({
-      student_id: student.id,
-      subject,
-      term,
-      year,
-      class_score,
-      exam_score: scaled
-    });
+  } else {
+    for (const student of students) {
+        // Read raw exam input value (0-100)
+        const examInput = document.querySelector(`#examTableBody input[data-type="exam"][data-id="${student.id}"]`);
+        const examRaw = examInput ? (parseInt(examInput.value, 10) || 0) : 0;
+        if (isNaN(examRaw) || examRaw < 0 || examRaw > 100) {
+          notify(`Invalid exam score for ${student.first_name || ''} ${student.surname || ''}. Must be between 0 and 100.`, 'warning');
+          continue;
+        }
+        // Scaled preview
+        const scaled = Math.round((examRaw / 100) * 50);
+        // Fetch existing SBA component/class_score if present
+        let class_score = 0, individual = 0, groupVal = 0, class_test = 0, project = 0;
+        try {
+          const { data: existing } = await supabaseClient
+            .from('results')
+            .select('class_score, individual, "group", class_test, project')
+            .eq('student_id', student.id)
+            .eq('subject', subject)
+            .eq('term', term)
+            .eq('year', year)
+            .single();
+          if (existing) {
+            if (typeof existing.class_score === 'number') class_score = existing.class_score;
+            if (typeof existing.individual === 'number') individual = existing.individual;
+            if (typeof existing["group"] === 'number') groupVal = existing["group"];
+            if (typeof existing.class_test === 'number') class_test = existing.class_test;
+            if (typeof existing.project === 'number') project = existing.project;
+          }
+        } catch (e) {}
+        submissions.push({ student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) });
+    }
   }
   if (submissions.length === 0) {
     notify('No valid exam scores to submit.', 'warning');
     return;
   }
-  const { data, error } = await supabaseClient
-    .from('results')
-    .upsert(submissions, {
-      onConflict: ['student_id', 'subject', 'term', 'year']
-    })
-    .select();
-  if (error) {
-    console.error('Exam upsert error:', error.message);
-    notify('Failed to submit exam scores.', 'error');
-  } else {
-    console.log('Exam upserted:', data);
+  if (submissions.length === 0) { notify('No valid exam scores to submit.', 'warning'); return; }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting exam marks...') : null;
+  try {
+    for (let i = 0; i < submissions.length; i++) {
+      const rec = submissions[i];
+      if (loader) loader.update(Math.round((i / submissions.length) * 100));
+      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: ['student_id', 'subject', 'term', 'year'] });
+      if (error) throw error;
+    }
+    if (loader) loader.update(100);
+    // Clear drafts after successful submit
+    try { localStorage.removeItem(draftKey); } catch (e) {}
     notify('Exam scores submitted successfully.', 'info');
-    // Clear Exam form fields after submit
     document.getElementById('examTableBody').innerHTML = '';
-    // Optionally reload students to repopulate form with latest marks
     loadStudents('exam');
-  }
+  } catch (err) {
+    console.error('Exam upsert error:', err);
+    notify('Failed to submit exam scores: ' + (err.message || String(err)), 'error');
+  } finally { if (loader) loader.close(); }
 }
 // 📤 Send assignment to students
 async function sendAssignment() {
@@ -1157,6 +1395,8 @@ async function sendAssignment() {
     notify('Please fill in all required fields.', 'warning');
     return;
   }
+  // Show loader for file upload / assignment creation
+  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Sending assignment...') : null;
   // Prevent sending assignment to class/subject not assigned to teacher
   const isAssigned = teacher.assignments && teacher.assignments.some(a => a.class === className && a.subject === subject);
   if (!isAssigned) {
@@ -1170,7 +1410,7 @@ async function sendAssignment() {
     const { data, error } = await supabaseClient.storage
       .from('assignments')
       .upload(filePath, file);
-    console.log('Upload response:', data, error);
+    console.debug('Upload response:', data, error);
     if (error) {
       notify('File upload failed: ' + error.message, 'error');
       return;
@@ -1182,16 +1422,16 @@ async function sendAssignment() {
       else if (data.Key) uploadedPath = data.Key;
       else if (data.id) uploadedPath = data.id;
       else if (typeof data === 'string') uploadedPath = data;
-    }
-    console.log('Extracted uploadedPath:', uploadedPath);
+  }
+  console.debug('Extracted uploadedPath:', uploadedPath);
     if (uploadedPath) {
       const publicUrlResult = supabaseClient.storage
         .from('assignments')
         .getPublicUrl(uploadedPath);
       try {
-        console.log('getPublicUrl result:', JSON.stringify(publicUrlResult));
+        console.debug('getPublicUrl result:', JSON.stringify(publicUrlResult));
       } catch (e) {
-        console.log('getPublicUrl result (raw):', publicUrlResult);
+        console.debug('getPublicUrl result (raw):', publicUrlResult);
       }
       fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
       if (!fileUrl) {
@@ -1203,19 +1443,59 @@ async function sendAssignment() {
       return;
     }
   }
-  const payload = {
-    teacher_id: teacher.id,
-    class: className,
-    subject,
-    term,
-    year,
-    title,
-    instructions,
-    file_url: fileUrl || null
-  };
-  const { error } = await supabaseClient.from('assignments').insert([payload]);
+  if (file) {
+    try {
+      if (loader) loader.update(10);
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const filePath = `teacher/${Date.now()}_${safeFileName}`;
+      const { data, error } = await supabaseClient.storage
+        .from('assignments')
+        .upload(filePath, file);
+      console.debug('Upload response:', data, error);
+      if (error) {
+        notify('File upload failed: ' + error.message, 'error');
+        try { if (loader) loader.close(); } catch(e) {}
+        return;
+      }
+      if (loader) loader.update(60);
+      // Try to extract the file path from the response
+      let uploadedPath = null;
+      if (data) {
+        if (data.path) uploadedPath = data.path;
+        else if (data.Key) uploadedPath = data.Key;
+        else if (data.id) uploadedPath = data.id;
+        else if (typeof data === 'string') uploadedPath = data;
+      }
+      let fileUrl = null;
+      if (uploadedPath) {
+        const publicUrlResult = supabaseClient.storage
+          .from('assignments')
+          .getPublicUrl(uploadedPath);
+        try { if (loader) loader.update(80); } catch(e) {}
+        try {
+          console.debug('getPublicUrl result:', JSON.stringify(publicUrlResult));
+        } catch (e) {
+          console.debug('getPublicUrl result (raw):', publicUrlResult);
+        }
+        fileUrl = publicUrlResult && publicUrlResult.data && publicUrlResult.data.publicUrl ? publicUrlResult.data.publicUrl : null;
+        if (!fileUrl) {
+          notify('File uploaded but public URL could not be generated.', 'error');
+          try { if (loader) loader.close(); } catch(e) {}
+          return;
+        }
+      } else {
+        notify('File uploaded but no path returned.', 'error');
+        try { if (loader) loader.close(); } catch(e) {}
+        return;
+      }
+    } catch (e) {
+      console.error('Assignment upload failed:', e);
+      notify('File upload failed: ' + (e.message || String(e)), 'error');
+      try { if (loader) loader.close(); } catch(e) {}
+      return;
+    }
   if (error) {
-    notify('Assignment submission failed: ' + error.message, 'error');
+  const payload = {
   } else {
     notify('Assignment sent successfully.', 'info');
     try {
@@ -1223,25 +1503,29 @@ async function sendAssignment() {
       document.getElementById('assignText').value = '';
       document.getElementById('assignFile').value = '';
       document.getElementById('assignClass').value = '';
-      document.getElementById('assignSubject').value = '';
+    file_url: fileUrl || null
       document.getElementById('assignTerm').value = '';
-      document.getElementById('assignYear').value = '';
-    } catch (e) {}
-    await loadAssignments();
-    await loadStudentSubmissions();
-  }
-}
-
-// 📥 Load assignments sent by this teacher (for download by students)
-async function loadAssignments() {
-  const tbody = document.getElementById('teacherAssignmentTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-  const { data, error } = await supabaseClient
-    .from('assignments')
-    .select('id, class, subject, term, year, title, instructions, file_url, created_at')
-    .eq('teacher_id', teacher.id)
-    .order('created_at', { ascending: false });
+  try {
+    if (loader) loader.update(90);
+    const { error } = await supabaseClient.from('assignments').insert([payload]);
+    if (error) {
+      notify('Assignment submission failed: ' + error.message, 'error');
+    } else {
+      if (loader) loader.update(100);
+      notify('Assignment sent successfully.', 'info');
+      try {
+        document.getElementById('assignTitle').value = '';
+        document.getElementById('assignText').value = '';
+        document.getElementById('assignFile').value = '';
+        document.getElementById('assignClass').value = '';
+        document.getElementById('assignSubject').value = '';
+        document.getElementById('assignTerm').value = '';
+        document.getElementById('assignYear').value = '';
+      } catch (e) {}
+      await loadAssignments();
+      await loadStudentSubmissions();
+    }
+  } finally { try { if (loader) loader.close(); } catch(e) {} }
   if (error || !Array.isArray(data)) {
     tbody.innerHTML = '<tr><td colspan="8">Error loading assignments.</td></tr>';
     return;
@@ -1272,20 +1556,20 @@ async function loadAssignments() {
 // 📬 Load student submissions for assignments sent by this teacher
 async function loadStudentSubmissions() {
   const tbody = document.getElementById('studentSubmissionTableBody');
-  console.log('DEBUG: loadStudentSubmissions called. Teacher:', teacher);
+  console.debug('DEBUG: loadStudentSubmissions called. Teacher:', teacher);
   if (!tbody) return;
   tbody.innerHTML = '';
   const { data: assignments, error: aErr } = await supabaseClient
     .from('assignments')
     .select('id, title, class')
     .eq('teacher_id', teacher.id);
-  console.log('DEBUG: Assignments query result:', assignments, aErr);
+  console.debug('DEBUG: Assignments query result:', assignments, aErr);
   if (aErr || !Array.isArray(assignments) || assignments.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5">No student submissions yet.</td></tr>';
     return;
   }
   const assignmentIds = assignments.map(a => a.id);
-  console.log('DEBUG: Teacher assignments IDs:', assignmentIds);
+  console.debug('DEBUG: Teacher assignments IDs:', assignmentIds);
   if (assignmentIds.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5">No student submissions yet.</td></tr>';
     return;
@@ -1294,7 +1578,7 @@ async function loadStudentSubmissions() {
     .from('student_submissions')
   .select('id, student_id, assignment_id, file_url, submitted_at, students(first_name, surname), assignments(title)')
     .in('assignment_id', assignmentIds);
-  console.log('DEBUG: Submissions fetched for these assignment IDs:', submissions, sErr);
+  console.debug('DEBUG: Submissions fetched for these assignment IDs:', submissions, sErr);
   if (sErr || !Array.isArray(submissions) || submissions.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5">No student submissions yet.</td></tr>';
     return;
@@ -1510,3 +1794,207 @@ function togglePanel(panelId) {
     panel.style.display = panel.classList.contains('open') ? 'block' : 'none';
   }
 }
+
+// --- Edit Marks Modal Logic ---
+function openEditMarksModal(studentId, section) {
+  try {
+    const modal = document.getElementById('editMarksModal');
+    const studentNameEl = document.getElementById('editMarksStudentName');
+    const titleEl = document.getElementById('editMarksTitle');
+    const sidEl = document.getElementById('editMarksStudentId');
+    const sectionEl = document.getElementById('editMarksSection');
+    const sbaFields = document.getElementById('editMarksSBAFields');
+    const examFields = document.getElementById('editMarksExamFields');
+    // set context
+    sidEl.value = studentId;
+    sectionEl.value = section;
+    const student = students.find(s => s.id === studentId) || { first_name: '', surname: '' };
+    studentNameEl.textContent = `${student.first_name || ''} ${student.surname || ''}`.trim();
+    // Clear fields
+    document.getElementById('edit_individual').value = '';
+    document.getElementById('edit_group').value = '';
+    document.getElementById('edit_classTest').value = '';
+    document.getElementById('edit_project').value = '';
+    document.getElementById('edit_total').textContent = '0';
+    document.getElementById('edit_scaled').textContent = '0';
+    document.getElementById('edit_examScore').value = '';
+    document.getElementById('edit_examScaled').textContent = '0';
+
+    // Determine current selected subject/term/year based on section
+    let subject = '';
+    let term = '';
+    let year = '';
+    if (section === 'sba') {
+      subject = document.getElementById('subjectSelect')?.value || '';
+      ({ term, year } = getTermYear());
+    } else {
+      subject = document.getElementById('subjectSelectExam')?.value || '';
+      term = document.getElementById('termInputExam')?.value || '';
+      year = document.getElementById('yearInputExam')?.value || '';
+    }
+
+    // Try to populate from local drafts first
+    if (section === 'sba') {
+      const dk = `drafts:sba:${document.getElementById('classSelect')?.value || ''}:${subject}:${term}:${year}`;
+      let drafts = {};
+      try { drafts = JSON.parse(localStorage.getItem(dk) || '{}'); } catch (e) { drafts = {}; }
+      if (drafts && drafts[studentId]) {
+        const d = drafts[studentId];
+        document.getElementById('edit_individual').value = d.individual || 0;
+        document.getElementById('edit_group').value = d.group || 0;
+        document.getElementById('edit_classTest').value = d.classTest || 0;
+        document.getElementById('edit_project').value = d.project || 0;
+        const total = Math.min((d.individual||0)+(d.group||0)+(d.classTest||0)+(d.project||0), 60);
+        document.getElementById('edit_total').textContent = total;
+        document.getElementById('edit_scaled').textContent = Math.round((total/60)*50);
+      } else if (subject && term && year) {
+        // Load class_score and component breakdown from DB
+        supabaseClient.from('results').select('class_score, individual, "group", class_test, project').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single().then(({ data, error }) => {
+          if (!error && data) {
+            if (typeof data.class_score === 'number') {
+              document.getElementById('edit_scaled').textContent = data.class_score;
+              document.getElementById('edit_total').textContent = Math.round((data.class_score/50)*60);
+            }
+            document.getElementById('edit_individual').value = data.individual || 0;
+            document.getElementById('edit_group').value = data["group"] || 0;
+            document.getElementById('edit_classTest').value = data.class_test || 0;
+            document.getElementById('edit_project').value = data.project || 0;
+          }
+        }).catch(e => { /* ignore */ });
+      }
+      sbaFields.style.display = '';
+      examFields.style.display = 'none';
+      titleEl.textContent = 'Edit SBA Marks';
+    } else {
+      const dk = `drafts:exam:${document.getElementById('classSelectExam')?.value || ''}:${subject}:${term}:${year}`;
+      let drafts = {};
+      try { drafts = JSON.parse(localStorage.getItem(dk) || '{}'); } catch (e) { drafts = {}; }
+      if (drafts && drafts[studentId] !== undefined) {
+        document.getElementById('edit_examScore').value = drafts[studentId];
+        document.getElementById('edit_examScaled').textContent = Math.round((drafts[studentId]/100)*50);
+      } else if (subject && term && year) {
+        supabaseClient.from('results').select('exam_score').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single().then(({ data, error }) => {
+          if (!error && data && typeof data.exam_score === 'number') {
+            document.getElementById('edit_examScore').value = data.exam_score;
+            document.getElementById('edit_examScaled').textContent = Math.round((data.exam_score/100)*50);
+          }
+        }).catch(e => { /* ignore */ });
+      }
+      sbaFields.style.display = 'none';
+      examFields.style.display = '';
+      titleEl.textContent = 'Edit Exam Marks';
+    }
+
+    // Wire input previews
+    ['edit_individual','edit_group','edit_classTest','edit_project'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.oninput = () => {
+        const a = Math.min(parseInt(document.getElementById('edit_individual').value) || 0,15);
+        const b = Math.min(parseInt(document.getElementById('edit_group').value) || 0,15);
+        const c = Math.min(parseInt(document.getElementById('edit_classTest').value) || 0,15);
+        const d = Math.min(parseInt(document.getElementById('edit_project').value) || 0,15);
+        const total = Math.min(a+b+c+d,60);
+        document.getElementById('edit_total').textContent = total;
+        document.getElementById('edit_scaled').textContent = Math.round((total/60)*50);
+      };
+    });
+    const examInp = document.getElementById('edit_examScore');
+    if (examInp) examInp.oninput = () => { const v = Math.min(Math.max(parseInt(examInp.value) || 0,0),100); document.getElementById('edit_examScaled').textContent = Math.round((v/100)*50); };
+
+    // Show modal
+    modal.classList.remove('hidden'); modal.style.display = '';
+    modal.setAttribute('aria-hidden','false');
+  } catch (e) {
+    console.debug('openEditMarksModal error', e);
+  }
+}
+
+function closeEditMarksModal() {
+  const modal = document.getElementById('editMarksModal');
+  if (!modal) return;
+  modal.classList.add('hidden'); modal.style.display = 'none'; modal.setAttribute('aria-hidden','true');
+}
+
+// Save handler for edit modal
+document.addEventListener('DOMContentLoaded', () => {
+  const saveBtn = document.getElementById('editMarksSaveBtn');
+  const cancelBtn = document.getElementById('editMarksCancelBtn');
+  const closeX = document.getElementById('editMarksClose');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeEditMarksModal);
+  if (closeX) closeX.addEventListener('click', closeEditMarksModal);
+  if (saveBtn) saveBtn.addEventListener('click', async () => {
+    const studentId = document.getElementById('editMarksStudentId').value;
+    const section = document.getElementById('editMarksSection').value;
+    // determine subject/term/year
+    let subject=''; let term=''; let year=''; let classVal='';
+    if (section === 'sba') { subject = document.getElementById('subjectSelect')?.value || ''; ({ term, year } = getTermYear()); classVal = document.getElementById('classSelect')?.value || ''; }
+    else { subject = document.getElementById('subjectSelectExam')?.value || ''; term = document.getElementById('termInputExam')?.value || ''; year = document.getElementById('yearInputExam')?.value || ''; classVal = document.getElementById('classSelectExam')?.value || ''; }
+    if (!subject || !term || !year) { notify('Please ensure class, subject, term and year are selected before saving edits.', 'warning'); return; }
+    let _lastPayload = null;
+    try {
+      if (section === 'sba') {
+        const individual = Math.min(parseInt(document.getElementById('edit_individual').value) || 0, 15);
+        const group = Math.min(parseInt(document.getElementById('edit_group').value) || 0, 15);
+        const classTest = Math.min(parseInt(document.getElementById('edit_classTest').value) || 0, 15);
+        const project = Math.min(parseInt(document.getElementById('edit_project').value) || 0, 15);
+        const total = Math.min(individual+group+classTest+project, 60);
+        const scaled = Math.round((total/60)*50);
+        // Upsert scaled class_score into results, preserve exam_score if exists by fetching
+        const { data: existing } = await supabaseClient.from('results').select('exam_score').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single();
+        // Ensure exam_score is present (DB has NOT NULL constraint) - default to 0 when missing
+        const payload = { student_id: studentId, subject, term, year, class_score: scaled };
+        payload.exam_score = (existing && typeof existing.exam_score === 'number') ? existing.exam_score : 0;
+        // Include component breakdown so it is persisted in DB
+        payload.individual = Number(individual || 0);
+        payload["group"] = Number(group || 0);
+        payload.class_test = Number(classTest || 0);
+        payload.project = Number(project || 0);
+        _lastPayload = payload;
+        console.debug('Upserting SBA payload:', payload);
+        const { error } = await supabaseClient.from('results').upsert([payload], { onConflict: ['student_id','subject','term','year'] });
+        if (error) throw error;
+        // Update local drafts to reflect saved value (remove draft entry because saved to DB)
+        const dk = `drafts:sba:${classVal}:${subject}:${term}:${year}`;
+        try { const drafts = JSON.parse(localStorage.getItem(dk) || '{}'); delete drafts[studentId]; localStorage.setItem(dk, JSON.stringify(drafts)); } catch(e){}
+        notify('SBA marks updated.', 'info');
+      } else {
+    const examScore = Math.min(Math.max(parseInt(document.getElementById('edit_examScore').value) || 0, 0), 100);
+    // Fetch existing class_score and component breakdown to preserve them
+    const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single();
+    // Ensure class_score is present to satisfy NOT NULL constraints if any - default to 0 when missing
+    const payload = { student_id: studentId, subject, term, year, exam_score: examScore };
+    payload.class_score = (existing && typeof existing.class_score === 'number') ? existing.class_score : 0;
+    // Preserve component breakdown if present
+    payload.individual = (existing && typeof existing.individual === 'number') ? existing.individual : 0;
+    payload["group"] = (existing && typeof existing["group"] === 'number') ? existing["group"] : 0;
+    payload.class_test = (existing && typeof existing.class_test === 'number') ? existing.class_test : 0;
+    payload.project = (existing && typeof existing.project === 'number') ? existing.project : 0;
+    _lastPayload = payload;
+    console.debug('Upserting Exam payload:', payload);
+    const { error } = await supabaseClient.from('results').upsert([payload], { onConflict: ['student_id','subject','term','year'] });
+    if (error) throw error;
+        // Update drafts key if present (remove saved draft)
+        const dk = `drafts:exam:${classVal}:${subject}:${term}:${year}`;
+        try { const drafts = JSON.parse(localStorage.getItem(dk) || '{}'); delete drafts[studentId]; localStorage.setItem(dk, JSON.stringify(drafts)); } catch(e){}
+        notify('Exam marks updated.', 'info');
+      }
+      // Refresh current table row UI if present
+      await loadStudents(section === 'sba' ? 'sba' : 'exam');
+      closeEditMarksModal();
+    } catch (err) {
+      // Provide richer debug info to help diagnose DB upsert errors
+      try {
+        console.error('Failed to save edited marks:', err, { section, studentId, subject, term, year, payload: _lastPayload });
+      } catch (e) { console.error('Failed to save edited marks (secondary):', err); }
+      // If Supabase error object contains .message or .details, surface them
+      let msg = 'Failed to save marks.';
+      if (err && err.message) msg = err.message;
+      else if (err && err.error_description) msg = err.error_description;
+      notify('Failed to save marks: ' + msg, 'error');
+    }
+  });
+  // allow closing modal by Escape or clicking outside
+  const modal = document.getElementById('editMarksModal');
+  window.addEventListener('click', (ev) => { if (ev.target === modal) closeEditMarksModal(); });
+  window.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeEditMarksModal(); });
+});
