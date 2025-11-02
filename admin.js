@@ -96,13 +96,39 @@ function closeModal(modalId) {
     modal.style.display = 'none';
     try { modal.style.zIndex = ''; } catch(e) {}
   }
-  // Always show dashboard overview after closing key modals
-  if (modalId === 'promotionPassMarkModal' || modalId === 'eventsModal') {
-    const overview = document.getElementById('dashboardOverview');
-    if (overview) {
-      overview.classList.remove('hidden');
-      overview.style.display = '';
-    }
+  // After closing a modal, if no dashboard section is visible, restore the overview
+  try {
+    // Wait a tick to allow any other handlers to run
+    setTimeout(function() {
+      // Find any dashboard-section that is currently visible (not hidden and display not none)
+      var sections = Array.from(document.querySelectorAll('.dashboard-section'));
+      var anyVisible = sections.some(function(s) {
+        if (!s) return false;
+        if (s.classList && s.classList.contains('hidden')) return false;
+        var cs = window.getComputedStyle(s);
+        return cs && cs.display && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+      });
+      if (!anyVisible) {
+        if (typeof window.showOverview === 'function') {
+          try { window.showOverview(); } catch(e) { /* ignore */ }
+        } else {
+          var overview = document.getElementById('dashboardOverview');
+          if (overview) {
+            overview.classList.remove('hidden');
+            overview.style.display = '';
+          }
+        }
+      }
+    }, 40);
+  } catch (e) {
+    // If anything fails, as a fallback try to restore overview
+    try {
+      if (typeof window.showOverview === 'function') window.showOverview();
+      else {
+        var overview = document.getElementById('dashboardOverview');
+        if (overview) { overview.classList.remove('hidden'); overview.style.display = ''; }
+      }
+    } catch (ee) { /* ignore */ }
   }
 }
 
@@ -194,6 +220,8 @@ document.addEventListener('DOMContentLoaded', function() {
           classField.disabled = true;
         }
       }
+      // After successful edit, refresh page to clear modal state
+      setTimeout(function() { location.reload(); }, 600);
     });
   }
   // --- Promotion Pass Mark UI Logic ---
@@ -663,6 +691,9 @@ document.addEventListener('submit', function(e) {
 
 // Create student record from the provided form element (uploads picture, assigns register_id)
 async function createStudentFromForm(form) {
+  // Show saving spinner
+  var savingOverlay = document.getElementById('studentModalSaving');
+  if (savingOverlay) savingOverlay.style.display = 'flex';
   // gather values
   const firstName = (form.querySelector('[name="first_name"]')?.value || '').trim();
   const surname = (form.querySelector('[name="surname"]')?.value || '').trim();
@@ -789,6 +820,7 @@ async function createStudentFromForm(form) {
     if (pictureUrl) updatePayload.picture_url = pictureUrl;
 
     const { error } = await window.supabaseClient.from('students').update(updatePayload).eq('id', studentId);
+    if (savingOverlay) savingOverlay.style.display = 'none';
     if (error) {
       console.error('Failed to update student:', error);
       throw error;
@@ -796,6 +828,7 @@ async function createStudentFromForm(form) {
     try { showToast('Student updated!', 'info', 3500); } catch (e) { /* fallback */ }
     if (typeof loadStudents === 'function') loadStudents();
     closeModal('studentModal');
+    setTimeout(function() { location.reload(); }, 600);
     return;
   }
 
@@ -819,6 +852,21 @@ async function createStudentFromForm(form) {
   if (typeof loadStudents === 'function') loadStudents();
   closeModal('studentModal');
 }
+// Restore last section on page load
+try {
+  var lastSection = localStorage.getItem('adminCurrentSection');
+  if (lastSection) {
+    if (typeof window.showSection === 'function') {
+      window.showSection(lastSection);
+    } else {
+      var sec = document.getElementById(lastSection);
+      if (sec) sec.style.display = 'block';
+    }
+    // Do not remove the persisted key here — let showOverview clear it when the user returns to overview.
+  }
+} catch(e) {}
+
+// Export students as CSV
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
   try { notify('No student data to export.', 'warning'); } catch (e) { try { safeNotify('No student data to export.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }

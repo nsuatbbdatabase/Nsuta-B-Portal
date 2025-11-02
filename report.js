@@ -502,6 +502,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Bulk print logic
+// Usage: click the element with id="bulkPrintBtn" (button provided in the UI).
+// This routine expects the page to contain:
+// - a class selector with id="classSelect"
+// - a student selector with id="studentSelect"
+// - the report template container with id="reportSection" which is populated by loadReportForStudent()
+// It will populate the template for each student in the selected class, clone the populated template
+// into a hidden print container (one clone per student), then trigger window.print() once so the
+// browser can save a single multi-page PDF containing all student reports. After printing the
+// temporary print elements are cleaned up automatically.
 document.getElementById('bulkPrintBtn').onclick = async function() {
   const selectedClass = document.getElementById('classSelect').value;
   if (!selectedClass) {
@@ -514,12 +523,175 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
     notify('No students found for this class.', 'warning');
     return;
   }
-  // Print each student's report in sequence
-  for (const student of students) {
-    document.getElementById('studentSelect').value = student.id;
-    await loadReportForStudent();
-    window.print();
+  // Build a hidden print container and append one populated report per student
+  const reportSection = document.getElementById('reportSection');
+  if (!reportSection) {
+    notify('Report template not found on the page.', 'error');
+    return;
   }
+
+  // Create a small progress overlay so user knows generation is in progress
+  let progressOverlay = document.getElementById('bulkPrintProgress');
+  if (progressOverlay) progressOverlay.remove();
+  progressOverlay = document.createElement('div');
+  progressOverlay.id = 'bulkPrintProgress';
+  progressOverlay.style.position = 'fixed';
+  progressOverlay.style.left = '0';
+  progressOverlay.style.top = '0';
+  progressOverlay.style.right = '0';
+  progressOverlay.style.bottom = '0';
+  progressOverlay.style.background = 'rgba(0,0,0,0.55)';
+  progressOverlay.style.display = 'flex';
+  progressOverlay.style.alignItems = 'center';
+  progressOverlay.style.justifyContent = 'center';
+  progressOverlay.style.zIndex = '99999';
+  progressOverlay.innerHTML = `
+    <div style="background:#fff;padding:20px 18px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:12px;min-width:300px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="bulk-spinner" style="width:28px;height:28px;border:4px solid #ddd;border-top-color:#2b7cff;border-radius:50%;animation:spin 1s linear infinite"></div>
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;">
+          <div id="bulkPrintProgressText">Preparing 0/${students.length}</div>
+          <div style="font-size:12px;color:#666;margin-top:6px;">Please wait while reports are generated...</div>
+        </div>
+      </div>
+      <div style="width:100%;display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button id="bulkPrintCancelBtn" style="background:#f44336;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
+      </div>
+    </div>
+  `;
+  // Add spinner keyframes if not present
+  if (!document.getElementById('bulkPrintProgressStyle')) {
+    const pf = document.createElement('style');
+    pf.id = 'bulkPrintProgressStyle';
+    pf.textContent = `@keyframes spin {from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
+    document.head.appendChild(pf);
+  }
+  document.body.appendChild(progressOverlay);
+  // Expose a simple controller to allow cancellation from the Cancel button
+  window.__bulkPrintController = { cancelled: false };
+  const cancelBtn = document.getElementById('bulkPrintCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      window.__bulkPrintController.cancelled = true;
+      const pt = document.getElementById('bulkPrintProgressText');
+      if (pt) pt.textContent = `Cancelling...`;
+      // visually disable the cancel button
+      cancelBtn.disabled = true;
+      cancelBtn.style.opacity = '0.6';
+    };
+  }
+
+  // Create a container for bulk printing
+  let bulkContainer = document.getElementById('bulkPrintContainer');
+  if (bulkContainer) bulkContainer.remove();
+  bulkContainer = document.createElement('div');
+  bulkContainer.id = 'bulkPrintContainer';
+  // keep it off-screen / hidden in normal view
+  bulkContainer.style.display = 'none';
+  document.body.appendChild(bulkContainer);
+
+  // Inject print-only stylesheet to show only the bulk container during printing
+  const styleId = 'bulk-print-style';
+  let printStyle = document.getElementById(styleId);
+  if (printStyle) printStyle.remove();
+  printStyle = document.createElement('style');
+  printStyle.id = styleId;
+  printStyle.textContent = `
+    @media print {
+      /* hide everything except the bulk container when printing */
+      body * { visibility: hidden !important; }
+      #bulkPrintContainer, #bulkPrintContainer * { visibility: visible !important; }
+      #bulkPrintContainer { position: absolute; left: 0; top: 0; width: 100%; }
+      /* each report should start on a new printed page */
+      .print-page { page-break-after: always; }
+    }
+    /* Ensure page break works for pdf engines as well */
+    .print-page { -webkit-print-color-adjust: exact; }
+  `;
+  document.head.appendChild(printStyle);
+
+  // Save current selection to restore later
+  const originalStudentSelectValue = document.getElementById('studentSelect')?.value || '';
+
+  // Populate the bulk container: for each student, load their report into the visible template, clone it, sanitize ids, and append to container
+  for (let i = 0; i < students.length; i++) {
+    const student = students[i];
+    try {
+      // check for cancellation before starting work for this student
+      if (window.__bulkPrintController?.cancelled) {
+        const pt = document.getElementById('bulkPrintProgressText');
+        if (pt) pt.textContent = `Canceled at ${i}/${students.length}`;
+        break;
+      }
+      // Set the global student selector so loadReportForStudent() populates the template
+      if (document.getElementById('studentSelect')) {
+        document.getElementById('studentSelect').value = student.id;
+      }
+      // Wait for the template to be populated
+      await loadReportForStudent();
+      // check for cancellation after population
+      if (window.__bulkPrintController?.cancelled) {
+        const pt = document.getElementById('bulkPrintProgressText');
+        if (pt) pt.textContent = `Canceled at ${i + 1}/${students.length}`;
+        break;
+      }
+      // Clone the populated report section
+      const clone = reportSection.cloneNode(true);
+      // Remove ids inside the clone to avoid duplicate-id collisions in the document
+      clone.querySelectorAll('[id]').forEach(el => {
+        el.removeAttribute('id');
+      });
+      // Add a marker class for page breaks
+      clone.classList.add('print-page');
+      // Make sure the clone is visible when printed
+      clone.style.display = '';
+      bulkContainer.appendChild(clone);
+      // Update progress text
+      const progressText = document.getElementById('bulkPrintProgressText');
+      if (progressText) progressText.textContent = `Preparing ${i + 1}/${students.length}`;
+    } catch (e) {
+      console.error('Failed to build report for student', student, e);
+      const progressText = document.getElementById('bulkPrintProgressText');
+      if (progressText) progressText.textContent = `Error at ${i + 1}/${students.length}`;
+    }
+  }
+
+  // Restore the original student selection in the form
+  if (document.getElementById('studentSelect')) {
+    document.getElementById('studentSelect').value = originalStudentSelectValue;
+    // Optionally reload the original student's report if needed
+    if (originalStudentSelectValue) await loadReportForStudent();
+  }
+
+  // Show the container just before printing so some browsers pick up layout
+  bulkContainer.style.display = 'block';
+  // If cancelled, clean up and do not open print dialog
+  if (window.__bulkPrintController?.cancelled) {
+    // cleanup
+    try { bulkContainer.remove(); } catch (e) { /* ignore */ }
+    try { printStyle.remove(); } catch (e) { /* ignore */ }
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) { /* ignore */ }
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) { /* ignore */ }
+    // clear controller
+    try { delete window.__bulkPrintController; } catch (e) {}
+    return;
+  }
+
+  // Update progress to ready
+  const progressTextFinal = document.getElementById('bulkPrintProgressText');
+  if (progressTextFinal) progressTextFinal.textContent = `Ready — opening print dialog (${students.length} pages)`;
+  // Trigger the browser print dialog once for the full document
+  window.print();
+
+  // Cleanup: remove the bulk container, print stylesheet and progress overlay after printing
+  // Use a small timeout to allow print dialog to spawn in some browsers
+  setTimeout(() => {
+    try { bulkContainer.remove(); } catch (e) { /* ignore */ }
+    try { printStyle.remove(); } catch (e) { /* ignore */ }
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) { /* ignore */ }
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) { /* ignore */ }
+    try { delete window.__bulkPrintController; } catch (e) {}
+  }, 1000);
 };
 
 // Send result to student (by class)

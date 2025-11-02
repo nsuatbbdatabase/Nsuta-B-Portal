@@ -11,70 +11,31 @@
   <link rel="stylesheet" href="student-duplicates-warning.css" />
   <link rel="stylesheet" href="teacher-breakdown.css" />
   <!-- Inline override to ensure dashboard tables stay horizontal on small screens -->
-  <style>
-    @media (max-width: 700px) {
-      /* Target admin/student/teacher dashboard tables specifically */
-      .admin-dashboard .table-wrap table,
-      .admin-dashboard .grid-table-4-accent-3,
-      .student-dashboard .grid-table-4-accent-3,
-      .teacher-dashboard .grid-table-4-accent-3 {
-        display: block !important;
-        overflow-x: auto !important;
-        width: 100% !important;
-        max-width: 100% !important;
-      }
-
-      /* Preserve table semantics so columns don't stack */
-      .admin-dashboard .grid-table-4-accent-3 thead,
-      .admin-dashboard .grid-table-4-accent-3 tbody,
-      .admin-dashboard .grid-table-4-accent-3 tr,
-      .student-dashboard .grid-table-4-accent-3 thead,
-      .student-dashboard .grid-table-4-accent-3 tbody,
-      .student-dashboard .grid-table-4-accent-3 tr,
-      .teacher-dashboard .grid-table-4-accent-3 thead,
-      .teacher-dashboard .grid-table-4-accent-3 tbody,
-      .teacher-dashboard .grid-table-4-accent-3 tr {
-        display: table !important;
-        width: 100% !important;
-        table-layout: fixed !important;
-      }
-
-      .admin-dashboard .grid-table-4-accent-3 th,
-      .admin-dashboard .grid-table-4-accent-3 td,
-      .student-dashboard .grid-table-4-accent-3 th,
-      .student-dashboard .grid-table-4-accent-3 td,
-      .teacher-dashboard .grid-table-4-accent-3 th,
-      .teacher-dashboard .grid-table-4-accent-3 td {
-        display: table-cell !important;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        padding: 0.45rem 0.6rem !important;
-      }
-
-      /* Keep header visible and usable */
-      .admin-dashboard .grid-table-4-accent-3 thead { display: table-header-group !important; position: sticky !important; top: 0 !important; z-index: 60 !important; background: inherit !important; }
-
-      /* Disable stacked pseudo-labels for dashboard tables */
-      .admin-dashboard .grid-table-4-accent-3 td:before,
-      .student-dashboard .grid-table-4-accent-3 td:before,
-      .teacher-dashboard .grid-table-4-accent-3 td:before {
-        display: none !important;
-        content: none !important;
-      }
-
-      /* Ensure action buttons remain visible */
-      .admin-dashboard .grid-table-4-accent-3 td.actions,
-      .student-dashboard .grid-table-4-accent-3 td.actions,
-      .teacher-dashboard .grid-table-4-accent-3 td.actions { width: 150px !important; }
-      .admin-dashboard .grid-table-4-accent-3 td.actions .btn,
-      .admin-dashboard .grid-table-4-accent-3 td.actions button { min-width: 56px !important; padding: 6px 8px !important; }
-    }
-  </style>
+  <!-- Table / responsive rules moved to dashboard-cards.css -->
 </head>
 <body class="admin-dashboard">
 
   <div class="admin-bg-overlay"></div>
+  <script>
+    // Persist current section on refresh
+    document.addEventListener('DOMContentLoaded', function() {
+      // Find all refresh/reload buttons
+      document.querySelectorAll('button, .btn').forEach(function(btn) {
+        if (btn.textContent.trim().toLowerCase().includes('refresh') || btn.id === 'refreshBtn' || btn.classList.contains('refresh-btn')) {
+          btn.addEventListener('click', function() {
+            // Find the currently visible section
+            var currentSection = null;
+            document.querySelectorAll('.dashboard-section').forEach(function(sec) {
+              if (!sec.hidden && sec.id) currentSection = sec.id;
+            });
+            if (currentSection) {
+              try { localStorage.setItem('adminCurrentSection', currentSection); } catch(e) {}
+            }
+          });
+        }
+      });
+    });
+  </script>
 
   <header class="dashboard-header">
   <img src="Badge.png" alt="School Logo" class="school-logo" />
@@ -105,10 +66,10 @@
         ];
         var wrap = document.createElement('div');
         wrap.className = 'holidays-list';
-        var title = document.createElement('h3'); title.textContent = 'Upcoming Holidays'; title.style.margin='0 0 8px 0'; wrap.appendChild(title);
+  var title = document.createElement('h3'); title.textContent = 'Upcoming Holidays'; title.className = 'holidays-title'; wrap.appendChild(title);
         holidays.slice(0,5).forEach(function(h){
           var it = document.createElement('div'); it.className = 'holiday-item';
-          var d = document.createElement('div'); d.textContent = h.name; var dd = document.createElement('div'); dd.textContent = new Date(h.date).toLocaleDateString(); dd.style.opacity=0.8; it.appendChild(d); it.appendChild(dd); wrap.appendChild(it);
+          var d = document.createElement('div'); d.textContent = h.name; var dd = document.createElement('div'); dd.textContent = new Date(h.date).toLocaleDateString(); dd.className = 'holiday-date'; it.appendChild(d); it.appendChild(dd); wrap.appendChild(it);
         });
         holidayTarget.appendChild(wrap);
       }
@@ -417,9 +378,10 @@
       <button onclick="openModal('studentModal')">Add Student</button>
       <input type="file" id="csvInput" accept=".csv" title="Upload CSV" />
       <button onclick="importCSV()">Import CSV</button>
-  <button onclick="exportStudentsCSV()">Export CSV</button>
-  <div class="student-filter-row">
-  <button class="btn-danger" onclick="deleteClassStudents()">Delete All Students in Class (TEMP)</button>
+      <button onclick="exportStudentsCSV()">Export CSV</button>
+      <!-- Removed the temporary destructive button (Delete All Students in Class) to prevent accidental data loss.
+           If you need this functionality again, re-enable it here after adding proper confirmation and access checks. -->
+      <div class="student-filter-row">
         <label for="classFilter">Class:</label>
         <select id="classFilter">
           <option value="">-- All Classes --</option>
@@ -537,6 +499,10 @@
   <!-- Student Modal -->
   <div id="studentModal" class="modal hidden">
     <div class="modal-content">
+      <div id="studentModalSaving" class="modal-saving-overlay" style="display:none;">
+        <div class="modal-saving-spinner"></div>
+        <div class="modal-saving-text">Saving...</div>
+      </div>
       <h3>Register Student</h3>
   <form id="studentForm" enctype="multipart/form-data" novalidate>
         <label for="register_id">Student ID</label>
@@ -569,10 +535,7 @@
               </select>
               <input type="hidden" name="class" id="student_class_hidden" />
             </div>
-            <style>
-      .class-select-row { display:flex; gap:0.5rem; align-items:center; }
-      .class-select-row select { padding:0.35em 0.6em; border-radius:6px; border:1px solid #cbd5e1; background:#fff; }
-      </style>
+    <!-- class-select-row styles moved to dashboard-cards.css -->
     <!-- Only one hidden class input is needed -->
         <input type="text" name="parent_name" placeholder="Parent/Guardian Name" />
         <input type="tel" name="parent_contact" placeholder="Parent/Guardian Number" />
@@ -1037,6 +1000,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Defensive fix: ensure dashboard overview cards are visible on small screens
     (function() {
       function forceShowDashboardCards() {
+        try {
+          // If a section is persisted or a section is already open, do not force-show the overview.
+          if (typeof localStorage !== 'undefined') {
+            var persisted = localStorage.getItem('adminCurrentSection');
+            if (persisted) return;
+          }
+          if (typeof sessionStorage !== 'undefined') {
+            var persistedSession = sessionStorage.getItem('adminCurrentSection');
+            if (persistedSession) return;
+          }
+          if (document.body && document.body.classList && document.body.classList.contains('section-open')) return;
+        } catch (e) { /* ignore storage/access errors and continue */ }
         try {
           const ov = document.getElementById('dashboardOverview');
           const bg = document.querySelector('.dashboard-cards-bg');

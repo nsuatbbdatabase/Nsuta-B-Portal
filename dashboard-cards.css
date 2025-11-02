@@ -315,11 +315,32 @@
 .admin-dashboard .form-margin-small { margin: 0.5rem 0 1rem 0; }
 
 /* Sidebar converted from cards */
-.admin-dashboard .sidebar { width: 220px; background: linear-gradient(180deg, var(--brand-500), var(--brand-700)); color: #fff; padding-top:4.5rem; position:fixed; left:0; top:0; bottom:0; box-shadow:2px 0 28px rgba(2,24,57,0.12); z-index:1001; border-right:1px solid rgba(255,255,255,0.06); }
-.admin-dashboard .sidebar-nav { list-style:none; padding:0.6rem; margin:0; display:flex; flex-direction:column; gap:0.4rem }
-.admin-dashboard .sidebar-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.8rem; border-radius:10px; background:transparent; border:none; text-align:left; width:100%; font-weight:700; color:rgba(255,255,255,0.95); cursor:pointer }
-.admin-dashboard .sidebar-item span { color:rgba(255,255,255,0.92); }
-.admin-dashboard .sidebar-item:hover { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); box-shadow: 0 6px 18px rgba(255,255,255,0.03); }
+/* Modernized sidebar: collapsible, compact, animated, accessible */
+.admin-dashboard .sidebar { width: 220px; background: linear-gradient(180deg, var(--brand-500), var(--brand-700)); color: #fff; padding-top:4.5rem; position:fixed; left:0; top:0; bottom:0; box-shadow:2px 0 28px rgba(2,24,57,0.12); z-index:1001; border-right:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; transition: width 220ms ease, transform 220ms ease; }
+.admin-dashboard .sidebar.collapsed { width: 72px; }
+.admin-dashboard .sidebar-nav { list-style:none; padding:0.6rem; margin:0; display:flex; flex-direction:column; gap:0.4rem; flex:1 1 auto; }
+.admin-dashboard .sidebar-item { display:flex; align-items:center; gap:0.75rem; padding:0.65rem 0.9rem; border-radius:10px; background:transparent; border:none; text-align:left; width:100%; font-weight:700; color:rgba(255,255,255,0.95); cursor:pointer; transition: background 160ms ease, transform 120ms ease; position:relative; }
+.admin-dashboard .sidebar-item .icon { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; font-size:1.15rem; }
+.admin-dashboard .sidebar-item span { color:rgba(255,255,255,0.92); white-space:nowrap; }
+.admin-dashboard .sidebar-item:hover { background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); box-shadow: 0 6px 18px rgba(255,255,255,0.03); transform: translateY(-1px); }
+
+/* Collapsed state: hide labels and show tooltips */
+.admin-dashboard .sidebar.collapsed .sidebar-item { justify-content:center; padding:0.6rem 0; }
+.admin-dashboard .sidebar.collapsed .sidebar-item span { display:none; }
+.admin-dashboard .sidebar.collapsed .sidebar-item::after { content: attr(data-label); position: absolute; left: calc(100% + 10px); top: 50%; transform: translateY(-50%); background: rgba(11,33,60,0.98); color: #fff; padding: 6px 8px; border-radius: 6px; white-space: nowrap; font-size: 0.95rem; box-shadow: 0 8px 20px rgba(2,24,57,0.25); opacity: 0; pointer-events: none; transition: opacity 120ms ease, transform 120ms ease; transform-origin: left center; }
+.admin-dashboard .sidebar.collapsed .sidebar-item:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+/* Active sidebar item indicator */
+.admin-dashboard .sidebar-item.active { background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)); box-shadow: inset 4px 0 0 0 rgba(255,255,255,0.12); }
+.admin-dashboard .sidebar-item:focus { outline: 3px solid rgba(255,255,255,0.08); }
+
+/* Collapse control area */
+.admin-dashboard .sidebar-controls { padding: 0.6rem; border-top: 1px solid rgba(255,255,255,0.04); display:flex; gap:0.5rem; align-items:center; justify-content:center; }
+.admin-dashboard #sidebarCollapseBtn { background: transparent; border: 1px solid rgba(255,255,255,0.08); color: #fff; padding: 0.5rem; border-radius: 8px; cursor:pointer; min-width:40px; }
+.admin-dashboard #sidebarCollapseBtn:active { transform: scale(0.98); }
+
+/* Ensure hamburger toggle is positioned nicely */
+#sidebarToggleBtn { margin-right: 0.6rem; }
 
 /* Adjust main content when sidebar present */
 .admin-dashboard .dashboard-main { margin-left: 240px; padding: 2rem; }
@@ -388,6 +409,44 @@
   .admin-dashboard .dashboard-card{grid-template-columns:64px 1fr;padding:0.8rem}
 }
 @media (max-width: 600px){
+
+/* Mobile redesign tweaks: improve touch targets, full-screen modals and clearer stacking
+   These rules apply only for smaller viewports and intentionally override some
+   desktop-specific interplay (e.g., section-open dimming) so the mobile UX feels
+   immediate and fully interactive. */
+@media (max-width: 900px) {
+  /* Make overview cards larger and single-column for easy tapping */
+  .admin-dashboard .dashboard-overview { grid-template-columns: 1fr; gap: 0.9rem; padding: 0.6rem; }
+  .admin-dashboard .dashboard-card { min-height: 80px; padding: 0.95rem; border-radius: 10px; }
+  .admin-dashboard .dashboard-card .dashboard-card-title { font-size: 1.05rem; }
+  .admin-dashboard .dashboard-card .dashboard-card-desc { font-size: 0.98rem; }
+
+  /* Ensure section-open does not fully hide the overview on mobile — keep context visible */
+  .admin-dashboard.section-open .dashboard-overview { opacity: 1 !important; pointer-events: auto !important; transform: none !important; }
+
+  /* Make modals occupy the full screen for ease of use on mobile */
+  .admin-dashboard .modal { align-items: flex-start; padding-top: 56px; }
+  .admin-dashboard .modal-content { width: 100%; height: calc(100vh - 72px); max-width: 100%; border-radius: 0; margin: 0 auto; overflow: auto; box-shadow: none; }
+
+  /* Increase hit targets across the toolbar and cards */
+  .admin-dashboard .admin-toolbar button, .admin-dashboard .dashboard-card-action, .admin-dashboard .dashboard-card .dashboard-card-action { padding: 0.85rem 1rem; min-height: 48px; font-size: 1rem; }
+
+  /* Sidebar: hide by default on mobile, use .open to display. A small toggle is injected by JS. */
+  .admin-dashboard .sidebar { left: -320px; transition: left 220ms ease; width: 280px; }
+  .admin-dashboard .sidebar.open { left: 0 !important; box-shadow: 0 10px 40px rgba(2,24,57,0.22); }
+
+  /* Add a visible hamburger in the header (styled here; element created by JS) */
+  #sidebarToggleBtn { display: inline-flex; align-items: center; justify-content: center; width:44px; height:44px; border-radius:8px; background: rgba(255,255,255,0.08); color: #fff; border: none; margin-right: 0.4rem; cursor: pointer; }
+  #sidebarToggleBtn:active { transform: scale(0.98); }
+
+  /* Ensure back-to-overview/back buttons are easy to reach */
+  .back-to-dashboard { padding: 0.7rem 1rem; font-size: 0.95rem; }
+
+  /* Ensure the dashboard header content compresses but remains readable */
+  .admin-dashboard .dashboard-header { height: 64px; padding: 0.45rem 0.7rem; }
+  .admin-dashboard .dashboard-header .school-title { font-size: 1rem; max-width: 55%; overflow: hidden; text-overflow: ellipsis; }
+  .admin-dashboard .dashboard-header .profile { display: none; } /* hide profile to save space on very small screens */
+}
   /* Stack panels on small screens */
   .admin-dashboard .dashboard-overview{grid-template-columns:1fr;padding:0.6rem;gap:0.6rem}
   .admin-dashboard .dashboard-card{grid-template-columns: 56px 1fr;padding:0.75rem;align-items:center}
@@ -630,4 +689,33 @@
 
 /* Small utility for action buttons inside tables */
 .admin-dashboard .table-action-btn { background: transparent; border: 1px solid rgba(6,54,99,0.08); padding: 0.35rem 0.6rem; border-radius: 6px; color: #034069; cursor: pointer }
+
+/* Saving overlay and spinner styles */
+.modal-saving-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-saving-spinner {
+  width: 38px;
+  height: 38px;
+  border: 4px solid #e0e7ef;
+  border-top: 4px solid #0b66b2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.modal-saving-text {
+  font-size: 1.1rem;
+  color: #0b2740;
+  font-weight: 600;
+}
 
