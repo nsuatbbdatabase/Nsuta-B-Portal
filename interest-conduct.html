@@ -8,7 +8,10 @@
 </head>
 <body>
   <div class="form-container">
-    <h2>Student Interest, Conduct & Attendance</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+      <h2 style="margin:0;">Student Interest, Conduct & Attendance</h2>
+      <button id="backToDashboard" style="margin-left:1rem;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">← Back to Dashboard</button>
+    </div>
 
     <!-- 🔽 Class Selector -->
     <label for="classSelect">Select Class:</label>
@@ -105,5 +108,9 @@
   <script src="error-monitor.js"></script>
     <script src="toasts.js"></script>
     <script src="form.js"></script>
+  <script>
+    // Back to admin dashboard shortcut
+    document.getElementById('backToDashboard')?.addEventListener('click', function(){ window.location.href = 'admin.html'; });
+  </script>
 </body>
 </html>

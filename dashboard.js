@@ -59,8 +59,10 @@ async function createTestTeacher() {
     return;
   }
   const pin = '1234';
-  const { error } = await supabaseClient.from('teachers').insert([{
-    name: 'Test Teacher',
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Creating test teacher...', { color: '#0b66b2' }) : null;
+  try {
+    const { error } = await supabaseClient.from('teachers').insert([{
+      name: 'Test Teacher',
     gender: 'Male',
     dob: '1990-01-01',
     staff_id: 'TST001',
@@ -89,12 +91,15 @@ async function createTestTeacher() {
     denomination: 'Presbyterian Church of Ghana',
     home_town: 'Nkawkaw',
     pin
-  }]);
-  if (error) {
-    notify('Failed to create test teacher: ' + error.message, 'error');
-  } else {
-    // Do not expose PINs in notifications
-    notify(`Test teacher created!\nStaff ID: TST001\nPIN: [hidden for security]`, 'info');
+    }]);
+    if (error) {
+      notify('Failed to create test teacher: ' + error.message, 'error');
+    } else {
+      // Do not expose PINs in notifications
+      notify(`Test teacher created!\nStaff ID: TST001\nPIN: [hidden for security]`, 'info');
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
   }
 }
 
@@ -106,9 +111,17 @@ async function deleteTeacher(id) {
     const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this teacher?', { title: 'Delete teacher' }) : confirm('Are you sure you want to delete this teacher?');
     if (!ok) return;
   } catch (e) { return; }
-  const { error } = await supabaseClient.from('teachers').delete().eq('id', id);
-  if (error) notify('Delete failed.', 'error');
-  else loadTeachers();
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Deleting teacher...', { color: '#c62828' }) : null;
+  try {
+    const { error } = await supabaseClient.from('teachers').delete().eq('id', id);
+    if (error) notify('Delete failed: ' + (error.message || ''), 'error');
+    else {
+      notify('Teacher deleted.', 'info');
+      loadTeachers();
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
+  }
 }
 // 🗑️ Delete Admin
 async function deleteAdmin(id) {
@@ -116,9 +129,17 @@ async function deleteAdmin(id) {
     const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this admin?', { title: 'Delete admin' }) : confirm('Are you sure you want to delete this admin?');
     if (!ok) return;
   } catch (e) { return; }
-  const { error } = await supabaseClient.from('admins').delete().eq('id', id);
-  if (error) notify('Delete failed.', 'error');
-  else loadAdmins();
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Deleting admin...', { color: '#c62828' }) : null;
+  try {
+    const { error } = await supabaseClient.from('admins').delete().eq('id', id);
+    if (error) notify('Delete failed: ' + (error.message || ''), 'error');
+    else {
+      notify('Admin deleted.', 'info');
+      loadAdmins();
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
+  }
 }
 // � Edit Admin
 async function editAdmin(id) {
@@ -164,6 +185,23 @@ async function loadAdmins() {
 document.getElementById('adminForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
+  // Confirm before saving admin
+  try {
+    let pref = null;
+    try { pref = localStorage.getItem('nsuta_confirm_save_admin'); } catch (e) { pref = null; }
+    if (pref === 'false') {
+      // proceed without confirmation
+    } else {
+      const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Save admin changes?', { title: 'Confirm save', rememberKey: 'save_admin' }) : confirm('Save admin changes?');
+      if (!ok) return;
+    }
+  } catch (err) { return; }
+  // prevent double submit
+  if (form._saving) return;
+  form._saving = true;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  try { if (submitBtn) submitBtn.disabled = true; } catch(e){}
+
   const adminId = form.admin_id.value;
   const adminData = {
     full_name: form.full_name.value.trim(),
@@ -171,18 +209,28 @@ document.getElementById('adminForm').addEventListener('submit', async (e) => {
     phone: form.phone.value.trim(),
     pin: form.pin.value.trim()
   };
+  // Show loader while saving
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast(adminId ? 'Updating admin...' : 'Registering admin...', { color: '#0b66b2' }) : null;
+  try {
+    let result;
+    if (adminId) {
+      result = await supabaseClient.from('admins').update(adminData).eq('id', adminId).select();
+    } else {
+      result = await supabaseClient.from('admins').insert([adminData]).select();
+    }
 
-  const result = adminId
-    ? await supabaseClient.from('admins').update(adminData).eq('id', adminId)
-    : await supabaseClient.from('admins').insert([adminData]);
-
-  if (result.error) {
-    notify('Error: ' + result.error.message, 'error');
-  } else {
-    notify(adminId ? 'Admin updated!' : `Admin registered: ${adminData.full_name}`, 'info');
-    form.reset();
-    closeModal('adminModal');
-    loadAdmins();
+    if (result.error) {
+      notify('Error: ' + result.error.message, 'error');
+    } else {
+      notify(adminId ? 'Admin updated!' : `Admin registered: ${adminData.full_name}`, 'info');
+      form.reset();
+      closeModal('adminModal');
+      loadAdmins();
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
+    try { if (submitBtn) submitBtn.disabled = false; } catch(e){}
+    form._saving = false;
   }
 });
 async function loadTeachers() {
@@ -312,6 +360,8 @@ function importCSV() {
     const raw = e.target.result;
     const lines = raw.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return notify('CSV file is empty or missing data.', 'warning');
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Importing CSV...', { color: '#0b66b2' }) : null;
+  try {
     // Expect header: Student ID,Full Name,Area,DOB,NHIS Number,Gender,Class,Parent Name,Parent Contact
     const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
     let successCount = 0, failCount = 0, errorRows = [];
@@ -420,11 +470,16 @@ function importCSV() {
         errorRows.push(i+1);
         console.error('Unexpected JS error (row ' + (i+1) + '):', err.message);
       }
+      // update visual progress if loader still exists
+      try { if (loader && typeof loader.update === 'function') loader.update(Math.round((i / (lines.length - 1)) * 100)); } catch(e) {}
     }
     let msg = `CSV import complete. Success: ${successCount}, Failed: ${failCount}`;
     if (errorRows.length) msg += `\nRows with errors: ${errorRows.join(', ')}`;
   notify(msg, 'info');
     loadStudents();
+  } finally {
+    try { loader && loader.close(); } catch(e) {}
+  }
   };
   reader.readAsText(file);
 }
@@ -489,9 +544,17 @@ async function deleteStudent(id) {
     const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete this student?', { title: 'Delete student' }) : confirm('Are you sure you want to delete this student?');
     if (!ok) return;
   } catch (e) { return; }
-  const { error } = await supabaseClient.from('students').delete().eq('id', id);
-  if (error) notify('Delete failed.', 'error');
-  else loadStudents();
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Deleting student...', { color: '#c62828' }) : null;
+  try {
+    const { error } = await supabaseClient.from('students').delete().eq('id', id);
+    if (error) notify('Delete failed: ' + (error.message || ''), 'error');
+    else {
+      notify('Student deleted.', 'info');
+      loadStudents();
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
+  }
 }
 
 // 📋 Load Students
@@ -511,11 +574,16 @@ window.deleteClassStudents = async function deleteClassStudents() {
     const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.', { title: 'Delete all students' }) : confirm('Are you sure you want to delete ALL students in ' + className + '? This cannot be undone.');
     if (!ok) return;
   } catch (e) { return; }
-  const { error } = await supabaseClient.from('students').delete().eq('class', className);
-  if (error) notify('Delete failed: ' + error.message, 'error');
-  else {
-  notify('All students in ' + className + ' deleted.', 'info');
-    loadStudents();
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Deleting students in ' + className + '...', { color: '#c62828' }) : null;
+  try {
+    const { error } = await supabaseClient.from('students').delete().eq('class', className);
+    if (error) notify('Delete failed: ' + (error.message || ''), 'error');
+    else {
+      notify('All students in ' + className + ' deleted.', 'info');
+      loadStudents();
+    }
+  } finally {
+    try { loader && loader.close(); } catch(e) {}
   }
 }
 async function loadStudents() {
@@ -611,6 +679,17 @@ window.showSelectedStudent = function showSelectedStudent() {
 document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
+  // Confirm before saving teacher
+  try {
+    let pref = null;
+    try { pref = localStorage.getItem('nsuta_confirm_save_teacher'); } catch (e) { pref = null; }
+    if (pref === 'false') {
+      // proceed without confirmation
+    } else {
+      const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Save teacher changes?', { title: 'Confirm save', rememberKey: 'save_teacher' }) : confirm('Save teacher changes?');
+      if (!ok) return;
+    }
+  } catch (err) { return; }
   const teacherId = form.teacher_id.value;
   // Generate pin for new teachers
   const name = form.name.value.trim();
@@ -677,15 +756,24 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     pin
   };
 
-  let result;
-  if (teacherId) {
-    // Don't overwrite pin on update
-    const updateData = { ...teacherData };
-    delete updateData.pin;
-    result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId);
-  } else {
-    result = await supabaseClient.from('teachers').insert([teacherData]);
-  }
+  // prevent double submit
+  if (form._saving) return;
+  form._saving = true;
+  const submitBtn = form.querySelector('button[type="submit"]');
+  try { if (submitBtn) submitBtn.disabled = true; } catch(e){}
+
+  // Show loader while saving teacher and assignments
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast(teacherId ? 'Updating teacher...' : 'Registering teacher...', { color: '#0b66b2' }) : null;
+  try {
+    let result;
+    if (teacherId) {
+      // Don't overwrite pin on update
+      const updateData = { ...teacherData };
+      delete updateData.pin;
+      result = await supabaseClient.from('teachers').update(updateData).eq('id', teacherId).select();
+    } else {
+      result = await supabaseClient.from('teachers').insert([teacherData]).select();
+    }
 
     if (result.error) {
       notify('Error: ' + result.error.message, 'error');
@@ -723,11 +811,14 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
     }
   }
 
-  if (teacherId) {
-    notify('Teacher updated!', 'info');
-  } else {
-    // Hide PIN in notifications
-    notify(`Teacher registered: ${teacherData.name} (PIN hidden for security)`, 'info');
+    if (teacherId) {
+      notify('Teacher updated!', 'info');
+    } else {
+      // Hide PIN in notifications
+      notify(`Teacher registered: ${teacherData.name} (PIN hidden for security)`, 'info');
+    }
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
   }
   form.reset();
   document.getElementById('assignmentRowsContainer').innerHTML = '';
@@ -846,10 +937,14 @@ async function editTeacher(id) {
       if (assignments && assignments.length) {
         assignments.forEach(a => {
           try {
+            // Ensure we only pass main class (strip subclass if stored as "JHS 1 A")
+            let mainClass = (a.class || '').toString();
+            const m = mainClass.trim().match(/^(.+?)\s+[A-Za-z]$/);
+            if (m) mainClass = m[1];
             if (a.subject === 'Career Tech') {
-              container.appendChild(createAssignmentRowFn(a.class, a.subject, a.area));
+              container.appendChild(createAssignmentRowFn(mainClass, a.subject, a.area));
             } else {
-              container.appendChild(createAssignmentRowFn(a.class, a.subject));
+              container.appendChild(createAssignmentRowFn(mainClass, a.subject));
             }
           } catch (innerErr) {
             console.error('Failed to append assignment row for assignment', a, innerErr);
@@ -874,6 +969,9 @@ async function editTeacher(id) {
 loadStudents();
 loadTeachers();
 loadAdmins();
+
+// Start live breakdowns (default: push). Change mode to 'pop' or 'slideshow' to use other animations.
+try { initLiveBreakdowns('push', 9000); } catch (e) { /* ignore if init not available */ }
 
 // -------------------------------
 // Sidebar collapse / expand toggle
@@ -979,6 +1077,89 @@ loadAdmins();
       ]);
       setKPI('kpiStudents', students ? students.length : '—');
       setKPI('kpiTeachers', teachers ? teachers.length : '—');
+      setKPI('kpiAdmins', admins ? admins.length : '—');
+
+      // Build concise breakdown summaries if we have the full rows available
+      try {
+        // Fetch full rows (lightweight) to compute breakdowns
+        const [{ data: studentRows }, { data: teacherRows }] = await Promise.all([
+          supabaseClient.from('students').select('class,subclass'),
+          supabaseClient.from('teachers').select('responsibility,subjects')
+        ]);
+        // Students: count by main class and subclass
+        if (studentRows && Array.isArray(studentRows)) {
+          const classMap = {};
+          studentRows.forEach(s => {
+            const main = (s.class || '').toString().trim();
+            const sub = (s.subclass || '').toString().trim();
+            if (!main) return;
+            classMap[main] = classMap[main] || { total: 0, subs: {} };
+            classMap[main].total += 1;
+            if (sub) {
+              classMap[main].subs[sub] = (classMap[main].subs[sub] || 0) + 1;
+            }
+          });
+          const parts = Object.keys(classMap).sort().map(k => {
+            const entry = classMap[k];
+            const subs = Object.keys(entry.subs).map(sk => `${sk}: ${entry.subs[sk]}`).join(', ');
+            return `${k}: ${entry.total}${subs ? ' (' + subs + ')' : ''}`;
+          });
+          const studentsBreakdownEl = document.getElementById('studentsBreakdown');
+          if (studentsBreakdownEl) {
+            // If a live mode is active, don't overwrite the live container here.
+            if (!window._nsuta_live_mode) studentsBreakdownEl.textContent = parts.length ? parts.join(' • ') : '—';
+          }
+        }
+
+        // Teachers: count by responsibility and top subjects
+        if (teacherRows && Array.isArray(teacherRows)) {
+          const respMap = {};
+          const subjMap = {};
+          teacherRows.forEach(t => {
+            const r = (t.responsibility || '').toString().trim() || 'Other';
+            respMap[r] = (respMap[r] || 0) + 1;
+            // subjects may be stored as Postgres array string like '{Maths,English}' or an array
+            let subs = [];
+            if (Array.isArray(t.subjects)) subs = t.subjects;
+            else if (typeof t.subjects === 'string') {
+              const m = t.subjects.trim();
+              if (m.startsWith('{') && m.endsWith('}')) {
+                subs = m.slice(1,-1).split(',').map(s => s.replace(/^"|"$/g,'').trim()).filter(Boolean);
+              } else {
+                subs = m ? [m] : [];
+              }
+            }
+            subs.forEach(sv => { subjMap[sv] = (subjMap[sv] || 0) + 1; });
+          });
+          const respParts = Object.keys(respMap).map(k => `${k}: ${respMap[k]}`);
+          const topSubjects = Object.keys(subjMap).sort((a,b)=> subjMap[b]-subjMap[a]).slice(0,5).map(k => `${k}: ${subjMap[k]}`);
+          const teachersBreakdownEl = document.getElementById('teachersBreakdown');
+          if (teachersBreakdownEl) {
+            if (!window._nsuta_live_mode) teachersBreakdownEl.textContent = (respParts.length ? respParts.join(' • ') : '') + (topSubjects.length ? ' — Top subjects: ' + topSubjects.join(', ') : '');
+          }
+        }
+
+        // Admins: list count and optional emails (kept brief)
+        try {
+          const { data: adminRows } = await supabaseClient.from('admins').select('email');
+          const adminsBreakdownEl = document.getElementById('adminsBreakdown');
+          if (adminsBreakdownEl) {
+            if (!window._nsuta_live_mode) {
+              if (adminRows && adminRows.length) {
+                adminsBreakdownEl.textContent = `${adminRows.length} admin(s)`;
+              } else {
+                adminsBreakdownEl.textContent = 'None';
+              }
+            }
+          }
+        } catch (e) {
+          // ignore admin breakdown failure
+        }
+
+      } catch (err) {
+        console.warn('populateKPIs: breakdown calculation failed', err);
+      }
+
     } catch (e) {
       console.warn('populateKPIs error', e);
     }
@@ -996,22 +1177,244 @@ loadAdmins();
   }
   // Wire search to a simple action: focus search + record
   document.addEventListener('DOMContentLoaded', function() {
-    const search = document.getElementById('adminSearch');
-    const searchBtn = document.getElementById('searchBtn');
-    if (search && searchBtn) {
-      searchBtn.addEventListener('click', function() {
-        const q = search.value.trim();
-        if (!q) { recordActivity('Opened quick search (empty)'); return; }
-        recordActivity('Searched: ' + q);
-        // Simple behavior: focus and show a toast
-        if (window.showToast) showToast('Search activated: ' + q, 'info');
-      });
+    // Quick search wiring: support the studentSearch input and a debounce for live queries
+    function debounce(fn, wait) {
+      let t = null;
+      return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
+    }
+
+    const studentSearch = document.getElementById('studentSearch');
+    if (studentSearch) {
+      const performSearch = async (q) => {
+        const qtrim = (q || '').trim();
+        recordActivity('Searched students: ' + qtrim);
+        if (!qtrim) {
+          // if empty, reload full students list
+          try { if (typeof loadStudents === 'function') await loadStudents(); } catch(e) { console.warn('loadStudents failed', e); }
+          return;
+        }
+        try {
+          // Query supabase for matches across several columns
+          const filter = `%${qtrim.replace(/%/g, '')}%`;
+          const { data, error } = await supabaseClient.from('students').select('*').or(
+            `first_name.ilike.${filter},surname.ilike.${filter},username.ilike.${filter},register_id.ilike.${filter}`
+          );
+          if (error) {
+            console.warn('Search query failed', error);
+            notify('Search failed: ' + (error.message || ''), 'error');
+            return;
+          }
+          // Update select and table
+          const select = document.getElementById('studentSelect');
+          if (select) {
+            select.innerHTML = '<option value="">-- Select Student --</option>';
+            data.forEach(s => {
+              const opt = document.createElement('option'); opt.value = s.id; opt.textContent = (s.register_id ? s.register_id + ' - ' : '') + ((s.first_name||'') + (s.surname ? ' ' + s.surname : '')).trim() + ' (' + (s.class||'') + ')';
+              select.appendChild(opt);
+            });
+          }
+          const tbody = document.querySelector('#studentTable tbody');
+          if (tbody) {
+            tbody.innerHTML = '';
+            data.forEach(d => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td><img src="${d.picture_url || ''}" alt="Student" width="40" height="40" /></td>
+                <td>${(d.first_name ? d.first_name + ' ' : '') + (d.surname || '')}</td>
+                <td>${d.area || ''}</td>
+                <td>${d.dob || ''}</td>
+                <td>${d.nhis_number || ''}</td>
+                <td>${d.gender || ''}</td>
+                <td>${d.class || ''}</td>
+                <td>${d.parent_name || ''}</td>
+                <td>${d.parent_contact || ''}</td>
+                <td>${d.username || ''}</td>
+                <td>${d.pin ? '••••' : ''}</td>
+                <td>
+                  <button onclick="editStudent('${d.id}')">Edit</button>
+                  <button onclick="deleteStudent('${d.id}')">Delete</button>
+                </td>
+              `;
+              tbody.appendChild(row);
+            });
+          }
+        } catch (err) {
+          console.error('Search error', err);
+          notify('Search error. See console for details.', 'error');
+        }
+      };
+      studentSearch.addEventListener('input', debounce((e) => performSearch(e.target.value), 320));
     }
     populateKPIs();
   });
   // Export for other modules
   window.recordActivity = recordActivity;
 })();
+
+// -------------------------------
+// Live breakdowns: periodically refresh and animate the overview breakdowns
+// mode: 'slideshow' (cycles items) or 'pop' (popping entries on refresh)
+// -------------------------------
+let _nsuta_breakdown_timers = { containers: {} };
+
+function _renderBreakdownItems(containerId, items, mode = 'slideshow', rotateInterval = 5000) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // Toggle slideshow mode class so CSS can position items absolutely when cycling
+  try {
+    if (mode === 'slideshow') container.classList.add('breakdown-slideshow');
+    else container.classList.remove('breakdown-slideshow');
+  } catch (e) {}
+  // Toggle push mode class for push transitions
+  try {
+    if (mode === 'push') container.classList.add('breakdown-push');
+    else container.classList.remove('breakdown-push');
+  } catch (e) {}
+  // Clear previous timers for this container
+  try { if (container._rotateTimer) { clearInterval(container._rotateTimer); container._rotateTimer = null; } } catch(e){}
+  container.innerHTML = '';
+  if (!items || !items.length) {
+    const el = document.createElement('div'); el.className = 'breakdown-item show'; el.innerHTML = '<div class="bd-title">—</div><div class="bd-sub muted-small">No data</div>';
+    container.appendChild(el);
+    return;
+  }
+  // If push mode, render a horizontal track
+  if (mode === 'push') {
+    const track = document.createElement('div');
+    track.className = 'break-push-track';
+    items.forEach((it) => {
+      const itemWrap = document.createElement('div');
+      itemWrap.className = 'break-push-item breakdown-item';
+      itemWrap.innerHTML = `<div class="bd-title">${it.title}</div><div class="bd-sub">${it.subtitle || ''}</div>`;
+      track.appendChild(itemWrap);
+    });
+    container.appendChild(track);
+    console.debug('[liveBreakdowns] rendered push track, items=', items.length);
+    const nodes = Array.from(track.children);
+    if (nodes.length <= 1) return;
+    container._pushIndex = 0;
+    // ensure starting transform
+    track.style.transform = 'translateX(0)';
+    container._rotateTimer = setInterval(() => {
+      try {
+        container._pushIndex = (container._pushIndex + 1) % nodes.length;
+        track.style.transform = `translateX(-${container._pushIndex * 100}%)`;
+      } catch (e) { /* ignore */ }
+    }, rotateInterval);
+    console.debug('[liveBreakdowns] push timer set on', containerId, 'interval=', rotateInterval);
+    return;
+  }
+
+  // Default rendering for slideshow/pop
+  items.forEach((it, idx) => {
+    const el = document.createElement('div');
+    el.className = 'breakdown-item';
+    el.innerHTML = `<div class="bd-title">${it.title}</div><div class="bd-sub">${it.subtitle || ''}</div>`;
+    if (mode === 'pop') {
+      // add pop class with slight stagger
+      setTimeout(() => { el.classList.add('break-pop'); }, 80 * idx);
+    }
+    if (idx === 0 && mode === 'slideshow') el.classList.add('show');
+    container.appendChild(el);
+  });
+
+  if (mode === 'slideshow') {
+    const nodes = Array.from(container.querySelectorAll('.breakdown-item'));
+    if (nodes.length <= 1) return;
+    container._rotateIndex = 0;
+    container._rotateTimer = setInterval(() => {
+      try {
+        nodes[container._rotateIndex].classList.remove('show');
+        container._rotateIndex = (container._rotateIndex + 1) % nodes.length;
+        nodes[container._rotateIndex].classList.add('show');
+      } catch (e) { /* ignore */ }
+    }, rotateInterval);
+  }
+}
+
+async function refreshLiveBreakdowns(mode = 'slideshow') {
+  try {
+    console.debug('[liveBreakdowns] refresh start, mode=', mode);
+    const [{ data: studentRows }, { data: teacherRows }, { data: adminRows }] = await Promise.all([
+      supabaseClient.from('students').select('class,subclass'),
+      supabaseClient.from('teachers').select('responsibility,subjects'),
+      supabaseClient.from('admins').select('email')
+    ]);
+    // Build student class + subclass breakdown and an overall gender summary
+    const studentClassMap = {}; // { 'JHS 1': { total: n, subs: { A: n, B: n } } }
+    const genderMap = { Male: 0, Female: 0, Other: 0 };
+    if (studentRows && Array.isArray(studentRows)) {
+      studentRows.forEach(s => {
+        const main = (s.class || '').toString().trim();
+        const sub = (s.subclass || '').toString().trim();
+        const gender = (s.gender || '').toString().trim();
+        if (gender) {
+          if (/^male$/i.test(gender)) genderMap.Male++;
+          else if (/^female$/i.test(gender)) genderMap.Female++;
+          else genderMap.Other++;
+        }
+        if (!main) return;
+        studentClassMap[main] = studentClassMap[main] || { total: 0, subs: {} };
+        studentClassMap[main].total += 1;
+        if (sub) {
+          studentClassMap[main].subs[sub] = (studentClassMap[main].subs[sub] || 0) + 1;
+        }
+      });
+    }
+    const studentItems = Object.keys(studentClassMap).sort().map(k => {
+      const entry = studentClassMap[k];
+      const subs = Object.keys(entry.subs).sort().map(sk => `${sk}: ${entry.subs[sk]}`).join(', ');
+      return { title: `${k}: ${entry.total}`, subtitle: subs || '' };
+    });
+    // add an overall gender summary as one of the items (helps admins quickly see gender split)
+    const genderParts = [];
+    if (genderMap.Male) genderParts.push(`M: ${genderMap.Male}`);
+    if (genderMap.Female) genderParts.push(`F: ${genderMap.Female}`);
+    if (genderMap.Other) genderParts.push(`Other: ${genderMap.Other}`);
+    if (genderParts.length) studentItems.push({ title: 'Gender', subtitle: genderParts.join(' • ') });
+  console.debug('[liveBreakdowns] studentItems=', studentItems);
+
+    // Teachers: by responsibility
+    const respMap = {};
+    const subjMap = {};
+    if (teacherRows && Array.isArray(teacherRows)) {
+      teacherRows.forEach(t => {
+        const r = (t.responsibility || '').toString().trim() || 'Other';
+        respMap[r] = (respMap[r] || 0) + 1;
+        let subs = [];
+        if (Array.isArray(t.subjects)) subs = t.subjects;
+        else if (typeof t.subjects === 'string') {
+          const m = t.subjects.trim();
+          if (m.startsWith('{') && m.endsWith('}')) subs = m.slice(1,-1).split(',').map(s=>s.replace(/^"|"$/g,'').trim()).filter(Boolean);
+          else if (m) subs = [m];
+        }
+        subs.forEach(sv => subjMap[sv] = (subjMap[sv] || 0) + 1);
+      });
+    }
+    const teacherItems = Object.keys(respMap).map(k => ({ title: k, subtitle: String(respMap[k]) }));
+  console.debug('[liveBreakdowns] teacherItems=', teacherItems.slice(0,10));
+    // Admins: show emails as items (short list)
+    const adminItems = (adminRows && Array.isArray(adminRows) && adminRows.length) ? adminRows.slice(0,8).map(a => ({ title: a.email || '[no email]', subtitle: '' })) : [{ title: 'None', subtitle: '' }];
+  console.debug('[liveBreakdowns] adminItems=', adminItems);
+
+    // Render into containers
+    _renderBreakdownItems('studentsBreakdown', studentItems.length ? studentItems : [{ title: 'None', subtitle: '' }], mode, 4500);
+    _renderBreakdownItems('teachersBreakdown', teacherItems.length ? teacherItems : [{ title: 'None', subtitle: '' }], mode, 4500);
+    _renderBreakdownItems('adminsBreakdown', adminItems, mode, 4500);
+  } catch (err) {
+    console.warn('refreshLiveBreakdowns failed', err);
+  }
+}
+
+function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
+  try { if (_nsuta_breakdown_timers.master) clearInterval(_nsuta_breakdown_timers.master); } catch(e){}
+  // record active live mode so other code (populateKPIs) won't clobber the live containers
+  try { window._nsuta_live_mode = mode; } catch (e) {}
+  // initial
+  refreshLiveBreakdowns(mode);
+  _nsuta_breakdown_timers.master = setInterval(() => refreshLiveBreakdowns(mode), intervalMs);
+}
+
 
   // Wire the announcement toolbar button and sidebar item clicks
   document.addEventListener('DOMContentLoaded', function() {

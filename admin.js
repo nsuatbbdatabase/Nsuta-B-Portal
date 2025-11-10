@@ -44,22 +44,52 @@ window.filterStudentDropdown = function filterStudentDropdown() {
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
+  // Maintain a stack of open modals so nested dialogs stack correctly
+    try {
+      window._openModals = window._openModals || [];
+    } catch (e) {
+      window._openModals = [];
+    }
+    // push this modal onto the stack (if not already present)
+    if (window._openModals.indexOf(modalId) === -1) window._openModals.push(modalId);
+    // compute backdrop/modal z-index based on stack depth
+    const baseBackdropZ = 9000; // matches .modal-backdrop in CSS
+    const perModal = 50; // spacing between stacked modals
+    const stackIndex = window._openModals.length - 1; // 0..n-1
+    const backdropZ = baseBackdropZ + stackIndex * perModal;
+    const modalZ = backdropZ + 10;
   // debug logging removed
     modal.classList.remove('hidden');
     // Force visible display and bring to front in case CSS rules conflict
     modal.style.display = 'flex';
-    try { modal.style.zIndex = '99999'; } catch(e) {}
+    try { modal.style.zIndex = String(modalZ); } catch(e) {}
+    // Mark as visible for assistive tech
+    try { modal.setAttribute('aria-hidden', 'false'); } catch(e) {}
+    // If this is the modal-panel variant used for small registration dialogs,
+    // apply the `.open` class so the CSS rules that center and fix the panel
+    // will take effect (prevents the panel from rendering inline at the page bottom).
+    if (modal.classList && modal.classList.contains('modal-panel')) {
+      modal.classList.add('open');
+      // ensure it's appended to body so it's not clipped by parent containers
+      try { if (modal.parentElement !== document.body) document.body.appendChild(modal); } catch(e) {}
+      // focus first control for convenience
+      try { const first = modal.querySelector('input,select,textarea,button'); if (first) first.focus(); } catch(e) {}
+      return;
+    }
     // Diagnostic: log computed styles and bounding rects for the modal and its content
     try {
       const cs = window.getComputedStyle(modal);
       // diagnostic logging removed
       const rect = modal.getBoundingClientRect();
-      const content = modal.querySelector('.modal-content');
+      // Prefer .modal-content, but fall back to .modal-panel, a form, or the modal itself
+      let content = modal.querySelector('.modal-content') || modal.querySelector('.modal-panel') || modal.querySelector('form') || modal;
       if (content) {
         const cs2 = window.getComputedStyle(content);
         // diagnostic logging removed for modal content
-      } else {
-        console.warn('openModal: no .modal-content child found inside', modalId);
+        // If the modal lacked a dedicated .modal-content wrapper, emit a debug-level note
+        if (!modal.querySelector('.modal-content')) {
+          console.debug('openModal: no .modal-content wrapper found; using fallback content element for', modalId);
+        }
       }
       // Inspect parent stacking context
       // ancestor diagnostic logging removed
@@ -82,6 +112,16 @@ function openModal(modalId) {
       // Ensure modal occupies viewport
       modal.style.width = modal.style.width || '100%';
       modal.style.height = modal.style.height || '100%';
+      try { modal.setAttribute('aria-hidden', 'false'); } catch(e) {}
+      // Ensure the shared backdrop sits behind the top-most modal
+      try {
+        const back = document.getElementById('modalBackdrop');
+        if (back) {
+          back.setAttribute('aria-hidden', 'false');
+          back.classList.add('show');
+          back.style.zIndex = String(backdropZ);
+        }
+      } catch (be) { /* ignore backdrop errors */ }
     } catch (moveErr) {
       console.error('openModal: failed to move/force-visual modal', moveErr);
     }
@@ -92,43 +132,51 @@ function closeModal(modalId) {
   const modal = document.getElementById(modalId);
   if (modal) {
   // close modal
+    // Remove `.open` for modal-panel and reset inline styles we may have injected
+    try { if (modal.classList && modal.classList.contains('modal-panel')) modal.classList.remove('open'); } catch(e) {}
     modal.classList.add('hidden');
     modal.style.display = 'none';
     try { modal.style.zIndex = ''; } catch(e) {}
-  }
-  // After closing a modal, if no dashboard section is visible, restore the overview
-  try {
-    // Wait a tick to allow any other handlers to run
-    setTimeout(function() {
-      // Find any dashboard-section that is currently visible (not hidden and display not none)
-      var sections = Array.from(document.querySelectorAll('.dashboard-section'));
-      var anyVisible = sections.some(function(s) {
-        if (!s) return false;
-        if (s.classList && s.classList.contains('hidden')) return false;
-        var cs = window.getComputedStyle(s);
-        return cs && cs.display && cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
-      });
-      if (!anyVisible) {
-        if (typeof window.showOverview === 'function') {
-          try { window.showOverview(); } catch(e) { /* ignore */ }
-        } else {
-          var overview = document.getElementById('dashboardOverview');
-          if (overview) {
-            overview.classList.remove('hidden');
-            overview.style.display = '';
-          }
-        }
-      }
-    }, 40);
-  } catch (e) {
-    // If anything fails, as a fallback try to restore overview
+    try { modal.setAttribute('aria-hidden', 'true'); } catch(e) {}
+    // cleanup inline positioning that might have been injected
     try {
-      if (typeof window.showOverview === 'function') window.showOverview();
-      else {
-        var overview = document.getElementById('dashboardOverview');
-        if (overview) { overview.classList.remove('hidden'); overview.style.display = ''; }
+      modal.style.position = '';
+      modal.style.left = '';
+      modal.style.top = '';
+      modal.style.transform = '';
+      modal.style.zIndex = '';
+    } catch(e) {}
+  }
+  // Also hide the shared backdrop if present
+  try {
+    // remove this modal from stack
+    try { window._openModals = window._openModals || []; } catch (e) { window._openModals = []; }
+    const idx = window._openModals.indexOf(modalId);
+    if (idx !== -1) window._openModals.splice(idx, 1);
+    const back = document.getElementById('modalBackdrop');
+    if (back) {
+      if (!window._openModals || window._openModals.length === 0) {
+        // no more open modals: hide backdrop
+        back.setAttribute('aria-hidden', 'true');
+        back.classList.remove('show');
+        back.style.zIndex = '';
+      } else {
+        // there are still open modals: adjust backdrop z-index to the new top
+        const baseBackdropZ = 9000;
+        const perModal = 50;
+        const stackIndex = window._openModals.length - 1;
+        const backdropZ = baseBackdropZ + stackIndex * perModal;
+        back.style.zIndex = String(backdropZ);
       }
-    } catch (ee) { /* ignore */ }
+    }
+  } catch (e) {}
+  // Always show dashboard overview after closing key modals
+  if (modalId === 'promotionPassMarkModal' || modalId === 'eventsModal') {
+    const overview = document.getElementById('dashboardOverview');
+    if (overview) {
+      overview.classList.remove('hidden');
+      overview.style.display = '';
+    }
   }
 }
 
@@ -164,17 +212,29 @@ document.addEventListener('DOMContentLoaded', function() {
   var subClass = document.getElementById('sub_class_select');
   var hiddenClass = document.getElementById('class_teacher_class');
   if (mainClass && subClass && hiddenClass) {
+    // ensure initial state matches hidden-select convention
+    if (!(mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
+      subClass.classList.add('hidden-select');
+      subClass.required = false;
+      subClass.value = '';
+    } else {
+      subClass.classList.remove('hidden-select');
+      subClass.required = true;
+    }
     mainClass.addEventListener('change', function() {
       if (mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2') {
-        subClass.style.display = '';
+        subClass.classList.remove('hidden-select');
+        subClass.required = true;
         subClass.value = '';
         hiddenClass.value = '';
       } else if (mainClass.value === 'JHS 3') {
-        subClass.style.display = 'none';
+        subClass.classList.add('hidden-select');
+        subClass.required = false;
         subClass.value = '';
         hiddenClass.value = 'JHS 3';
       } else {
-        subClass.style.display = 'none';
+        subClass.classList.add('hidden-select');
+        subClass.required = false;
         subClass.value = '';
         hiddenClass.value = '';
       }
@@ -220,8 +280,6 @@ document.addEventListener('DOMContentLoaded', function() {
           classField.disabled = true;
         }
       }
-      // After successful edit, refresh page to clear modal state
-      setTimeout(function() { location.reload(); }, 600);
     });
   }
   // --- Promotion Pass Mark UI Logic ---
@@ -256,29 +314,31 @@ document.addEventListener('DOMContentLoaded', function() {
         promotionPassMarkStatus.style.color = 'red';
         return;
       }
-      // Get the first row's id if exists, else insert new
-      const { data, error: fetchError } = await supabaseClient
-        .from('settings')
-        .select('id')
-        .order('id', { ascending: true })
-        .limit(1);
-      let upsertData;
-      if (!fetchError && data && data.length) {
-        upsertData = { id: data[0].id, promotion_pass_mark: value };
-      } else {
-        upsertData = { promotion_pass_mark: value };
+      // Show loader while saving
+      const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving pass mark...', { color: '#0b66b2' }) : null;
+      try {
+        const { data, error: fetchError } = await supabaseClient
+          .from('settings')
+          .select('id')
+          .order('id', { ascending: true })
+          .limit(1);
+        let upsertData;
+        if (!fetchError && data && data.length) {
+          upsertData = { id: data[0].id, promotion_pass_mark: value };
+        } else {
+          upsertData = { promotion_pass_mark: value };
+        }
+        const { error } = await supabaseClient
+          .from('settings')
+          .upsert([upsertData]);
+        if (!error) {
+          try { showToast('Pass mark saved', 'info'); } catch(e) {}
+        } else {
+          try { showToast('Error saving pass mark', 'error'); } catch(e) {}
+        }
+      } finally {
+        try { loader && loader.close(); } catch (e) {}
       }
-      const { error } = await supabaseClient
-        .from('settings')
-        .upsert([upsertData]);
-      if (!error) {
-        promotionPassMarkStatus.textContent = 'Saved!';
-        promotionPassMarkStatus.style.color = 'green';
-      } else {
-        promotionPassMarkStatus.textContent = 'Error saving.';
-        promotionPassMarkStatus.style.color = 'red';
-      }
-      setTimeout(() => { promotionPassMarkStatus.textContent = ''; }, 2000);
     };
   }
 
@@ -312,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
     announcementForm.onsubmit = async function(e) {
       e.preventDefault();
       const text = announcementText.value.trim();
-      announcementStatus.textContent = 'Saving...';
+      const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving announcement...', { color: '#0b66b2' }) : null;
       try {
         const { data: existing, error: fetchErr } = await supabaseClient
           .from('settings')
@@ -328,66 +388,55 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use explicit onConflict target to ensure upsert behaves predictably.
         const { data: upsertResponse, error: upsertErr } = await supabaseClient.from('settings').upsert([upsertData], { onConflict: 'id' });
         if (!upsertErr) {
-          announcementStatus.textContent = 'Saved!';
-          announcementStatus.style.color = 'green';
+          try { showToast('Announcement saved', 'info'); } catch(e) {}
           if (announcementStatEl) announcementStatEl.textContent = text || '—';
-          // Also update homepage if open in another tab using localStorage event
           try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
         } else {
-          // Detailed logging for debugging
           console.error('Announcement upsert failed', upsertErr, upsertResponse);
-          // Detect common case where the column doesn't exist and surface a helpful message
           const errMsg = (upsertErr && (upsertErr.message || upsertErr.details || upsertErr.code)) ? (upsertErr.message || upsertErr.details || String(upsertErr.code)) : 'Unknown error';
           if (/column\s+"announcement"\s+does not exist/i.test(errMsg) || /invalid column reference/i.test(errMsg)) {
-            announcementStatus.textContent = 'DB schema missing `announcement` column. Run migration (see console).';
-            announcementStatus.style.color = 'red';
+            try { showToast('DB schema missing `announcement` column. See console for details.', 'error', 6000); } catch(e) {}
             console.error('Likely cause: `settings` table does not have an `announcement` column. Example migration SQL: ALTER TABLE settings ADD COLUMN announcement text;');
           } else {
-            // Try fallback: update existing row (if we discovered an id earlier), otherwise insert
+            // fallback attempts
             try {
               if (existing && existing.length && existing[0].id) {
-                console.warn('Attempting fallback UPDATE for settings.id=', existing[0].id);
-                const { error: updateErr, data: updateResp } = await supabaseClient.from('settings').update({ announcement: text }).eq('id', existing[0].id);
+                const { error: updateErr } = await supabaseClient.from('settings').update({ announcement: text }).eq('id', existing[0].id);
                 if (!updateErr) {
-                  announcementStatus.textContent = 'Saved (update fallback).'; announcementStatus.style.color = 'green';
+                  try { showToast('Announcement saved (fallback)', 'info'); } catch(e) {}
                   if (announcementStatEl) announcementStatEl.textContent = text || '—';
                   try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
                 } else {
-                  console.error('Fallback UPDATE failed', updateErr);
-                  // Try insert as last resort
                   const { error: insertErr } = await supabaseClient.from('settings').insert([{ announcement: text }]);
                   if (!insertErr) {
-                    announcementStatus.textContent = 'Saved (insert fallback).'; announcementStatus.style.color = 'green';
+                    try { showToast('Announcement saved (fallback insert)', 'info'); } catch(e) {}
                     if (announcementStatEl) announcementStatEl.textContent = text || '—';
                     try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
                   } else {
-                    console.error('Fallback INSERT also failed', insertErr);
-                    announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+                    try { showToast('Error saving announcement', 'error'); } catch(e) {}
                   }
                 }
               } else {
-                console.warn('No existing settings row found; attempting INSERT fallback');
                 const { error: insertErr } = await supabaseClient.from('settings').insert([{ announcement: text }]);
                 if (!insertErr) {
-                  announcementStatus.textContent = 'Saved (insert fallback).'; announcementStatus.style.color = 'green';
+                  try { showToast('Announcement saved (insert)', 'info'); } catch(e) {}
                   if (announcementStatEl) announcementStatEl.textContent = text || '—';
                   try { localStorage.setItem('siteAnnouncementUpdatedAt', Date.now().toString()); } catch (e) {}
                 } else {
-                  console.error('Fallback INSERT failed', insertErr);
-                  announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+                  try { showToast('Error saving announcement', 'error'); } catch(e) {}
                 }
               }
             } catch (fallbackErr) {
               console.error('Announcement fallback path failed', fallbackErr);
-              announcementStatus.textContent = 'Error saving.'; announcementStatus.style.color = 'red';
+              try { showToast('Error saving announcement', 'error'); } catch(e) {}
             }
           }
         }
       } catch (err) {
-        announcementStatus.textContent = 'Error saving.';
-        announcementStatus.style.color = 'red';
+        try { showToast('Error saving announcement', 'error'); } catch(e) {}
+      } finally {
+        try { loader && loader.close(); } catch (e) {}
       }
-      setTimeout(() => { if (announcementStatus) announcementStatus.textContent = ''; }, 2000);
     };
   }
   // Prevent access if not logged in as admin
@@ -407,6 +456,7 @@ document.addEventListener('DOMContentLoaded', function() {
       reader.onload = async function(evt) {
         const text = evt.target.result;
         const lines = text.split(/\r?\n/).filter(l => l.trim());
+        const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Importing CSV...', { color: '#0b66b2' }) : null;
         if (lines.length < 2) {
           notify('CSV file is empty or missing data.', 'warning');
           return;
@@ -443,6 +493,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
   let successCount = 0, failCount = 0, duplicateRows = [], invalidRows = [];
         for (let i = 1; i < lines.length; i++) {
+          if (i % 5 === 0) {
+            try { loader && loader.update(Math.round((i / (lines.length - 1)) * 100)); } catch (e) {}
+          }
           const row = lines[i].split(/\t|,/);
           if (row.length < 5) continue;
           // Build studentData with only allowed fields
@@ -514,10 +567,12 @@ document.addEventListener('DOMContentLoaded', function() {
             successCount++;
           }
         }
+        try { loader && loader.update(100); } catch (e) {}
         let msg = `Import complete. Success: ${successCount}, Failed: ${failCount}`;
         if (duplicateRows.length) msg += `\nDuplicate students (already exist in this class): ${duplicateRows.join(', ')}`;
         if (invalidRows.length) msg += `\nRows with missing/invalid fields or other errors: ${invalidRows.join(', ')}`;
         notify(msg, 'info');
+        try { loader && loader.close(); } catch (e) {}
       };
       reader.readAsText(file);
     });
@@ -691,9 +746,26 @@ document.addEventListener('submit', function(e) {
 
 // Create student record from the provided form element (uploads picture, assigns register_id)
 async function createStudentFromForm(form) {
-  // Show saving spinner
-  var savingOverlay = document.getElementById('studentModalSaving');
-  if (savingOverlay) savingOverlay.style.display = 'flex';
+  // Ask for confirmation before saving
+  try {
+    // respect remembered preference
+    let pref = null;
+    try { pref = localStorage.getItem('nsuta_confirm_save_student'); } catch (e) { pref = null; }
+    if (pref === 'false') {
+      // user opted out of confirmations for this action
+    } else {
+      const ok = (typeof window.showConfirm === 'function') ? await window.showConfirm('Save student changes?', { title: 'Confirm save', rememberKey: 'save_student' }) : confirm('Save student changes?');
+      if (!ok) return;
+    }
+  } catch (e) { return; }
+
+  // Prevent double submits and show a persistent loading/progress toast if available
+  if (form._saving) return;
+  form._saving = true;
+  const saveBtn = document.getElementById('studentSaveBtn');
+  try { if (saveBtn) saveBtn.disabled = true; } catch(e){}
+  const _loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving student...', { color: '#0b66b2' }) : null;
+  try {
   // gather values
   const firstName = (form.querySelector('[name="first_name"]')?.value || '').trim();
   const surname = (form.querySelector('[name="surname"]')?.value || '').trim();
@@ -753,13 +825,18 @@ async function createStudentFromForm(form) {
   // Upload picture if present
   let pictureUrl = null;
   if (pictureFile && window.supabaseClient) {
-    const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
-    const { data: uploadData, error: uploadError } = await window.supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
-    if (uploadError) {
-      console.warn('Picture upload failed:', uploadError.message);
-    } else {
-      const publicUrlResult = window.supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
-      pictureUrl = publicUrlResult?.data?.publicUrl || publicUrlResult?.publicUrl || null;
+    try {
+      _loader && _loader.update('Uploading picture...');
+      const uploadPath = `students/${Date.now()}_${pictureFile.name}`;
+      const { data: uploadData, error: uploadError } = await window.supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
+      if (uploadError) {
+        console.warn('Picture upload failed:', uploadError.message);
+      } else {
+        const publicUrlResult = window.supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
+        pictureUrl = publicUrlResult?.data?.publicUrl || publicUrlResult?.publicUrl || null;
+      }
+    } catch (upErr) {
+      console.warn('Picture upload exception', upErr);
     }
   }
 
@@ -819,8 +896,7 @@ async function createStudentFromForm(form) {
     };
     if (pictureUrl) updatePayload.picture_url = pictureUrl;
 
-    const { error } = await window.supabaseClient.from('students').update(updatePayload).eq('id', studentId);
-    if (savingOverlay) savingOverlay.style.display = 'none';
+    const { error } = await window.supabaseClient.from('students').update(updatePayload).eq('id', studentId).select();
     if (error) {
       console.error('Failed to update student:', error);
       throw error;
@@ -828,7 +904,6 @@ async function createStudentFromForm(form) {
     try { showToast('Student updated!', 'info', 3500); } catch (e) { /* fallback */ }
     if (typeof loadStudents === 'function') loadStudents();
     closeModal('studentModal');
-    setTimeout(function() { location.reload(); }, 600);
     return;
   }
 
@@ -836,7 +911,7 @@ async function createStudentFromForm(form) {
   let insertError = null;
   const maxInsertAttempts = 6;
   for (let attempt = 0; attempt < maxInsertAttempts; attempt++) {
-    const { error } = await window.supabaseClient.from('students').insert([payload]);
+    const { data: insData, error } = await window.supabaseClient.from('students').insert([payload]).select();
     if (!error) { insertError = null; break; }
     insertError = error;
     const errMsg = (error && (error.message || error.details || '')).toString();
@@ -851,22 +926,12 @@ async function createStudentFromForm(form) {
   try { showToast(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info', 6000); } catch (e) { try { safeNotify(`Student added!\nUsername: ${finalUsername}\nPIN: [hidden for security]`, 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
   if (typeof loadStudents === 'function') loadStudents();
   closeModal('studentModal');
-}
-// Restore last section on page load
-try {
-  var lastSection = localStorage.getItem('adminCurrentSection');
-  if (lastSection) {
-    if (typeof window.showSection === 'function') {
-      window.showSection(lastSection);
-    } else {
-      var sec = document.getElementById(lastSection);
-      if (sec) sec.style.display = 'block';
-    }
-    // Do not remove the persisted key here — let showOverview clear it when the user returns to overview.
+  } finally {
+    try { _loader && _loader.close(); } catch (e) {}
+    try { if (saveBtn) saveBtn.disabled = false; } catch(e){}
+    form._saving = false;
   }
-} catch(e) {}
-
-// Export students as CSV
+}
 function exportStudentsCSV() {
   if (!allStudents || allStudents.length === 0) {
   try { notify('No student data to export.', 'warning'); } catch (e) { try { safeNotify('No student data to export.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
@@ -907,15 +972,63 @@ function exportStudentsCSV() {
 document.addEventListener('DOMContentLoaded', function() {
   var responsibilitySelect = document.getElementById('responsibility');
   var attendanceNote = document.getElementById('attendanceNote');
-  if (responsibilitySelect && attendanceNote) {
-    responsibilitySelect.addEventListener('change', function() {
-      if (responsibilitySelect.value === 'Class Teacher') {
-        attendanceNote.style.display = '';
+  var classTeacherSection = document.getElementById('classTeacherSection');
+  var mainClassSelect = document.getElementById('main_class_select');
+  var teacherSubClass = document.getElementById('sub_class_select');
+  var hiddenClassField = document.getElementById('class_teacher_class');
+
+  function updateClassTeacherUI() {
+    // attendance note
+    if (attendanceNote) attendanceNote.style.display = (responsibilitySelect && responsibilitySelect.value === 'Class Teacher') ? '' : 'none';
+    // show/hide the class responsibility block
+    if (classTeacherSection) {
+      if (responsibilitySelect && responsibilitySelect.value === 'Class Teacher') {
+        classTeacherSection.style.display = '';
+        // ensure subclass visibility matches main class selection
+        if (mainClassSelect) {
+          if (mainClassSelect.value === 'JHS 1' || mainClassSelect.value === 'JHS 2') {
+            if (teacherSubClass) { teacherSubClass.classList.remove('hidden-select'); teacherSubClass.required = true; }
+            if (hiddenClassField) hiddenClassField.value = '';
+          } else if (mainClassSelect.value === 'JHS 3') {
+            if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
+            if (hiddenClassField) hiddenClassField.value = 'JHS 3';
+          } else {
+            if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
+            if (hiddenClassField) hiddenClassField.value = '';
+          }
+        }
       } else {
-        attendanceNote.style.display = 'none';
+        // hide the whole section and clear values
+        classTeacherSection.style.display = 'none';
+        if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
+        if (hiddenClassField) { hiddenClassField.value = ''; hiddenClassField.disabled = true; }
+      }
+    }
+  }
+
+  // Wire change listener on responsibility select
+  if (responsibilitySelect) responsibilitySelect.addEventListener('change', updateClassTeacherUI);
+  // Also wire main class change to adjust subclass visibility when the section is visible
+  if (mainClassSelect) {
+    mainClassSelect.addEventListener('change', function() {
+      // Only affect subclass when classTeacherSection is visible (i.e., Class Teacher selected)
+      if (classTeacherSection && classTeacherSection.style.display !== 'none') {
+        if (mainClassSelect.value === 'JHS 1' || mainClassSelect.value === 'JHS 2') {
+          if (teacherSubClass) { teacherSubClass.classList.remove('hidden-select'); teacherSubClass.required = true; }
+          if (hiddenClassField) hiddenClassField.value = '';
+        } else if (mainClassSelect.value === 'JHS 3') {
+          if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
+          if (hiddenClassField) hiddenClassField.value = 'JHS 3';
+        } else {
+          if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
+          if (hiddenClassField) hiddenClassField.value = '';
+        }
       }
     });
   }
+
+  // initial state
+  updateClassTeacherUI();
 });
 
 // Use the supabaseClient already declared in dashboard.js
@@ -974,47 +1087,42 @@ let allStudents = [];
 async function resetStudentPin(studentId) {
   if (!studentId) return;
   if (!window.supabaseClient) {
-  try { notify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (e) { try { safeNotify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
-    // Optionally disable the button to prevent further attempts
-    const btn = document.querySelector(`button.reset-pin-btn[onclick*="${studentId}"]`);
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Supabase Error';
-      btn.style.background = '#ccc';
-      btn.style.cursor = 'not-allowed';
-    }
+    try { notify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (e) { try { safeNotify('PIN reset failed: Supabase client not found. Please refresh the page or contact IT support.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
-  // Update student PIN to default and set forcePinChange flag (camelCase)
-  const { error } = await window.supabaseClient
-    .from('students')
-    .update({ pin: '1234', forcePinChange: true })
-    .eq('id', studentId);
-  if (error) {
-  try { notify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (e) { try { safeNotify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
-    return;
-  }
-  // Log out student if currently logged in
+
+  // Show a small progress indicator while we perform the reset
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Resetting PIN...', { color: '#0b66b2' }) : null;
   try {
+    const { error } = await window.supabaseClient
+      .from('students')
+      .update({ pin: '1234', forcePinChange: true })
+      .eq('id', studentId);
+    if (error) {
+      try { notify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (e) { try { safeNotify('Failed to reset PIN. Please check your Supabase connection and schema.', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
+      return;
+    }
+
     // If the logged-in student matches the reset student, clear session
-    const loggedInStudentId = localStorage.getItem('studentId');
-    if (loggedInStudentId && loggedInStudentId === studentId) {
-      localStorage.removeItem('studentId');
-      localStorage.removeItem('studentSession');
-      localStorage.removeItem('studentUsername');
-      localStorage.removeItem('studentPin');
-      // Optionally, redirect if on student dashboard
+    try {
+      const loggedInStudentId = localStorage.getItem('studentId');
+      if (loggedInStudentId && loggedInStudentId === studentId) {
+        localStorage.removeItem('studentId');
+        localStorage.removeItem('studentSession');
+        localStorage.removeItem('studentUsername');
+        localStorage.removeItem('studentPin');
         if (window.location.pathname.includes('student-dashboard')) {
           try { localStorage.setItem('openLoginRole', 'student'); } catch (e) {}
           window.location.href = 'index.html';
         }
-    }
-  } catch (e) {
-    // Ignore errors
+      }
+    } catch (e) { /* ignore */ }
+
+    try { notify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (e) { try { safeNotify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
+    if (typeof showSelectedStudent === 'function') showSelectedStudent();
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
   }
-  try { notify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (e) { try { safeNotify('Student PIN has been reset. The student will be required to change their PIN on next login.', 'info'); } catch (ee) { console.error('safeNotify failed', ee); } }
-  // Optionally refresh student view
-  if (typeof showSelectedStudent === 'function') showSelectedStudent();
 }
 async function fetchAndDisplaySchoolDates() {
   const { data, error } = await supabaseClient
@@ -1022,30 +1130,44 @@ async function fetchAndDisplaySchoolDates() {
     .select('*')
     .order('inserted_at', { ascending: false })
     .limit(1);
+  // Helper to safely set textContent/value only if the element exists
+  function safeSetText(id, text) {
+    try {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    } catch (e) { /* ignore */ }
+  }
+  function safeSetValue(id, value) {
+    try {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    } catch (e) { /* ignore */ }
+  }
+
   if (error) {
-    document.getElementById('vacationDateDisplay').textContent = '—';
-    document.getElementById('reopenDateDisplay').textContent = '—';
+    safeSetText('vacationDateDisplay', '—');
+    safeSetText('reopenDateDisplay', '—');
     return;
   }
   const latest = data && data.length > 0 ? data[0] : null;
-  document.getElementById('vacationDateDisplay').textContent = latest && latest.vacation_date ? new Date(latest.vacation_date).toLocaleDateString() : '—';
-  document.getElementById('reopenDateDisplay').textContent = latest && latest.reopen_date ? new Date(latest.reopen_date).toLocaleDateString() : '—';
-  // Pre-fill modal form if editing
+  safeSetText('vacationDateDisplay', latest && latest.vacation_date ? new Date(latest.vacation_date).toLocaleDateString() : '—');
+  safeSetText('reopenDateDisplay', latest && latest.reopen_date ? new Date(latest.reopen_date).toLocaleDateString() : '—');
+  // Pre-fill modal form if editing (guard inputs)
   if (latest) {
-    document.getElementById('vacation_date').value = latest.vacation_date || '';
-    document.getElementById('reopen_date').value = latest.reopen_date || '';
-    document.getElementById('attendance_total_days').value = latest.attendance_total_days || '';
+    safeSetValue('vacation_date', latest.vacation_date || '');
+    safeSetValue('reopen_date', latest.reopen_date || '');
+    safeSetValue('attendance_total_days', latest.attendance_total_days || '');
   } else {
-    document.getElementById('vacation_date').value = '';
-    document.getElementById('reopen_date').value = '';
-    document.getElementById('attendance_total_days').value = '';
+    safeSetValue('vacation_date', '');
+    safeSetValue('reopen_date', '');
+    safeSetValue('attendance_total_days', '');
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   fetchAndDisplaySchoolDates();
   const schoolDatesForm = document.getElementById('schoolDatesForm');
-  if (schoolDatesForm) {
+    if (schoolDatesForm) {
     schoolDatesForm.onsubmit = async function(e) {
       e.preventDefault();
       const vacation_date = document.getElementById('vacation_date').value;
@@ -1055,18 +1177,23 @@ document.addEventListener('DOMContentLoaded', () => {
       try { notify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (e) { try { safeNotify('Please enter a valid number for Actual Attendance Days.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
         return;
       }
-      // Upsert (insert or update latest row)
-      const { data, error } = await supabaseClient
-        .from('school_dates')
-        .upsert([
-          { vacation_date, reopen_date, attendance_total_days }
-        ]);
-    if (error) {
-  try { notify('Failed to save dates', 'error'); } catch (e) { try { safeNotify('Failed to save dates', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
-        return;
+      const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving school dates...', { color: '#0b66b2' }) : null;
+      try {
+        // Upsert (insert or update latest row)
+        const { data, error } = await supabaseClient
+          .from('school_dates')
+          .upsert([
+            { vacation_date, reopen_date, attendance_total_days }
+          ]);
+        if (error) {
+          try { showToast('Failed to save dates', 'error'); } catch (e) {}
+          return;
+        }
+        closeModal('schoolDatesModal');
+        fetchAndDisplaySchoolDates();
+      } finally {
+        try { loader && loader.close(); } catch (e) {}
       }
-      closeModal('schoolDatesModal');
-      fetchAndDisplaySchoolDates();
     };
   }
 
@@ -1080,16 +1207,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const date = document.getElementById('event_date').value;
       const details = document.getElementById('event_desc').value;
       const type = 'event';
-      const { error } = await supabaseClient.from('events').insert([
-        { title, date, details, type }
-      ]);
-    if (error) {
-  try { notify('Failed to save event', 'error'); } catch (e) { try { safeNotify('Failed to save event', 'error'); } catch (ee) { console.error('safeNotify failed', ee); } }
-        return;
+      const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving event...', { color: '#0b66b2' }) : null;
+      try {
+        const { error } = await supabaseClient.from('events').insert([
+          { title, date, details, type }
+        ]);
+        if (error) {
+          try { showToast('Failed to save event', 'error'); } catch (e) {}
+          return;
+        }
+        closeModal('eventsModal');
+        eventsForm.reset();
+        fetchAndRenderEvents();
+      } finally {
+        try { loader && loader.close(); } catch (e) {}
       }
-      closeModal('eventsModal');
-      eventsForm.reset();
-      fetchAndRenderEvents();
     };
   }
 });
@@ -1136,15 +1268,37 @@ async function deleteEvent(eventId) {
 // Fetch all students on page load
 window.addEventListener('DOMContentLoaded', async () => {
   await fetchAndRenderStudents();
-  document.getElementById('classFilter').addEventListener('change', filterStudentsByClass);
+  const classFilterEl = document.getElementById('classFilter');
+  if (classFilterEl) classFilterEl.addEventListener('change', filterStudentsByClass);
+  // Ensure selecting a student shows the student table. Attach change listener here so it
+  // remains active even if the students section is moved into a modal (moving nodes keeps
+  // event listeners, but attaching here guarantees behavior on initial load).
+  try {
+    const studentSelectEl = document.getElementById('studentSelect');
+    if (studentSelectEl) {
+      studentSelectEl.addEventListener('change', function() {
+        try { if (typeof window.showSelectedStudent === 'function') window.showSelectedStudent(); } catch (e) { console.warn('showSelectedStudent failed on change', e); }
+      });
+    }
+    const teacherSelectEl = document.getElementById('teacherSelect');
+    if (teacherSelectEl) {
+      teacherSelectEl.addEventListener('change', function() {
+        try { if (typeof window.showSelectedTeacher === 'function') window.showSelectedTeacher(); } catch (e) { console.warn('showSelectedTeacher failed on change', e); }
+      });
+    }
+  } catch (e) {
+    console.warn('Failed to attach studentSelect change listener', e);
+  }
 });
 
 async function fetchAndRenderStudents() {
-  const { data, error } = await supabaseClient.from('students').select('*');
-  if (error) {
-  try { notify('Failed to fetch students', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to fetch students', 'error'); else if (window._originalAlert) window._originalAlert('Failed to fetch students'); else console.debug('Failed to fetch students'); } catch(err){ console.debug('Failed to fetch students'); } }
-    return;
-  }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Loading students...', { color: '#0b66b2' }) : null;
+  try {
+    const { data, error } = await supabaseClient.from('students').select('*');
+    if (error) {
+      try { notify('Failed to fetch students', 'error'); } catch (e) { try { if (window.safeNotify) window.safeNotify('Failed to fetch students', 'error'); else if (window._originalAlert) window._originalAlert('Failed to fetch students'); else console.debug('Failed to fetch students'); } catch(err){ console.debug('Failed to fetch students'); } }
+      return;
+    }
   // Sort students by register_id (natural order: class, then number)
   allStudents = (data || []).slice().sort((a, b) => {
     if (!a.register_id || !b.register_id) return 0;
@@ -1154,6 +1308,9 @@ async function fetchAndRenderStudents() {
     return ac.localeCompare(bc);
   });
   filterStudentsByClass();
+  } finally {
+    try { loader && loader.close(); } catch (e) {}
+  }
 }
 
 function filterStudentsByClass() {

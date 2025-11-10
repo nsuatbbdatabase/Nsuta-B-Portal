@@ -8,7 +8,10 @@
 </head>
 <body>
   <div class="dashboard-container">
-    <h2>Student Profiles by Term & Year</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+      <h2 style="margin:0;">Student Profiles by Term & Year</h2>
+      <button id="backToDashboard" style="margin-left:1rem;padding:0.4rem 0.6rem;border-radius:6px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;">← Back to Dashboard</button>
+    </div>
 
     <!-- 🔍 Filters -->
     <div class="filters">
@@ -51,5 +54,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="interest-dashboard.js"></script>
    <script src="toasts.js"></script>
+  <script>
+    // Back to admin dashboard
+    document.getElementById('backToDashboard')?.addEventListener('click', function(){ window.location.href = 'admin.html'; });
+  </script>
 </body>
 </html>

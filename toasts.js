@@ -55,10 +55,20 @@
   window.showToast = makeToast;
   // backward-compatible notify wrapper
   window.notify = function(msg, type='info', duration) { makeToast(String(msg), type, duration || 3500); };
-  // Monkey-patch alert to show toast instead (but leave original available)
+  // Monkey-patch alert: prefer an in-page modal alert if available, fall back to toast
   try {
     window._originalAlert = window.alert.bind(window);
-    window.alert = function(msg) { makeToast(String(msg), 'info', 5000); };
+    window.alert = function(msg, opts) {
+      try {
+        if (typeof window.showAlert === 'function') {
+          // showAlert returns a Promise; we don't need to await it here
+          window.showAlert(String(msg), opts || {});
+          return;
+        }
+      } catch (e) { /* ignore */ }
+      // Fallback to a toast when modal alert isn't available
+      makeToast(String(msg), 'info', 5000);
+    };
   } catch(e) {}
   
   // Persistent loading / progress toast. Returns an object { update(percentOrText), close() }
@@ -140,6 +150,7 @@
   window.showConfirm = function(message, options = {}) {
     return new Promise((resolve) => {
       const title = options.title || 'Please confirm';
+      const rememberKey = options.rememberKey || null;
       // Modal backdrop
       const backdrop = document.createElement('div');
       backdrop.className = 'app-confirm-backdrop';
@@ -168,6 +179,7 @@
         <div style="display:flex;flex-direction:column;gap:0.6rem">
           <div id="app-confirm-title" style="font-weight:700;font-size:1rem">${String(title)}</div>
           <div style="color:#334;margin-top:4px">${String(message).replace(/\n/g, '<br/>')}</div>
+          ${rememberKey ? '<label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem"><input type="checkbox" id="app-confirm-dontask" /> <span style="font-size:13px;color:#556">Don\'t ask me again for this action</span></label>' : ''}
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
             <button class="app-confirm-cancel" type="button">Cancel</button>
             <button class="app-confirm-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">OK</button>
@@ -186,6 +198,15 @@
       function cleanup(result) {
         try { document.body.removeChild(backdrop); } catch (e) {}
         try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
+        // If the user checked "Don't ask again" and this dialog was created with a rememberKey, persist preference
+        try {
+          if (rememberKey) {
+            const cb = dialog.querySelector('#app-confirm-dontask');
+            if (cb && cb.checked) {
+              try { localStorage.setItem('nsuta_confirm_' + rememberKey, 'false'); } catch (e) { /* ignore */ }
+            }
+          }
+        } catch (e) {}
         resolve(Boolean(result));
       }
 
@@ -266,6 +287,66 @@
       dialog.addEventListener('keydown', (ev) => {
         if (ev.key === 'Escape') { ev.preventDefault(); cleanup(null); }
         if (ev.key === 'Enter') { ev.preventDefault(); cleanup(String(input.value)); }
+      });
+    });
+  };
+
+  // Modern single-button alert modal (promise-based). Usage: await showAlert('Saved');
+  window.showAlert = function(message, options = {}) {
+    return new Promise((resolve) => {
+      const title = options.title || 'Notice';
+      const okText = options.okText || 'OK';
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'app-alert-backdrop';
+      backdrop.style.position = 'fixed';
+      backdrop.style.top = '0'; backdrop.style.left = '0'; backdrop.style.right = '0'; backdrop.style.bottom = '0';
+      backdrop.style.background = 'rgba(0,0,0,0.45)';
+      backdrop.style.zIndex = 100000;
+      backdrop.style.display = 'flex';
+      backdrop.style.alignItems = 'center';
+      backdrop.style.justifyContent = 'center';
+
+      const dialog = document.createElement('div');
+      dialog.className = 'app-alert-dialog';
+      dialog.setAttribute('role', 'alertdialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'app-alert-title');
+      dialog.style.background = '#fff';
+      dialog.style.color = '#052a3a';
+      dialog.style.padding = '1rem';
+      dialog.style.borderRadius = '8px';
+      dialog.style.minWidth = '320px';
+      dialog.style.maxWidth = '92%';
+      dialog.style.boxShadow = '0 10px 36px rgba(2,24,57,0.16)';
+
+      dialog.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:0.6rem">
+          <div id="app-alert-title" style="font-weight:700;font-size:1rem">${String(title)}</div>
+          <div style="color:#334;margin-top:4px">${String(message).replace(/\n/g, '<br/>')}</div>
+          <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
+            <button class="app-alert-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">${String(okText)}</button>
+          </div>
+        </div>`;
+
+      backdrop.appendChild(dialog);
+      document.body.appendChild(backdrop);
+
+      // Focus management
+      const okBtn = dialog.querySelector('.app-alert-ok');
+      const prevActive = document.activeElement;
+      try { okBtn.focus(); } catch (e) {}
+
+      function cleanup() {
+        try { document.body.removeChild(backdrop); } catch (e) {}
+        try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
+        resolve(true);
+      }
+
+      okBtn.addEventListener('click', () => cleanup());
+      backdrop.addEventListener('click', (ev) => { if (ev.target === backdrop) cleanup(); });
+      dialog.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' || ev.key === 'Enter') { ev.preventDefault(); cleanup(); }
       });
     });
   };

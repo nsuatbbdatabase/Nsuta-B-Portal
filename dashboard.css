@@ -259,6 +259,8 @@ body {
   justify-content: center;
 }
 
+.filters--start { justify-content: flex-start; }
+
 .filters label {
   font-weight: bold;
   margin-right: 0.3rem;
@@ -355,3 +357,277 @@ body {
   }
   .dashboard-container td:before, .grid-table-4-accent-3 td:before { display: none !important; content: none !important; }
 }
+
+/* Admin Dashboard: Live Tiles, Cards, Modals, Forms */
+.admin-app {
+  max-width: 1200px;
+  margin: 1.5rem auto;
+  padding: 1rem 1.2rem;
+}
+.admin-top {
+  display:flex;
+  gap:1rem;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:1rem;
+}
+.brand { display:flex; gap:0.8rem; align-items:center; }
+.brand .logo { width:56px; height:56px; border-radius:8px; object-fit:cover; box-shadow:0 4px 12px rgba(2,6,23,0.08); }
+.brand h1 { font-size:1.2rem; color:#04264b; margin:0; }
+.brand p { margin:0; font-size:0.85rem; color:#2563eb; opacity:0.9 }
+
+.tiles-grid {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:1rem;
+  margin-bottom:1.2rem;
+}
+.tile {
+  background: linear-gradient(180deg,#fff,#fbfdff);
+  border-radius:12px;
+  padding:1rem;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.06);
+  display:flex;
+  align-items:center;
+  gap:0.75rem;
+  transition: transform .18s ease, box-shadow .18s ease;
+  cursor:default;
+}
+.tile:hover { transform: translateY(-6px); box-shadow:0 12px 30px rgba(16,24,40,0.08); }
+.tile .icon { font-size:1.6rem; width:56px; height:56px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; }
+.tile .body { flex:1; }
+.tile .title { font-weight:700; color:#03224a; font-size:0.98rem; }
+.tile .value { font-size:1.35rem; font-weight:800; color:#0b4a94; }
+.tile .muted { color:#6b7280; font-size:0.85rem; }
+
+.tileAccent { background:linear-gradient(135deg,#e6f0ff,#fff); }
+.iconBlue { background: linear-gradient(180deg,#3b82f6,#1e40af); }
+.iconGreen { background: linear-gradient(180deg,#10b981,#059669); }
+.iconOrange { background: linear-gradient(180deg,#fb923c,#ef4444); }
+.action-btn { background:#04264b; color:#fff; border:none; padding:0.5rem 0.8rem; border-radius:8px; cursor:pointer; }
+
+.grid-sections { display:grid; grid-template-columns: 2fr 1fr; gap:1rem; }
+.section-card { background:#fff; border-radius:10px; padding:1rem; box-shadow:0 8px 24px rgba(15,23,42,0.04); }
+.section-card h2 { margin:0 0 0.6rem 0; color:#05204a; }
+
+.list-table { width:100%; border-collapse:collapse; }
+.list-table th, .list-table td { padding:0.55rem 0.6rem; border-bottom:1px solid #eef2f7; font-size:0.95rem; }
+.list-actions button { margin-right:0.35rem; }
+
+/* Modal */
+.modal-backdrop { position:fixed; inset:0; background:rgba(2,6,23,0.45); display:none; align-items:center; justify-content:center; z-index:9000; }
+.modal-backdrop.show { display:flex; }
+.modal-panel { background:#fff; width:100%; max-width:720px; border-radius:12px; padding:1rem 1.1rem; box-shadow:0 24px 60px rgba(2,6,23,0.2); }
+.modal-panel h3 { margin:0 0 0.6rem 0; }
+.form-grid { display:grid; grid-template-columns: repeat(2, 1fr); gap:0.6rem; }
+.form-grid .full { grid-column: 1 / -1; }
+.form-grid input, .form-grid select, .form-grid textarea { width:100%; padding:0.55rem; border-radius:8px; border:1px solid #d1d5db; }
+.modal-actions { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.6rem; }
+
+@media (max-width: 980px) {
+  .tiles-grid { grid-template-columns: repeat(2, 1fr); }
+  .grid-sections { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .tiles-grid { grid-template-columns: 1fr; }
+  .brand h1 { font-size:1rem; }
+}
+
+/* small helper */
+.muted-small { color:#6b7280; font-size:0.85rem }
+
+/* utility classes used by admin.html */
+.ml-sm { margin-left:8px; }
+.mt-sm { margin-top:8px; }
+.tile-centered { align-items:center; justify-content:center; }
+.text-center { text-align:center; }
+.flex-row { display:flex; gap:0.5rem; align-items:center; }
+.section-card--spaced { margin-top:1rem; }
+
+/* Dashboard overview cards (live tiles) */
+.dashboard-cards {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:0.9rem;
+  margin-bottom:1.2rem;
+}
+.dashboard-card {
+  background: linear-gradient(180deg,#fff,#fbfdff);
+  border-radius:10px;
+  padding:0.9rem;
+  display:flex;
+  gap:0.8rem;
+  align-items:center;
+  cursor:pointer;
+  box-shadow:0 6px 18px rgba(16,24,40,0.04);
+  transition: transform .16s ease, box-shadow .16s ease;
+  outline: none;
+}
+.dashboard-card:hover, .dashboard-card:focus {
+  transform:translateY(-6px);
+  box-shadow:0 12px 30px rgba(16,24,40,0.06);
+}
+.card-icon { font-size:1.5rem; width:56px; height:56px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#f1f5f9,#e6eefc); }
+.card-body { flex:1; }
+.card-title { font-weight:700; color:#03224a; }
+.card-desc { color:#6b7280; font-size:0.9rem; }
+
+@media (max-width: 980px) {
+  .dashboard-cards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .dashboard-cards { grid-template-columns: 1fr; }
+}
+
+/* Lightweight styles for the sample-style modal blocks used in admin.html
+   (there are two modal patterns in the project: .modal-panel and .modal/.modal-content)
+*/
+.modal.hidden { display:none; }
+.modal { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:12000; background: rgba(2,6,23,0.45); }
+.modal-content { background:#fff; border-radius:12px; padding:0.75rem; width:100%; max-width:920px; box-shadow:0 24px 60px rgba(2,6,23,0.18);
+  /* Make modal content a vertical flex container so body can scroll while header/footer remain visible */
+  display:flex; flex-direction:column; gap:0.5rem;
+  max-height: calc(100vh - 96px); /* leave space for viewport chrome */
+  overflow: hidden;
+}
+/* Scrollable body inside modal */
+.modal-content .modal-body { overflow:auto; padding:0.6rem 0.6rem 0.8rem 0.6rem; }
+/* Header and footer styling */
+.modal-content .modal-header { padding:0.6rem 0.6rem; border-bottom:1px solid rgba(15,23,42,0.04); }
+.modal-content .modal-header h3 { margin:0; font-size:1.05rem; }
+.modal-content .modal-footer { padding:0.5rem 0.6rem 0.6rem 0.6rem; border-top:1px solid rgba(15,23,42,0.04); background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95)); }
+/* Keep form actions visible: if form sits inside modal-body, the .form-actions will stick to bottom of visible area */
+.modal-content form .form-actions { position: sticky; bottom: 0; display:flex; gap:0.6rem; justify-content:flex-end; padding-top:0.5rem; background: linear-gradient(transparent, rgba(255,255,255,0.95)); }
+.modal .form-actions { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.6rem; }
+.modal .section-desc { color:#6b7280; margin-bottom:0.6rem; }
+
+/* Section modal header layout used by #sectionModal */
+#sectionModal .modal-content .section-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:0.6rem;
+}
+
+/* Backdrop visibility helper (matches modal-backdrop/show usage) */
+.modal-backdrop.visible, .modal-backdrop.show { display:flex; }
+
+/* button variant for admin creation */
+.btn-admin { background:#0b4a94; color:#fff; border:none; padding:0.5rem 0.8rem; border-radius:8px; }
+.btn-admin:hover { filter:brightness(1.03); }
+
+/* Modal visibility helpers */
+.modal-panel { display:none; }
+.modal-panel.open { display:block; position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:12001; max-width:720px; width:95%; }
+.modal-backdrop.show + .modal-panel.open { display:block; }
+
+/* Breakdown animations (moved from admin.html) */
+/* Layout for overview breakdowns */
+#overviewBreakdowns { margin-top: 0.75rem; display:flex; gap:0.5rem; align-items:flex-start; }
+#overviewBreakdowns .dashboard-card.small { flex:1; min-width:180px; padding:0.6rem; }
+.breakdown-item { display:block; opacity:0; transform: translateX(12px); transition: opacity 360ms ease, transform 360ms ease; padding:0.1rem 0; }
+.breakdown-item .bd-title { font-weight:700; font-size:0.95rem; }
+.breakdown-item .bd-sub { font-size:0.88rem; color:var(--muted-color,#6b7280); }
+.breakdown-item.show { opacity:1; transform: none; }
+.break-pop { animation: pop .42s cubic-bezier(.2,.8,.2,1); }
+@keyframes pop { 0% { transform: scale(.82); opacity: 0; } 60% { transform: scale(1.06); opacity:1; } 100% { transform: scale(1); opacity:1; } }
+
+/* Slideshow layout: position items absolutely inside the breakdown container
+  so inactive items do not take vertical space and the container height remains stable */
+.breakdown-slideshow { position: relative; min-height: 2.2rem; overflow: hidden; }
+.breakdown-slideshow .breakdown-item { position: absolute; left: 0; right: 0; top: 0; width: 100%; }
+
+/* Push transition: horizontal track where items push previous item out to the left */
+.breakdown-push { position: relative; overflow: hidden; }
+.break-push-track { display: flex; width: 100%; transition: transform 420ms cubic-bezier(.2,.8,.2,1); will-change: transform; }
+.break-push-item { flex: 0 0 100%; box-sizing: border-box; padding: 0; }
+.break-push-item { opacity: 1; transform: none; }
+.break-push-track .breakdown-item { position: relative; left: auto; right: auto; top: auto; width: auto; }
+.break-push-item .bd-title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Temporary highlight used when navigating to a section */
+.flash-highlight { box-shadow: 0 10px 30px rgba(11,102,178,0.08); border-radius: 8px; transition: box-shadow 240ms ease; }
+
+/* Modal spinner */
+.modal-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 24px auto;
+  border-radius: 50%;
+  border: 4px solid rgba(0,0,0,0.08);
+  border-top-color: rgba(11,102,178,0.9);
+  animation: nsuta-spin 990ms linear infinite;
+}
+@keyframes nsuta-spin { to { transform: rotate(360deg); } }
+
+/* Constrain images inside modals and tables so a large picture doesn't fill the modal */
+.modal-content img,
+.modal .list-table img,
+#sectionModalBody img,
+.modal .photo img,
+.list-table .photo img {
+  max-width: 96px;
+  max-height: 96px;
+  width: auto;
+  height: auto;
+  object-fit: cover;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Ensure the photo cell reserves space and avoids stretching layouts */
+.list-table td.photo, .list-table th.photo {
+  width: 110px;
+  vertical-align: middle;
+}
+
+/* Mobile-first / small viewport improvements */
+@media (max-width: 600px) {
+  /* Stack header elements */
+  .admin-top { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  .brand { gap: 0.6rem; }
+  .brand .logo { width:48px; height:48px; }
+
+  /* Tiles: single column, larger touch area */
+  .tiles-grid { grid-template-columns: 1fr; gap:0.8rem; }
+  .tile { padding: 0.9rem; align-items:flex-start; gap:0.6rem; cursor:pointer; }
+  .tile .icon { width:44px; height:44px; font-size:1.25rem; }
+  .tile .title { font-size:1rem; }
+  .tile .value { font-size:1.15rem; }
+
+  /* Action buttons full-width for easier tapping */
+  .action-btn, .btn-admin { width:100%; display:block; padding:0.75rem; }
+
+  /* Dashboard cards single column */
+  .dashboard-cards { grid-template-columns: 1fr; }
+
+  /* Section grid becomes single column (aside stacks below main) */
+  .grid-sections { grid-template-columns: 1fr; }
+
+  /* Make list tables horizontally scrollable and avoid stacking behavior interfering */
+  .list-table, .list-table tbody, .list-table thead, .list-table tr { display:block; width:100%; overflow-x:auto; }
+
+  /* Modal behaves like a bottom sheet on small screens */
+  .modal { align-items: flex-end; padding: 0 0 8px; }
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 12px 12px 0 0;
+    max-height: 92vh;
+    margin: 0;
+    box-shadow: 0 -8px 24px rgba(2,6,23,0.18);
+  }
+  .modal-content .modal-body { max-height: calc(92vh - 120px); padding: 0.6rem; }
+
+  /* Make small UI elements slightly larger and spaced for touch */
+  .filters select, .filters input[type="text"], .filters button { min-height:44px; }
+}
+
+/* Extra-tight phones: adjust font/sizes */
+@media (max-width: 420px) {
+  .brand h1 { font-size: 0.95rem; }
+  .tile .title { font-size: 0.95rem; }
+  .tile .muted { font-size: 0.8rem; }
+}
+

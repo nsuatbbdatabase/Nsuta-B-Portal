@@ -1,4 +1,30 @@
 // Consolidated admin inline scripts
+// Global handler: capture unhandled promise rejections (e.g. browser-extension messaging errors)
+// and present a friendly, debounced notification while avoiding noisy "Uncaught (in promise)" logs
+// for the known Chrome extension messaging case. We only suppress the default logging for the
+// specific message pattern so real app errors still surface.
+window.addEventListener('unhandledrejection', function (e) {
+  try {
+    const reason = e.reason;
+    const msg = reason && reason.message ? reason.message : String(reason || '');
+    // Known extension message substring
+    const extensionMsgFragment = 'A listener indicated an asynchronous response by returning true';
+    if (msg && msg.indexOf(extensionMsgFragment) !== -1) {
+      // Show a non-fatal toast so the user knows it's from a browser extension and not the app
+      try { if (window.showToast) window.showToast('A browser extension produced a messaging warning — it does not affect app functionality.', 'warning', 6000); } catch (t) {}
+      // Prevent the browser from printing the noisy "Uncaught (in promise)" entry for this case
+      try { e.preventDefault(); } catch (pe) {}
+    } else {
+      // For other unhandled rejections, log and surface a concise toast but do not fully suppress
+      try { console.warn('Unhandled promise rejection captured:', reason); } catch (c) {}
+      try { if (window.showToast) window.showToast('Unhandled promise rejection: ' + (msg || '[object]'), 'error', 6000); } catch (t) {}
+      // Do not call preventDefault for unknown errors so developers still see full console output
+    }
+  } catch (err) {
+    try { console.error('unhandledrejection handler error', err); } catch (e) {}
+  }
+});
+
 (function(){
   // Activation helper for dashboard cards (data-action values)
   function activateAction(action) {
@@ -52,16 +78,26 @@
     row.className = 'assignment-row';
     row.style.display = 'flex';
     row.style.gap = '0.5rem';
+
+    // If selectedClass contains a subclass (e.g. "JHS 1 A"), strip to main class
+    let initialMain = '';
+    if (selectedClass && typeof selectedClass === 'string') {
+      const m = selectedClass.trim().match(/^(.+?)\s+[A-Za-z]$/);
+      initialMain = m ? m[1] : selectedClass;
+    }
+
     const classSelect = document.createElement('select');
     classSelect.name = 'assignment_class[]';
     classSelect.required = true;
     classSelect.innerHTML = '<option value="">Class</option>' + CLASS_OPTIONS.map(c => `<option value="${c}">${c}</option>`).join('');
-    classSelect.value = selectedClass;
+    classSelect.value = initialMain || '';
+
     const subjectSelect = document.createElement('select');
     subjectSelect.name = 'assignment_subject[]';
     subjectSelect.required = true;
     subjectSelect.innerHTML = '<option value="">Subject</option>' + SUBJECT_OPTIONS.map(s => `<option value="${s}">${s}</option>`).join('');
-    subjectSelect.value = selectedSubject;
+    subjectSelect.value = selectedSubject || '';
+
     const areaSelectWrapper = document.createElement('div');
     areaSelectWrapper.style.display = 'none';
     areaSelectWrapper.style.flex = '1';
@@ -70,6 +106,22 @@
     areaSelect.innerHTML = '<option value="">Select Area</option>' + ['Home Economics','Pre Technical'].map(a => `<option value="${a}">${a}</option>`).join('');
     areaSelectWrapper.appendChild(areaSelect);
     if (selectedArea) areaSelect.value = selectedArea;
+
+    // Duplicate check based only on class + subject
+    function isDuplicateAssignment(testClass, testSubject, thisRow) {
+      try {
+        const rows = Array.from(document.querySelectorAll('#assignmentRowsContainer .assignment-row'));
+        for (const r of rows) {
+          if (r === thisRow) continue;
+          const c = (r.querySelector('select[name="assignment_class[]"]')?.value || '').trim();
+          const subj = r.querySelector('select[name="assignment_subject[]"]')?.value || '';
+          if (!c || !subj) continue;
+          if (c === testClass && subj === testSubject) return true;
+        }
+      } catch (e) { /* ignore */ }
+      return false;
+    }
+
     subjectSelect.addEventListener('change', function() {
       if (subjectSelect.value === 'Career Tech') {
         areaSelectWrapper.style.display = '';
@@ -79,15 +131,35 @@
         areaSelect.required = false;
         areaSelect.value = '';
       }
+      const cls = classSelect.value || '';
+      const subj = subjectSelect.value || '';
+      if (cls && subj) {
+        if (isDuplicateAssignment(cls, subj, row)) {
+          try { window.showToast && window.showToast('This class-subject assignment already exists. Please choose another.', 'warning'); } catch(e){}
+          subjectSelect.value = '';
+          if (areaSelect) { areaSelectWrapper.style.display = 'none'; areaSelect.required = false; areaSelect.value = ''; }
+        }
+      }
     });
-    if (selectedSubject === 'Career Tech') {
-      areaSelectWrapper.style.display = '';
-      areaSelect.required = true;
-    }
+    if (selectedSubject === 'Career Tech') { areaSelectWrapper.style.display = ''; areaSelect.required = true; }
+
+    classSelect.addEventListener('change', function() {
+      const v = classSelect.value;
+      const subj = subjectSelect.value || '';
+      if (v && subj) {
+        if (isDuplicateAssignment(v, subj, row)) {
+          try { window.showToast && window.showToast('This class-subject assignment already exists. Please choose another.', 'warning'); } catch(e){}
+          subjectSelect.value = '';
+          if (areaSelect) { areaSelectWrapper.style.display = 'none'; areaSelect.required = false; areaSelect.value = ''; }
+        }
+      }
+    });
+
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.textContent = 'Remove';
     removeBtn.onclick = () => row.remove();
+
     row.appendChild(classSelect);
     row.appendChild(subjectSelect);
     row.appendChild(areaSelectWrapper);
