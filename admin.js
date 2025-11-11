@@ -211,7 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'Church of Christ',
         'Christ Apostolic Church International',
         'Evangelical Presbyterian Church Ghana',
-        'Calvary Baptist Church'
+        'Calvary Baptist Church',
+        'The Church of the Lord Brotherhood'
       ];
       // clear existing options but keep a placeholder
       denomSelect.innerHTML = '<option value="">Select Denomination</option>';
