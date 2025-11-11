@@ -181,6 +181,55 @@ function closeModal(modalId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Populate denomination dropdown with approved churches in Ghana
+  (function populateDenominations(){
+    try {
+      const denomSelect = document.getElementById('denomination');
+      if (!denomSelect) return;
+      const denominations = [
+        'Church of Pentecost',
+        'Presbyterian Church of Ghana',
+        'Methodist Church Ghana',
+        'Roman Catholic Church Ghana',
+        'Anglican Church Ghana',
+        'Redeemed Christian Church of God (RCCG)',
+        'Assemblies of God Ghana',
+        'Seventh-day Adventist Church Ghana',
+        'Baptist Convention Ghana',
+        'Salvation Army Ghana',
+        'International Central Gospel Church (ICGC)',
+        'Action Chapel International',
+        'Lighthouse Chapel International',
+        'Perez Chapel International',
+        'Christ Embassy Ghana',
+        'Power Chapel Worldwide',
+        'Deeper Christian Life Ministry',
+        'Winners Chapel International',
+        'Synagogue Church of All Nations (SCOAN)',
+        'Church of Jesus Christ of Latter-day Saints',
+        'Jehovah\'s Witnesses',
+        'Church of Christ',
+        'Christ Apostolic Church International',
+        'Evangelical Presbyterian Church Ghana',
+        'Calvary Baptist Church'
+      ];
+      // clear existing options but keep a placeholder
+      denomSelect.innerHTML = '<option value="">Select Denomination</option>';
+      denominations.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        denomSelect.appendChild(opt);
+      });
+      // If the teacher form has an existing value (when editing), preserve it
+      try {
+        const form = document.getElementById('teacherForm');
+        if (form && form.denomination && form.denomination.value) {
+          denomSelect.value = form.denomination.value;
+        }
+      } catch (e) { /* ignore */ }
+    } catch (e) { console.warn('populateDenominations failed', e); }
+  })();
   // --- Student registration modal: show subclass select when main class is selected ---
   var studentMainClass = document.getElementById('student_main_class_select');
   var studentSubClass = document.getElementById('student_sub_class_select');
