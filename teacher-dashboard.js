@@ -993,22 +993,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.submitPromotionExam = submitPromotionExam;
 async function loadStudents(section = 'sba') {
-  // Restrict loading students for attendance to Class Teacher only
-  if (!teacher || teacher.responsibility !== 'Class Teacher') {
+  // All teachers (Class Teacher, Subject Teacher, Career Tech, etc.) can access SBA/exam entry
+  // for their assigned classes and subjects. The class/subject select dropdowns are already
+  // filtered by their teaching assignment, so access control is implicit.
+  if (!teacher) {
     students = [];
-    if (section === 'sba') {
-      renderSBAForm({});
-      const sbaTable = document.getElementById('sbaTableBody');
-      if (sbaTable) {
-        sbaTable.innerHTML = '<tr><td colspan="10" style="color:red;">Only Class Teachers can load students for attendance.</td></tr>';
-      }
-    } else if (section === 'exam') {
-      renderExamForm({});
-      const examTable = document.getElementById('examTableBody');
-      if (examTable) {
-        examTable.innerHTML = '<tr><td colspan="10" style="color:red;">Only Class Teachers can load students for attendance.</td></tr>';
-      }
-    }
+    if (section === 'sba') renderSBAForm({});
+    else if (section === 'exam') renderExamForm({});
     return;
   }
   let selectedClass, selectedSubject;
