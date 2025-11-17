@@ -849,13 +849,18 @@ document.addEventListener('DOMContentLoaded', function() {
   var classSection = document.getElementById('classTeacherSection');
   if (respSelect && classSection) {
     respSelect.addEventListener('change', function() {
+      var main = document.getElementById('class_teacher_class_main');
+  var sub = document.getElementById('class_teacher_subclass');
+      var legacy = document.getElementById('class_teacher_class');
       if (respSelect.value === 'Class Teacher') {
         classSection.style.display = '';
-        document.getElementById('class_teacher_class').required = true;
+        if (main) main.required = true;
+        if (legacy) legacy.required = true;
       } else {
         classSection.style.display = 'none';
-        document.getElementById('class_teacher_class').required = false;
-        document.getElementById('class_teacher_class').value = '';
+        if (main) { main.required = false; main.value = ''; }
+        if (sub) sub.value = '';
+        if (legacy) { legacy.required = false; legacy.value = ''; }
       }
     });
   }

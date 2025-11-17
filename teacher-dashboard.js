@@ -69,20 +69,64 @@ function setupAttendanceSection() {
   // If teacher is a Class Teacher with a single class (class_teacher_class), prefer that
   // and lock the attendance selector to that class (including subclass if present).
   try {
-    if (teacher && teacher.responsibility === 'Class Teacher' && teacher.class_teacher_class) {
-      // Lock to assigned class/subclass
-      const tt = teacher.class_teacher_class.trim();
+    const assigned = getAssignedClass();
+    if (teacher && teacher.responsibility === 'Class Teacher' && assigned) {
+      // If the teacher has an explicit subclass (e.g. 'JHS 2 A'), lock to that subclass.
+      // If the teacher has only a base class (e.g. 'JHS 2'), populate the select with
+      // an "All" option and one option per subclass found for that class so the teacher
+      // can choose to mark for All or a specific subclass.
+  const tt = assigned;
+      // Parse class and optional subclass token
+      const tm = tt.match(/^(.+?)\s+([A-Za-z0-9]+)$/);
       if (attendanceClassSelect) {
         attendanceClassSelect.innerHTML = '';
-        const opt = document.createElement('option');
-        opt.value = tt;
-        opt.textContent = tt;
-        attendanceClassSelect.appendChild(opt);
-        attendanceClassSelect.value = tt;
-        attendanceClassSelect.disabled = true;
+        if (tm) {
+          // Assigned with subclass -> single locked option
+          const opt = document.createElement('option');
+          opt.value = tt;
+          opt.textContent = tt;
+          attendanceClassSelect.appendChild(opt);
+          attendanceClassSelect.value = tt;
+          attendanceClassSelect.disabled = true;
+          // Load students immediately for the locked subclass
+          setTimeout(loadAttendanceStudents, 30);
+          return;
+        } else {
+          // Assigned to base class only: show All + per-subclass options discovered from students table
+          const classOnly = tt;
+          // Add 'All' option (value = classOnly) to show all subclasses
+          const allOpt = document.createElement('option');
+          allOpt.value = classOnly;
+          allOpt.textContent = `${classOnly} (All)`;
+          attendanceClassSelect.appendChild(allOpt);
+          // Fetch available subclasses for this class and populate options
+          (async () => {
+            try {
+              const { data: subs, error } = await supabaseClient
+                .from('students')
+                .select('subclass')
+                .eq('class', classOnly);
+              if (!error && Array.isArray(subs)) {
+                // Deduplicate and append
+                const unique = [...new Set(subs.map(s => (s.subclass || '').toString().trim()).filter(Boolean))];
+                unique.forEach(sc => {
+                  const o = document.createElement('option');
+                  o.value = `${classOnly} ${sc}`;
+                  o.textContent = `${classOnly} ${sc}`;
+                  attendanceClassSelect.appendChild(o);
+                });
+              }
+            } catch (e) { console.debug('Failed to load subclasses for class teacher:', e); }
+            // Allow teacher to change subclass selection (All by default)
+            attendanceClassSelect.disabled = false;
+            attendanceClassSelect.addEventListener('change', loadAttendanceStudents);
+            // Trigger initial load (All)
+            setTimeout(loadAttendanceStudents, 50);
+          })();
+          // Return now — the async function will call loadAttendanceStudents after population
+          return;
+        }
       }
-      setTimeout(loadAttendanceStudents, 30);
-      return;
     }
   } catch (e) { console.warn('setupAttendanceSection class teacher lock failed', e); }
   if (attendanceClassSelect && teacher && teacher.classes) {
@@ -106,44 +150,96 @@ function setupAttendanceSection() {
 
 // Load students for selected class and date
 async function loadAttendanceStudents() {
-  let classVal = document.getElementById('attendanceClassSelect').value;
-  classVal = classVal ? classVal.trim() : '';
+  const classSelectEl = document.getElementById('attendanceClassSelect');
+  const rawClassVal = classSelectEl ? (classSelectEl.value || '') : '';
+  let classVal = rawClassVal ? rawClassVal.trim() : '';
   console.debug('[Attendance] Normalized class value:', classVal);
   const tbody = document.getElementById('attendanceTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
-  if (!classVal) return;
-  // Determine whether classVal contains a subclass portion (e.g. 'JHS 1 A')
+
+  // If teacher is a Class Teacher and has an assigned class, override and strictly use that
+  let assignedClass = null;
+  try { if (teacher && teacher.responsibility === 'Class Teacher') assignedClass = getAssignedClass(); } catch (e) { assignedClass = null; }
+  if (assignedClass) {
+    // override the selection so even if the DOM value differs we always use the teacher's assigned class
+    classVal = assignedClass;
+  }
+
+  if (!classVal) {
+    tbody.innerHTML = '<tr><td colspan="2">No class selected.</td></tr>';
+    return;
+  }
+
+  // Parse class and optional subclass (e.g. 'JHS 2 A' -> classOnly='JHS 2', subclassOnly='A')
   let classOnly = classVal;
   let subclassOnly = null;
-  const m = classVal.match(/^(.+?)\s+([A-Za-z])$/);
+  const m = classVal.match(/^(.+?)\s+([A-Za-z0-9]+)$/);
   if (m) {
-    classOnly = m[1];
-    subclassOnly = m[2].toUpperCase();
+    classOnly = m[1].trim();
+    subclassOnly = m[2].toString().trim().toUpperCase();
   }
 
-  // Always strictly filter by the class teacher's assignment if present
-  let query = supabaseClient.from('students').select('id, first_name, surname, class, subclass');
-  let teacherClassFilter = null;
-  try { if (teacher && teacher.responsibility === 'Class Teacher' && teacher.class_teacher_class) teacherClassFilter = teacher.class_teacher_class.trim(); } catch (e) {}
-  if (teacherClassFilter) {
-    const tm = teacherClassFilter.match(/^(.+?)\s+([A-Za-z])$/);
-    if (tm) {
-      query = query.eq('class', tm[1]).eq('subclass', tm[2].toUpperCase());
-    } else {
-      query = query.eq('class', teacherClassFilter);
+  // If teacher is Class Teacher but their assigned class is different from the selected class, disallow
+  if (teacher && teacher.responsibility === 'Class Teacher') {
+    const assignedNormalized = getAssignedClass();
+    if (assignedNormalized && assignedNormalized !== classVal) {
+      tbody.innerHTML = '<tr><td colspan="2" style="color:red;">You are only allowed to mark attendance for your assigned class (' + assignedNormalized + ').</td></tr>';
+      return;
     }
-  } else if (subclassOnly) {
-    query = query.eq('class', classOnly).eq('subclass', subclassOnly);
   } else {
-    query = query.or(`class.ilike.${classOnly},class.eq.${classOnly}`);
+    // For non-class-teachers, ensure they only load students for classes they are assigned to
+    if (teacher && Array.isArray(teacher.classes) && teacher.classes.length > 0) {
+      if (!teacher.classes.includes(classOnly) && !teacher.classes.includes(classVal)) {
+        tbody.innerHTML = '<tr><td colspan="2" style="color:red;">You are not assigned to this class. Please select one of your assigned classes.</td></tr>';
+        return;
+      }
+    }
   }
 
-  const { data, error } = await query;
+  // Fetch students for the class, then do subclass filtering in JS to avoid case/collation issues
+  let q = supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classOnly);
+  let { data, error } = await q;
+  // Some installations store the subclass concatenated into the `class` column (e.g. 'JHS 2 A').
+  // If we didn't find any rows by the base class, try querying the full class value including subclass.
+  if ((!data || data.length === 0) && classVal && classVal !== classOnly) {
+    try {
+      const alt = await supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classVal);
+      if (alt && alt.data && Array.isArray(alt.data) && alt.data.length > 0) {
+        data = alt.data;
+        error = alt.error || null;
+      }
+    } catch (e) {
+      console.debug('Alternate student query failed', e);
+    }
+  }
+
   if (error || !Array.isArray(data) || data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="2" style="color:red;">No students found for this class. If you are the class teacher, please check that students are registered for this class in the system.</td></tr>';
     return;
   }
-  data.forEach(student => {
+
+  // If a subclass is specified (either selected or assigned), filter results to that subclass only
+  let rowsToShow = data;
+  if (subclassOnly) {
+    rowsToShow = data.filter(s => {
+      const sc = (s.subclass || '').toString().trim().toUpperCase();
+      const classField = (s.class || '').toString().trim().toUpperCase();
+      // Treat either a matching subclass column OR a class field that equals the full selected class as a match
+      return sc === subclassOnly || classField === classVal.toString().trim().toUpperCase();
+    });
+  }
+
+  // If teacher is Class Teacher and assigned a subclass but no students match, show helpful message
+  const assignedForCheck = getAssignedClass();
+  if (teacher && teacher.responsibility === 'Class Teacher' && assignedForCheck) {
+    if (rowsToShow.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="color:red;">No students found in your assigned subclass. Please confirm students have the correct subclass set in their profiles.</td></tr>';
+      return;
+    }
+  }
+
+  rowsToShow.forEach(student => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
@@ -174,13 +270,22 @@ async function submitAttendance() {
     notify('Please select class, term and date.', 'warning');
     return;
   }
+  // Normalize class and subclass: classVal may be 'JHS 2 A' or 'JHS 2'.
+  let classOnly = classVal;
+  let subclassOnly = null;
+  const classMatch = classVal.match(/^(.+?)\s+([A-Za-z0-9]+)$/);
+  if (classMatch) {
+    classOnly = classMatch[1].trim();
+    subclassOnly = classMatch[2].toString().trim().toUpperCase();
+  }
   const presentCheckboxes = document.querySelectorAll('.attendance-present');
   const records = Array.from(presentCheckboxes).map(cb => {
     const student_id = cb.getAttribute('data-student-id');
     const isPresent = !!cb.checked;
     return {
       student_id,
-      class: classVal,
+      class: classOnly,
+      subclass: subclassOnly,
       date: dateVal,
       term: termVal,
       present: isPresent,
@@ -195,9 +300,17 @@ async function submitAttendance() {
   let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting attendance...') : null;
   try {
     if (loader) loader.update(8);
+    // Deduplicate records by student_id + date to avoid "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const keyed = {};
+    records.forEach(r => {
+      const key = `${r.student_id}::${r.date}`;
+      keyed[key] = r; // last write wins for duplicates
+    });
+    const dedupedRecords = Object.values(keyed);
+
     const { error } = await supabaseClient
       .from('attendance')
-      .upsert(records, { onConflict: ['student_id', 'date'] });
+      .upsert(dedupedRecords, { onConflict: ['student_id', 'date'] });
     if (error) {
     // Detect commonly encountered schema-cache / missing column error and show actionable guidance
     const msg = error && error.message ? error.message : String(error);
@@ -234,15 +347,36 @@ async function submitAttendance() {
     } catch (e) { attendanceActual = null; }
 
   for (const [i, sid] of studentIds.entries()) {
-      // Count present days for this student in the selected term
-      const { countData, countError } = await supabaseClient
-        .from('attendance')
-        .select('student_id', { count: 'exact', head: false })
-        .eq('student_id', sid)
-        .eq('term', termVal)
-        .eq('present', true);
+      // Count unique dates where this student was marked present for the selected term
       let presentCount = 0;
-      if (!countError && Array.isArray(countData)) presentCount = countData.length;
+      try {
+        const { data: attRows, error: attErr } = await supabaseClient
+          .from('attendance')
+          .select('id, date, present')
+          .eq('student_id', sid)
+          .eq('term', termVal);
+        if (!attErr && Array.isArray(attRows)) {
+          const presentSet = new Set();
+          attRows.forEach(a => {
+            const v = a.present;
+            let isPresent = false;
+            if (v === true) isPresent = true;
+            else if (typeof v === 'string') {
+              const s = v.toString().trim().toLowerCase();
+              if (s === 't' || s === 'true' || s === '1') isPresent = true;
+            } else if (typeof v === 'number') {
+              if (v === 1) isPresent = true;
+            }
+            if (!isPresent) return;
+            if (a.date) presentSet.add(a.date.toString());
+            else if (a.id) presentSet.add('rec-' + a.id);
+            else presentSet.add(JSON.stringify(a));
+          });
+          presentCount = presentSet.size;
+        }
+      } catch (e) {
+        presentCount = 0;
+      }
 
       // Try to update existing profile for student+term (do not require year)
       const { data: existingProfile } = await supabaseClient
@@ -250,8 +384,7 @@ async function submitAttendance() {
         .select('id')
         .eq('student_id', sid)
         .eq('term', termVal)
-        .limit(1)
-        .single();
+        .maybeSingle();
 
       const payload = {
         student_id: sid,
@@ -271,7 +404,8 @@ async function submitAttendance() {
     }
     // Notify other open pages (interest/conduct, etc.) that attendance changed so they can refresh
     try {
-      localStorage.setItem('attendanceUpdated', JSON.stringify({ ts: Date.now(), studentIds, term: termVal }));
+      // Include date in the payload so admin checks can use the exact attendance date
+      localStorage.setItem('attendanceUpdated', JSON.stringify({ ts: Date.now(), studentIds, term: termVal, date: dateVal }));
     } catch (e) { /* ignore storage errors */ }
   } catch (e) {
     console.warn('Failed to sync attendance totals to profiles:', e);
@@ -343,6 +477,19 @@ const supabaseClient = createClient(
 );
 
 let teacher = {};
+
+// Helper: return teacher assigned class (prefer split columns if present)
+function getAssignedClass() {
+  try {
+    if (!teacher) return null;
+    const main = (teacher.class_teacher_class_main || '').toString().trim();
+    const sub = (teacher.class_teacher_subclass || '').toString().trim();
+    if (main && sub) return (main + ' ' + sub).trim();
+    if (main) return main;
+    if (teacher.class_teacher_class) return teacher.class_teacher_class.toString().trim();
+    return null;
+  } catch (e) { return (teacher && teacher.class_teacher_class) ? teacher.class_teacher_class.toString().trim() : null; }
+}
 // � Load resource requests sent to this teacher
 async function loadResourceRequests() {
   const tbody = document.getElementById('resourceRequestsTableBody');
@@ -455,7 +602,8 @@ async function loadTeacherDashboard(staffId) {
   // Load teacher basic info
   const { data: teacherData, error: teacherError } = await supabaseClient
     .from('teachers')
-    .select('id, name, staff_id, responsibility')
+    // Schema uses split columns; do not request the legacy `class_teacher_class` which may be absent
+    .select('id, name, staff_id, responsibility, class_teacher_class_main, class_teacher_subclass')
     .eq('staff_id', staffId)
     .single();
   if (teacherError || !teacherData) {

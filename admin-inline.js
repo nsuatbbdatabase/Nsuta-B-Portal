@@ -210,12 +210,18 @@ window.addEventListener('unhandledrejection', function (e) {
     var classSection = document.getElementById('classTeacherSection');
     if (respSelect && classSection) {
       respSelect.addEventListener('change', function() {
+        var main = document.getElementById('class_teacher_class_main');
+  var sub = document.getElementById('class_teacher_subclass');
+        var legacy = document.getElementById('class_teacher_class');
         if (respSelect.value === 'Class Teacher') {
           classSection.style.display = '';
-          var ct = document.getElementById('class_teacher_class'); if (ct) ct.required = true;
+          if (main) main.required = true;
+          if (legacy) legacy.required = true;
         } else {
           classSection.style.display = 'none';
-          var ct2 = document.getElementById('class_teacher_class'); if (ct2) { ct2.required = false; ct2.value=''; }
+          if (main) main.required = false; if (main) main.value = '';
+          if (sub) sub.value = '';
+          if (legacy) { legacy.required = false; legacy.value=''; }
         }
       });
     }

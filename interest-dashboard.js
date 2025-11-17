@@ -7,16 +7,27 @@ const supabaseClient = createClient(
 
 // 🔽 Populate class dropdown
 async function populateClassDropdown() {
+  // Fetch both class and subclass so we can present combined class+subclass options
   const { data, error } = await supabaseClient
     .from('students')
-    .select('class')
+    .select('class, subclass')
     .neq('class', '')
     .order('class');
 
   if (error) return console.error('Failed to load classes:', error.message);
 
-  const uniqueClasses = [...new Set(data.map(s => s.class))];
-  const select = document.getElementById('classFilter');
+  // Build combined options: prefer 'Class Subclass' when subclass exists, otherwise just 'Class'
+  const opts = new Set();
+  data.forEach(s => {
+    const c = (s.class || '').toString().trim();
+    const sc = (s.subclass || '').toString().trim();
+    if (!c) return;
+    if (sc) opts.add(`${c} ${sc}`);
+    else opts.add(c);
+  });
+  const uniqueClasses = [...opts].sort();
+  // Support multiple possible element IDs used across pages
+  const select = document.getElementById('classFilter') || document.getElementById('classSelect');
   select.innerHTML = '<option value="">-- Select Class --</option>';
   uniqueClasses.forEach(cls => {
     const option = document.createElement('option');
@@ -29,10 +40,40 @@ async function populateClassDropdown() {
 // 🚀 Initialize class dropdown on page load
 window.addEventListener('DOMContentLoaded', populateClassDropdown);
 
+// Wire up UI controls (supporting both ID variants) to trigger loading
+document.addEventListener('DOMContentLoaded', function(){
+  const classEl = getElementByIds('classFilter','classSelect');
+  const termEl = getElementByIds('termFilter','term');
+  if (classEl) classEl.addEventListener('change', loadProfiles);
+  if (termEl) termEl.addEventListener('change', loadProfiles);
+});
+
+// Listen for attendance updates written by the teacher dashboard and refresh
+window.addEventListener('storage', function(e){
+  if (!e) return;
+  if (e.key === 'attendanceUpdated') {
+    try { loadProfiles(); } catch (err) { console.warn('Failed to refresh profiles after attendanceUpdated', err); }
+  }
+});
+
+// Helper: read the first available element by a list of IDs
+function getElementByIds(...ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) return el;
+  }
+  return null;
+}
+
+function getValueByIds(...ids) {
+  const el = getElementByIds(...ids);
+  return el ? (el.value || '').toString().trim() : '';
+}
+
 // 🔍 Load profiles by term/class
 async function loadProfiles() {
-  const term = document.getElementById('termFilter').value.trim();
-  const className = document.getElementById('classFilter').value.trim();
+  const term = getValueByIds('termFilter','term');
+  const className = getValueByIds('classFilter','classSelect');
   const tbody = document.querySelector('#profileTable tbody');
   tbody.innerHTML = '';
 
@@ -41,10 +82,19 @@ async function loadProfiles() {
     return;
   }
 
-  const { data: students, error: studentError } = await supabaseClient
-    .from('students')
-    .select('id, first_name, surname, class')
-    .eq('class', className);
+  // Determine whether a subclass token is present (e.g. 'JHS 2 A')
+  let classOnly = className;
+  let subclassOnly = null;
+  const m = className.match(/^(.+?)\s+([A-Za-z0-9]+)$/);
+  if (m) {
+    classOnly = m[1].trim();
+    subclassOnly = m[2].toString().trim();
+  }
+
+  // Query students by class and subclass (if provided). Always request subclass in the select.
+  let studentsQuery = supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classOnly);
+  if (subclassOnly) studentsQuery = studentsQuery.eq('subclass', subclassOnly);
+  const { data: students, error: studentError } = await studentsQuery;
 
   if (studentError) {
     console.error('Failed to load students:', studentError.message);
@@ -66,11 +116,14 @@ async function loadProfiles() {
   }
 
   // Fetch all attendance records for this class and term
-  const { data: attendanceRecords, error: attendanceError } = await supabaseClient
+  let attendanceQuery = supabaseClient
     .from('attendance')
-    .select('student_id, present, term, class')
+    .select('id, student_id, present, term, class, date')
     .eq('term', term)
-    .eq('class', className);
+    .eq('class', classOnly);
+  // if a subclass was selected, include it in the attendance filter so we match records
+  if (subclassOnly) attendanceQuery = attendanceQuery.eq('subclass', subclassOnly);
+  const { data: attendanceRecords, error: attendanceError } = await attendanceQuery;
   if (attendanceError) {
     console.error('Failed to load attendance:', attendanceError.message);
   }
@@ -78,33 +131,53 @@ async function loadProfiles() {
   // Fetch profiles for interest/conduct
   const { data: profiles, error: profileError } = await supabaseClient
     .from('profiles')
-    .select('student_id, term, interest, conduct')
+    .select('student_id, term, interest, conduct, attendance_total, attendance_actual')
     .eq('term', term);
   if (profileError) {
     console.error('Failed to load profiles:', profileError.message);
     return;
   }
 
+  // Build a quick lookup of profiles by student_id (these may be populated by teacher attendance sync)
+  const profileMap = (profiles || []).reduce((m, p) => { if (p && p.student_id) m[p.student_id] = p; return m; }, {});
+
   students.forEach(student => {
-    // Count present days for this student (X)
-    const presentCount = (attendanceRecords || []).filter(a => {
-      if (a.student_id !== student.id) return false;
-      const v = a.present;
-      // Accept different representations: boolean true, 't', 'true', 1, '1'
-      if (v === true) return true;
-      if (typeof v === 'string') {
-        const s = v.trim().toLowerCase();
-        return s === 't' || s === 'true' || s === '1';
-      }
-      if (typeof v === 'number') return v === 1;
-      return false;
-    }).length;
-    const profile = profiles.find(p => p.student_id === student.id);
+    const profile = profileMap[student.id];
+    // Prefer the attendance_total stored in profiles (synced by teacher submitAttendance). If missing, fall back to counting attendance records.
+    let presentCount = null;
+    if (profile && (profile.attendance_total !== null && profile.attendance_total !== undefined)) {
+      presentCount = Number(profile.attendance_total) || 0;
+    } else {
+      // Count unique dates where the student was marked present. If attendance rows lack a date,
+      // fall back to counting unique attendance record ids so we don't double-count.
+      const presentDateSet = new Set();
+      (attendanceRecords || []).forEach(a => {
+        if (a.student_id !== student.id) return;
+        const v = a.present;
+        let isPresent = false;
+        if (v === true) isPresent = true;
+        else if (typeof v === 'string') {
+          const s = v.trim().toLowerCase();
+          if (s === 't' || s === 'true' || s === '1') isPresent = true;
+        } else if (typeof v === 'number') {
+          if (v === 1) isPresent = true;
+        }
+        if (!isPresent) return;
+        if (a.date) presentDateSet.add(a.date.toString());
+        else if (a.id) presentDateSet.add('rec-' + a.id);
+        else presentDateSet.add(JSON.stringify(a));
+      });
+      presentCount = presentDateSet.size;
+    }
+    // For display of "out of", prefer profile.attendance_actual if present, otherwise use global attendanceTotalDays
+    const attendanceActualDisplay = (profile && (profile.attendance_actual !== null && profile.attendance_actual !== undefined)) ? Number(profile.attendance_actual) : attendanceTotalDays;
+
     const row = document.createElement('tr');
+    const classDisplay = `${student.class || ''} ${student.subclass || ''}`.trim();
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
-      <td>${student.class}</td>
-      <td>${presentCount} out of ${attendanceTotalDays}</td>
+      <td>${classDisplay}</td>
+      <td>${presentCount} out of ${attendanceActualDisplay}</td>
       <td>
         <select data-student="${student.id}" data-field="interest">
           ${generateInterestOptions(profile?.interest ?? '')}
@@ -152,13 +225,61 @@ function generateConductOptions(selected) {
 
 // ✏️ Upsert profile (create or update)
 async function upsertProfile(studentId) {
-  const term = document.getElementById('termFilter').value.trim();
-  const year = document.getElementById('yearFilter')?.value?.trim() || '';
+  const term = getValueByIds('termFilter','term');
+  const year = getValueByIds('yearFilter','year');
   const inputs = document.querySelectorAll(`[data-student="${studentId}"]`);
+  // Ensure we provide a non-null attendance_total to satisfy DB constraints.
+  // Fetch latest attendance total days from school_dates as the canonical source.
+  let attendanceTotalDays = 0;
+  try {
+    const { data: sd, error: sdErr } = await supabaseClient
+      .from('school_dates')
+      .select('attendance_total_days')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    if (!sdErr && sd && sd.length > 0) attendanceTotalDays = sd[0].attendance_total_days || 0;
+  } catch (e) {
+    attendanceTotalDays = 0;
+  }
+
+  // Compute actual present days for this student in the given term by counting unique dates
+  // where present is truthy. This ensures absent marks are not counted.
+  let presentCountForStudent = 0;
+  try {
+    const { data: attRows, error: attErr } = await supabaseClient
+      .from('attendance')
+      .select('id, date, present')
+      .eq('student_id', studentId)
+      .eq('term', term);
+    if (!attErr && Array.isArray(attRows)) {
+      const presentSet = new Set();
+      attRows.forEach(a => {
+        const v = a.present;
+        let isPresent = false;
+        if (v === true) isPresent = true;
+        else if (typeof v === 'string') {
+          const s = v.trim().toLowerCase();
+          if (s === 't' || s === 'true' || s === '1') isPresent = true;
+        } else if (typeof v === 'number') {
+          if (v === 1) isPresent = true;
+        }
+        if (!isPresent) return;
+        if (a.date) presentSet.add(a.date.toString());
+        else if (a.id) presentSet.add('rec-' + a.id);
+        else presentSet.add(JSON.stringify(a));
+      });
+      presentCountForStudent = presentSet.size;
+    }
+  } catch (e) {
+    presentCountForStudent = 0;
+  }
+
   const payload = {
     student_id: studentId,
     term,
     year,
+    // attendance_total stores the count of dates the student was present (not total possible days)
+    attendance_total: presentCountForStudent,
     updated_at: new Date().toISOString()
   };
 
@@ -170,6 +291,9 @@ async function upsertProfile(studentId) {
     }
     payload[field] = value;
   });
+
+  // Provide attendance_actual as the canonical number of days in session (if known)
+  if (attendanceTotalDays !== null && attendanceTotalDays !== undefined) payload.attendance_actual = attendanceTotalDays;
 
   const { error } = await supabaseClient
     .from('profiles')

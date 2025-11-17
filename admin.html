@@ -7,13 +7,15 @@
 	<link rel="stylesheet" href="dashboard.css" />
 	<style>
 	/* Flip-card styles for the KPI tiles (front/back rotation) */
-	.tiles-grid { display:flex; gap:1rem; flex-wrap:wrap; }
-	.flip-card { width: 220px; height: 110px; perspective: 1000px; }
-	.flip-card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s; }
+	/* Use a responsive grid so tiles align nicely on all screens. Individual flip-cards
+	   are flexible (full-width within a grid column) and their inner content adapts. */
+	.tiles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+	.flip-card { width: 100%; height: auto; perspective: 1000px; }
+	.flip-card-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.6s; min-height: 110px; }
 	.flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
-	.flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 8px; box-shadow: 0 6px 18px rgba(16,24,40,0.06); display:flex; align-items:center; }
-	.flip-card-front { background: linear-gradient(180deg,#fff,#f7fbff); padding:0.85rem; }
-	.flip-card-back { background: linear-gradient(180deg,#0ea5a4,#047857); color: #fff; transform: rotateY(180deg); padding:0.85rem; cursor:pointer; }
+	.flip-card-front, .flip-card-back { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 8px; box-shadow: 0 6px 18px rgba(16,24,40,0.06); display:flex; align-items:center; }
+	.flip-card-front { background: linear-gradient(180deg,#fff,#f7fbff); padding:0.85rem; box-sizing: border-box; }
+	.flip-card-back { background: linear-gradient(180deg,#0ea5a4,#047857); color: #fff; transform: rotateY(180deg); padding:0.85rem; cursor:pointer; box-sizing: border-box; }
 	.flip-card .icon { font-size:28px; margin-right:0.6rem; }
 	.flip-card .body { flex:1; }
 	.flip-card .title { font-weight:600; font-size:0.95rem; }
@@ -21,6 +23,66 @@
 	.flip-card-back .back-title { font-weight:700; font-size:1rem; margin-bottom:0.25rem; }
 	.flip-card-back .back-desc { font-size:0.92rem; opacity:0.95; }
 	.flip-card:focus { outline: 3px solid rgba(2,132,199,0.12); }
+	</style>
+	<style>
+	  /* Make wide tables horizontally scrollable so Actions and extra columns remain reachable.
+		  Also allow vertical scrolling when table content grows (useful when the section is shown
+		  in a modal). Using a max-height keeps the table usable inside modals on mobile screens. */
+	  .table-scroll { overflow-x: auto; width: 100%; max-height: 60vh; overflow-y: auto; }
+	  /* Default desktop behavior keeps wider tables so columns stay aligned */
+	  .table-scroll table { border-collapse: collapse; width: 100%; min-width: 900px; table-layout: auto; }
+	  .table-scroll th, .table-scroll td { white-space: nowrap; padding: 0.6rem; }
+
+	  /* Mobile: make tables friendlier on narrow screens
+	     - reduce forced min widths
+	     - allow cells to wrap and use a stacked layout when necessary
+	     - preserve horizontal scrolling for very wide tables but try to fit content first */
+	  @media (max-width: 900px) {
+	    /* Layout: stack header and actions, compact brand */
+	    .admin-top { display:flex; flex-direction:column; gap:0.6rem; align-items:flex-start; }
+	    .brand { display:flex; gap:0.6rem; align-items:center; }
+	    .brand h1 { font-size:1.05rem; margin:0; }
+	    .brand .muted-small { display:none; }
+
+	    /* Actions: full-width stacked buttons for easy tapping */
+	    .actions-right { width:100%; display:flex; justify-content:flex-end; }
+	    .quick-actions { display:flex; gap:0.5rem; flex-wrap:wrap; width:100%; }
+	    .quick-actions .action-btn { flex:1 1 48%; min-width: 48%; padding:0.8rem; font-size:0.98rem; }
+
+	    /* Tiles: full-width large touch targets, stacked vertically */
+	    .tiles-grid { display:flex; flex-direction:column; gap:0.65rem; align-items:stretch; }
+	    .flip-card { width:100% !important; height:auto !important; }
+	    .flip-card .flip-card-inner { min-height: 88px; }
+	    .flip-card-front, .flip-card-back { position:relative; height:auto; backface-visibility: visible; padding:0.9rem; }
+
+	    /* Overview cards stack and become full-width */
+	    .dashboard-cards { display:flex; flex-direction:column; gap:0.6rem; }
+	    .dashboard-card, .dashboard-card.small { width:100%; box-sizing:border-box; }
+
+	    /* Tables: hide bulky table view on mobile in favor of modal 'Open list' button */
+	    .mobile-list-toggle { display:block; margin-bottom:0.5rem; }
+	    .mobile-list-toggle .action-btn { width:100%; padding:0.7rem; font-size:1rem; }
+	    /* Keep table scroll available but reduce min-width so it fits better when needed */
+	    .table-scroll table { min-width: auto; table-layout: fixed; }
+	    .table-scroll th, .table-scroll td { white-space: normal; word-wrap:break-word; padding:0.5rem; font-size:0.95rem; }
+
+	    /* Reduce spacing and scale form controls for mobile */
+	    .modal .modal-body { padding: 0.75rem; }
+	    .modal .modal-body .form-group label { font-size:0.92rem; }
+	    .modal .modal-body .form-group input, .modal .modal-body .form-group select, .modal .modal-body .form-group textarea { padding:0.45rem; }
+
+	    /* Make modals full screen and easier to interact with on phones */
+	    .modal { align-items: flex-end; }
+	    .modal .modal-content { width:100% !important; height:100% !important; max-width:100% !important; border-radius:0 !important; margin:0 !important; padding:0.6rem !important; box-sizing:border-box; }
+	    .modal .modal-content .modal-header { padding:0.5rem 0.6rem; }
+
+	    /* Ensure action buttons are full width for easier tapping */
+	    .form-actions { flex-direction: column; gap:0.5rem; }
+	    .form-actions button { width:100%; }
+
+	    /* Improve legibility and touch performance */
+	    body { font-size: 15px; }
+	  }
 	</style>
 	<style>/* small page-specific overrides */
 		body { background: linear-gradient(180deg,#f6fbff,#f4f6f8); }
@@ -40,6 +102,55 @@
 		.hidden-select { display: none !important; }
 		.modal .modal-body .form-actions { display:flex; gap:0.5rem; justify-content:flex-start; margin-top:0.75rem; }
 	</style>
+
+		<style>
+			/* Styles for the missing registers panel and modal footer actions */
+			#missingRegistersPanel { position: fixed; right: 1rem; top: 4rem; z-index: 1200; width: 360px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); padding: 0.6rem; }
+			#missingRegistersPanel .mrp-body { max-height: 320px; overflow: auto; padding-top: 0.25rem; padding-bottom: 0.25rem; font-size: 0.98rem; color:#111; }
+			#missingRegistersPanel .mrp-header { font-weight:700; font-size:0.98rem; }
+			#missingRegistersPanel .mrp-header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem; }
+			#missingRegistersPanel .mrp-close-btn { background:none; border:0; font-size:1.05rem; cursor:pointer; }
+			#missingRegistersPanel .mrp-footer { margin-top:0.5rem; text-align:right; }
+			.modal-footer-actions { display:flex; gap:0.5rem; justify-content:flex-end; }
+			.mrp-link { margin-left:0.4rem; color:#0b66b2; text-decoration:none; }
+			.mrp-link:hover { text-decoration:underline; }
+		</style>
+
+		<style>
+		  .gallery-bucket-hint { display:none; margin-top:0.5rem; }
+		</style>
+		<style>
+		  /* Last Attendance tile helpers */
+		  .last-att-row { display:flex; align-items:center; gap:0.5rem; }
+		  .kpi-last-spinner { width:18px; height:18px; display:none; border-radius:50%; border:2px solid rgba(0,0,0,0.08); border-top-color: #0b66b2; animation: kpi-spin 800ms linear infinite; }
+		  @keyframes kpi-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+		</style>
+
+		<style>
+		  /* Gallery modal styles */
+		  .gallery-upload-row { display:flex; gap:0.75rem; align-items:flex-start; margin-bottom:0.75rem; }
+		  .gallery-upload-left { flex:1; }
+		  .gallery-upload-right { flex:2; display:flex; flex-direction:column; gap:0.4rem; }
+		  .gallery-desc { width:100%; box-sizing:border-box; padding:0.45rem 0.6rem; border-radius:6px; border:1px solid #d1d5db; }
+		  .gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:0.6rem; margin-top:0.6rem; }
+		  .gallery-thumb { background:#fff; border:1px solid #e6e6e6; border-radius:6px; overflow:hidden; display:flex; flex-direction:column; }
+		  .gallery-thumb img { width:100%; height:120px; object-fit:cover; display:block; }
+		  .gallery-thumb .meta { padding:0.45rem; font-size:0.92rem; }
+		</style>
+
+		<style>
+		  /* Header slideshow styles */
+		  .header-slideshow { position:relative; width:100%; max-width:980px; margin:0.6rem 0 0.8rem 0; border-radius:10px; overflow:hidden; box-shadow: 0 8px 30px rgba(16,24,40,0.06); background:#fff; display:none; }
+		  .header-slideshow .hs-slides { position:relative; width:100%; height:140px; }
+		  .header-slideshow .hs-slide { position:absolute; inset:0; opacity:0; transform:translateX(6%); transition:opacity .6s ease, transform .6s ease; display:flex; align-items:center; justify-content:center; }
+		  .header-slideshow .hs-slide.active { opacity:1; transform:translateX(0); }
+		  .header-slideshow .hs-slide img { width:100%; height:140px; object-fit:cover; display:block; }
+		  .header-slideshow .hs-control { position:absolute; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.35); color:#fff; border:0; padding:0.4rem 0.6rem; border-radius:6px; cursor:pointer; z-index:30; }
+		  .header-slideshow .hs-prev { left:0.6rem; }
+		  .header-slideshow .hs-next { right:0.6rem; }
+		  /* Small screens: reduce height */
+		  @media (max-width:900px) { .header-slideshow .hs-slides, .header-slideshow .hs-slide img { height:96px; } }
+		</style>
 
 	<style>
 	  /* Hide the large in-page management sections since these are now exposed via modal tiles */
@@ -68,15 +179,61 @@
 					<p class="muted-small">Manage students, teachers and admins — live tiles & quick actions</p>
 				</div>
 			</div>
+
+	      <!-- Header slideshow: shows rotating gallery images in the top area -->
+	      <div id="headerSlideshow" class="header-slideshow" aria-hidden="true">
+	        <div class="hs-slides" id="hsSlides" aria-live="polite"></div>
+	        <button class="hs-prev hs-control" id="hsPrev" aria-label="Previous slide">◀</button>
+	        <button class="hs-next hs-control" id="hsNext" aria-label="Next slide">▶</button>
+	      </div>
 			<div class="actions-right">
 				<div class="quick-actions">
 					<button id="btnAddStudent" class="action-btn">+ Student</button>
 					<button id="btnAddTeacher" class="action-btn ml-sm">+ Teacher</button>
-					<button id="btnAddAdmin" class="action-btn ml-sm btn-admin">+ Admin</button>
+									<button id="btnAddAdmin" class="action-btn ml-sm btn-admin">+ Admin</button>
+									<button id="btnCheckRegisters" class="action-btn ml-sm">Check Registers</button>
 					<!-- Logout control for admin users -->
 					<button id="btnLogout" class="action-btn ml-sm btn-logout">Logout</button>
 				</div>
 				<!-- Top tools removed per request: Announcement / Promotion / Events / School Dates -->
+			</div>
+
+			<!-- Missing Registers Panel (hidden by default) -->
+			<div id="missingRegistersPanel" class="modal-panel hidden">
+			  <div class="mrp-header-row">
+			    <div class="mrp-header">Missing Registers</div>
+			    <div><button id="mrpCloseBtn" class="mrp-close-btn">✕</button></div>
+			  </div>
+			  <div class="mrp-body"></div>
+			  <div class="mrp-footer"></div>
+			</div>
+
+			<!-- Check Registers Modal -->
+			<div id="checkRegistersModal" class="modal hidden" aria-hidden="true">
+			  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="checkRegistersTitle">
+			    <div class="modal-header">
+			      <h3 id="checkRegistersTitle">Check Registers</h3>
+			    </div>
+			    <div class="modal-body">
+						<div class="form-group">
+							<label for="crTerm">Term</label>
+							<select id="crTerm">
+								<option value="">-- Select Term --</option>
+								<option>1st Term</option>
+								<option>2nd Term</option>
+								<option>3rd Term</option>
+							</select>
+						</div>
+			      <div class="form-group">
+			        <label for="crDate">Date</label>
+			        <input id="crDate" type="date" />
+			      </div>
+			    </div>
+					<div class="modal-footer modal-footer-actions">
+			      <button id="crCancel" class="action-btn">Cancel</button>
+			      <button id="crRun" class="action-btn">Run Check</button>
+			    </div>
+			  </div>
 			</div>
 		</div>
 
@@ -148,41 +305,210 @@
 					<div class="mt-sm"><label for="csvInputMain" class="muted-small">Import CSV</label><input id="csvInputMain" type="file" accept=".csv" aria-label="Import students CSV" /></div>
 				</div>
 			</div>
+
+			<!-- Top Students flip tile (JHS 1 & 2 overall best performers) -->
+			<div class="flip-card" id="tileTopStudents">
+				<div class="flip-card-inner">
+					<div class="flip-card-front tile tileAccent" data-action="modal:topStudentsModal" role="button" tabindex="0">
+						<div class="icon">🏅</div>
+						<div class="body">
+							<div class="title">Top Students</div>
+							<div id="kpiTopStudents" class="value">—</div>
+							<div class="muted">Best performers (JHS 1 & 2)</div>
+						</div>
+					</div>
+					<div class="flip-card-back" data-action="modal:topStudentsModal" aria-hidden="true">
+						<div class="body">
+							<div class="back-title">Top Students (JHS1 & JHS2)</div>
+							<div class="back-desc">Click to view detailed scores and rankings</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Class Ranking flip tile -->
+			<div class="flip-card" id="tileClassRanking">
+				<div class="flip-card-inner">
+					<div class="flip-card-front tile tileAccent" data-action="modal:classRankingModal" role="button" tabindex="0">
+						<div class="icon">📋</div>
+						<div class="body">
+							<div class="title">Class Ranking</div>
+							<div id="kpiClassRanking" class="value">—</div>
+							<div class="muted">Generate ranking PDF per class</div>
+						</div>
+					</div>
+					<div class="flip-card-back" data-action="modal:classRankingModal" aria-hidden="true">
+						<div class="body">
+							<div class="back-title">Class Ranking</div>
+							<div class="back-desc">Click to select a class and export its ranking as PDF</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</section>
 
 		<!-- Dashboard Overview Cards (live tiles) -->
 		<div id="dashboardOverviewCards" class="dashboard-cards" aria-label="Overview tiles">
-			<div class="dashboard-card" tabindex="0" data-modal="schoolDatesModal">
-				<div class="card-icon">📆</div>
-				<div class="card-body"><div class="card-title">Set School Dates</div><div class="card-desc">Vacation & Reopening</div></div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="schoolDatesModal">
+			      <div class="card-icon">📆</div>
+			      <div class="card-body"><div class="card-title">Set School Dates</div><div class="card-desc">Vacation & Reopening</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:schoolDatesModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Set School Dates</div><div class="back-desc">Open the school dates editor</div></div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-modal="eventsModal">
-				<div class="card-icon">📅</div>
-				<div class="card-body"><div class="card-title">Add School Event</div><div class="card-desc">Create calendar events</div></div>
+
+			<!-- Last Attendance tile: shows the teacher who last submitted attendance -->
+			<div class="flip-card" id="tileLastAttendance">
+				<div class="flip-card-inner">
+					<div class="flip-card-front dashboard-card" tabindex="0" role="button" aria-label="Last Attendance">
+						<div class="card-icon">✅</div>
+						<div class="card-body"><div class="card-title">Last Attendance</div>
+							<div class="last-att-row">
+							  <div id="kpiLastAttendance" class="value">—</div>
+							  <div id="kpiLastAttendanceSpinner" aria-hidden="true" class="kpi-last-spinner"></div>
+							</div>
+							<div id="kpiLastAttendanceDate" class="muted-small">—</div>
+						</div>
+					</div>
+					<div class="flip-card-back" aria-hidden="true">
+						<div class="body"><div class="back-title">Last Attendance</div><div class="back-desc">Shows the teacher who most recently submitted a register</div></div>
+					</div>
+				</div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-modal="announcementModal">
-				<div class="card-icon">📢</div>
-				<div class="card-body"><div class="card-title">Site Announcement</div><div class="card-desc">Post site-wide notices</div></div>
+
+			<!-- Gallery tile: shows recent school pictures & activities -->
+			<div class="flip-card" id="tileGallery">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" role="button" aria-label="Gallery">
+			      <div class="card-icon">🖼️</div>
+			      <div class="card-body"><div class="card-title">School Gallery</div>
+			        <div id="kpiGalleryPreview" class="value">—</div>
+			        <div id="kpiGalleryCount" class="muted-small">—</div>
+			      </div>
+			    </div>
+			    <div class="flip-card-back" aria-hidden="true">
+			      <div class="body"><div class="back-title">School Gallery</div><div class="back-desc">Upload and view recent pictures and activities</div></div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-modal="promotionPassMarkModal">
-				<div class="card-icon">🏆</div>
-				<div class="card-body"><div class="card-title">Promotion Pass</div><div class="card-desc">Set promotion pass mark</div></div>
+
+			<!-- Gallery Modal -->
+			<div id="galleryModal" class="modal hidden">
+			  <div class="modal-content">
+			    <div class="modal-header"><h3>School Gallery</h3></div>
+				  <div class="modal-body">
+				      <div class="gallery-upload-row">
+				        <div class="gallery-upload-left">
+						  <label for="galleryFile">Picture(s)</label>
+						  <input type="file" id="galleryFile" accept="image/*" multiple />
+				        </div>
+				        <div class="gallery-upload-right">
+				          <label for="galleryTitle">Title</label>
+				          <input type="text" id="galleryTitle" placeholder="Short title" />
+				          <label for="galleryDesc">Description</label>
+				          <textarea id="galleryDesc" rows="2" placeholder="Short description" class="gallery-desc"></textarea>
+				        </div>
+				      </div>
+			      <div class="form-actions"><button id="galleryUploadBtn" class="action-btn">Upload</button> <button type="button" class="modal-close action-btn">Close</button></div>
+				<div id="galleryBucketHint" class="muted-small gallery-bucket-hint"></div>
+				<hr />
+			      <div id="galleryGrid" class="gallery-grid">
+			        <!-- Gallery thumbnails injected here -->
+			      </div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-action="link:report.html">
-				<div class="card-icon">📈</div>
-				<div class="card-body"><div class="card-title">Reports</div><div class="card-desc">View reports dashboard</div></div>
+
+			<!-- Last Attendance Modal -->
+			<div id="lastAttendanceModal" class="modal hidden">
+			  <div class="modal-content">
+			    <div class="modal-header"><h3>Recent Attendance Submissions</h3></div>
+			    <div class="modal-body">
+			      <div id="lastAttendanceList" class="muted-small">Loading…</div>
+			      <div class="form-actions"><button type="button" class="modal-close action-btn">Close</button></div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-action="section:studentBreakdown">
-				<div class="card-icon">🏖️</div>
-				<div class="card-body"><div class="card-title">Public Holidays</div><div class="card-desc">Upcoming holidays</div></div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="eventsModal">
+			      <div class="card-icon">📅</div>
+			      <div class="card-body"><div class="card-title">Add School Event</div><div class="card-desc">Create calendar events</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:eventsModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Add School Event</div><div class="back-desc">Create and manage calendar events</div></div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-action="section:interestConduct">
-				<div class="card-icon">⭐</div>
-				<div class="card-body"><div class="card-title">Interest & Conduct</div><div class="card-desc">Manage interests & conduct</div></div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="announcementModal">
+			      <div class="card-icon">📢</div>
+			      <div class="card-body"><div class="card-title">Site Announcement</div><div class="card-desc">Post site-wide notices</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:announcementModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Site Announcement</div><div class="back-desc">Write a short announcement for the homepage</div></div>
+			    </div>
+			  </div>
 			</div>
-			<div class="dashboard-card" tabindex="0" data-action="section:interestUpdate">
-				<div class="card-icon">🔄</div>
-				<div class="card-body"><div class="card-title">Interest Update</div><div class="card-desc">Update student interests</div></div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="promotionPassMarkModal">
+			      <div class="card-icon">🏆</div>
+			      <div class="card-body"><div class="card-title">Promotion Pass</div><div class="card-desc">Set promotion pass mark</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:promotionPassMarkModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Promotion Pass</div><div class="back-desc">Adjust pass mark used for report cards</div></div>
+			    </div>
+			  </div>
+			</div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-action="link:report.html">
+			      <div class="card-icon">📈</div>
+			      <div class="card-body"><div class="card-title">Reports</div><div class="card-desc">View reports dashboard</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="link:report.html" aria-hidden="true">
+			      <div class="body"><div class="back-title">Reports</div><div class="back-desc">Open the reports dashboard</div></div>
+			    </div>
+			  </div>
+			</div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-action="section:studentBreakdown">
+			      <div class="card-icon">🏖️</div>
+			      <div class="card-body"><div class="card-title">Public Holidays</div><div class="card-desc">Upcoming holidays</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="section:studentBreakdown" aria-hidden="true">
+			      <div class="body"><div class="back-title">Public Holidays</div><div class="back-desc">View upcoming public holidays</div></div>
+			    </div>
+			  </div>
+			</div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-action="section:interestConduct">
+			      <div class="card-icon">⭐</div>
+			      <div class="card-body"><div class="card-title">Interest & Conduct</div><div class="card-desc">Manage interests & conduct</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="section:interestConduct" aria-hidden="true">
+			      <div class="body"><div class="back-title">Interest & Conduct</div><div class="back-desc">Update student interests and conduct records</div></div>
+			    </div>
+			  </div>
+			</div>
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-action="section:interestUpdate">
+			      <div class="card-icon">🔄</div>
+			      <div class="card-body"><div class="card-title">Interest Update</div><div class="card-desc">Update student interests</div></div>
+			    </div>
+			    <div class="flip-card-back" data-action="section:interestUpdate" aria-hidden="true">
+			      <div class="body"><div class="back-title">Interest Update</div><div class="back-desc">Quickly update student interest statuses</div></div>
+			    </div>
+			  </div>
 			</div>
 		</div>
 
@@ -220,7 +546,11 @@
 							<label for="studentSelect">Select:</label>
 							<select id="studentSelect"><option value="">-- Select Student --</option></select>
 							<button class="action-btn ml-sm" onclick="exportStudentsCSV()">Export Students</button>
-						</div>
+												</div>
+												<div class="mobile-list-toggle" aria-hidden="false">
+													<button class="action-btn" data-action="section:students">Open Students List</button>
+												</div>
+												<div class="table-scroll">
 						<table id="studentTable" class="list-table" aria-label="Students">
 							<thead>
 								<tr><th>Picture</th><th>Name</th><th>Area</th><th>DOB</th><th>NHIS</th><th>Gender</th><th>Class</th><th>Parent</th><th>Contact</th><th>Username</th><th>PIN</th><th>Actions</th></tr>
@@ -228,6 +558,7 @@
 							<tbody>
 							</tbody>
 						</table>
+						</div>
 					</div>
 				</section>
 
@@ -240,10 +571,15 @@
 							<select id="teacherSelect"><option value="">-- Select Teacher --</option></select>
 							<button class="action-btn ml-sm" onclick="exportTeachersCSV()">Export Teachers</button>
 						</div>
+						<div class="mobile-list-toggle">
+						  <button class="action-btn" data-action="section:teachers">Open Teachers List</button>
+						</div>
+						<div class="table-scroll">
 						<table id="teacherTable" class="list-table" aria-label="Teachers">
 							<thead><tr><th>Name</th><th>Gender</th><th>DOB</th><th>StaffID</th><th>NTC</th><th>Reg#</th><th>SSNIT</th><th>GhanaCard</th><th>Contact</th><th>Rank</th><th>Qualification</th><th>Classes</th><th>Subjects</th><th>PIN</th><th>Actions</th></tr></thead>
 							<tbody></tbody>
 						</table>
+						</div>
 					</div>
 				</section>
 
@@ -254,10 +590,15 @@
 						<div class="filters filters--start">
 							<button class="action-btn ml-sm" onclick="exportAdminsCSV()">Export Admins</button>
 						</div>
+						<div class="mobile-list-toggle">
+						  <button class="action-btn" data-action="section:admins">Open Admins List</button>
+						</div>
+						<div class="table-scroll">
 						<table id="adminTable" class="list-table" aria-label="Admins">
 							<thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>PIN</th><th>Actions</th></tr></thead>
 							<tbody></tbody>
 						</table>
+						</div>
 					</div>
 				</section>
 
@@ -441,6 +782,10 @@
 								</select>
 							</div>
 							<input type="hidden" name="class_teacher_class" id="class_teacher_class" />
+							<!-- New split fields: main class and subclass (kept alongside legacy field for backwards compatibility) -->
+							<input type="hidden" name="class_teacher_class_main" id="class_teacher_class_main" />
+							<!-- Subclass column in DB is named `class_teacher_subclass` -->
+							<input type="hidden" name="class_teacher_subclass" id="class_teacher_subclass" />
 						</div>
 						<!-- Extended HR fields -->
 						<div class="form-group">
@@ -619,6 +964,44 @@
 			    <div id="sectionModalBody"></div>
 			  </div>
 			</div>
+
+		<!-- Top Students Modal -->
+		<div id="topStudentsModal" class="modal hidden">
+		  <div class="modal-content">
+			<div class="modal-header"><h3>Top Students — JHS 1 & 2</h3></div>
+			<div class="modal-body">
+				<div id="topStudentsContent" class="muted-small">Loading top students…</div>
+				<div class="form-actions"><button type="button" class="modal-close action-btn">Close</button></div>
+			</div>
+		  </div>
+		</div>
+
+		<!-- Class Ranking Modal -->
+		<div id="classRankingModal" class="modal hidden">
+		  <div class="modal-content">
+			<div class="modal-header"><h3>Class Ranking — Generate PDF</h3></div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label for="rankingClassSelect">Class</label>
+					<select id="rankingClassSelect"><option value="">-- Select Class --</option></select>
+				</div>
+				<div class="form-group" id="rankingSubclassWrapper">
+					<label for="rankingSubclassSelect">Subclass (optional)</label>
+					<select id="rankingSubclassSelect" class="hidden-select"><option value="">-- All Subclasses --</option></select>
+				</div>
+				<div class="form-group">
+					<label for="rankingTermSelect">Term</label>
+					<select id="rankingTermSelect"><option value="">-- Select Term --</option><option value="1st Term">1st Term</option><option value="2nd Term">2nd Term</option><option value="3rd Term">3rd Term</option></select>
+				</div>
+				<div class="form-group">
+					<label for="rankingYearInput">Academic Year</label>
+					<input id="rankingYearInput" placeholder="e.g. 2025/2026" />
+				</div>
+				<div id="classRankingPreview" class="muted-small">Select class, term and year then click Generate.</div>
+				<div class="form-actions"><button id="generateClassRankingBtn" class="action-btn">Generate PDF</button> <button type="button" class="modal-close action-btn">Close</button></div>
+			</div>
+		  </div>
+		</div>
 
 		<div id="modalBackdrop" class="modal-backdrop" aria-hidden="true"></div>
 
@@ -810,9 +1193,15 @@
 																				}
 																				const teacherSelect = modalBody.querySelector('#teacherSelect');
 																				if (teacherSelect && typeof window.showSelectedTeacher === 'function') {
-																					teacherSelect.removeEventListener('change', window._modalTeacherSelectHandler || function(){});
-																					window._modalTeacherSelectHandler = function() { try { window.showSelectedTeacher(); } catch(e) { console.warn('modal showSelectedTeacher failed', e); } };
-																					teacherSelect.addEventListener('change', window._modalTeacherSelectHandler);
+																					// Prefer the global handler when available so we don't attach duplicate listeners
+																					try { teacherSelect.removeEventListener('change', window._globalTeacherSelectHandler || window._modalTeacherSelectHandler || function(){}); } catch(e){}
+																					if (window._globalTeacherSelectHandler) {
+																						teacherSelect.addEventListener('change', window._globalTeacherSelectHandler);
+																					} else {
+																						// fallback: create a modal-scoped handler but store it so it can be removed later
+																						window._modalTeacherSelectHandler = function() { try { window.showSelectedTeacher(); } catch(e) { console.warn('modal showSelectedTeacher failed', e); } };
+																						teacherSelect.addEventListener('change', window._modalTeacherSelectHandler);
+																					}
 																					try { if (teacherSelect.value) window.showSelectedTeacher(); else { try { if (typeof window.showSelectedTeacher === 'function') window.showSelectedTeacher(); } catch(e){} } } catch(e) { console.warn('initial teacher render failed', e); }
 																					try { teacherSelect.focus(); } catch(e){}
 																				}
@@ -894,9 +1283,10 @@
 		<script>
 		(function(){
 		  try {
-		    const cards = Array.from(document.querySelectorAll('.flip-card'));
-
-		    cards.forEach(function(card){
+						const cards = Array.from(document.querySelectorAll('.flip-card'));
+						// Ensure flip-cards are keyboard-focusable for accessibility
+						cards.forEach(function(card){
+							if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex','0');
 		      // Toggle flip when clicking the card (but ignore clicks on interactive controls inside)
 		      card.addEventListener('click', function(e){
 		        if (e.target.closest('button, a, input, select, textarea')) return;
@@ -916,20 +1306,28 @@
 
 		      // If back has a data-action, clicking it should trigger the action immediately
 		      const back = card.querySelector('.flip-card-back[data-action]');
-		      if (back) {
-		        back.addEventListener('click', function(ev){
-		          ev.stopPropagation();
-		          const action = back.getAttribute('data-action');
-		          if (!action) return;
-		          if (action.indexOf('section:') === 0) {
-		            const section = action.split(':')[1];
-		            const el = document.querySelector('[data-action="section:' + section + '"]');
-		            if (el) el.click();
-		          } else if (action.indexOf('link:') === 0) {
-		            const url = action.split(':')[1]; if (url) window.location.href = url;
-		          }
-		        });
-		      }
+							if (back) {
+								back.addEventListener('click', function(ev){
+									ev.stopPropagation();
+									const action = back.getAttribute('data-action');
+									if (!action) return;
+									if (action.indexOf('section:') === 0) {
+										const section = action.split(':')[1];
+										const el = document.querySelector('[data-action="section:' + section + '"]');
+										if (el) el.click();
+									} else if (action.indexOf('link:') === 0) {
+										const url = action.split(':')[1]; if (url) window.location.href = url;
+									} else if (action.indexOf('modal:') === 0) {
+										const modalId = action.split(':')[1];
+										// Prefer canonical showModalById helper if available
+										try {
+											if (typeof showModalById === 'function') return showModalById(modalId);
+										} catch (e) {}
+										try { if (typeof openModal === 'function') return openModal(modalId); } catch (e) {}
+										try { const m = document.getElementById(modalId); if (m) { m.classList.remove('hidden'); } } catch (e) {}
+									}
+								});
+							}
 		    });
 
 		    // Auto-flip controller: periodically flip a random unpaused card briefly

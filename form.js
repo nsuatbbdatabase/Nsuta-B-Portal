@@ -5,6 +5,12 @@ const supabaseClient = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'             // Replace with your actual anon key
 );
 
+// Helper to normalize values used in REST filters: trim and replace stray plus signs
+function normalizeFilterValue(v) {
+  if (v === null || v === undefined) return '';
+  return v.toString().trim().replace(/\+/g, ' ');
+}
+
 // 🔽 Populate class dropdown
 async function populateClassDropdown() {
   const { data, error } = await supabaseClient.from('students').select('class').neq('class', '').order('class');
@@ -32,7 +38,9 @@ async function populateStudentDropdown(className, term, year) {
   for (const student of students) {
     let hasProfile = false;
     if (term && year) {
-      const { data: profile } = await supabaseClient.from('profiles').select('id').eq('student_id', student.id).eq('term', term).eq('year', year).single();
+      const t = normalizeFilterValue(term);
+      const y = normalizeFilterValue(year);
+      const { data: profile } = await supabaseClient.from('profiles').select('id').eq('student_id', student.id).eq('term', t).eq('year', y).maybeSingle();
       hasProfile = !!profile;
     }
     const option = document.createElement('option');
@@ -148,13 +156,15 @@ async function submitProfile() {
   };
 
   // 🔄 Check if profile exists for this student, term, and year
+  const tSan = normalizeFilterValue(term);
+  const ySan = normalizeFilterValue(year);
   const { data: existing, error: fetchError } = await supabaseClient
     .from('profiles')
     .select('id')
     .eq('student_id', studentId)
-    .eq('term', term)
-    .eq('year', year)
-    .single();
+    .eq('term', tSan)
+    .eq('year', ySan)
+    .maybeSingle();
 
   let result;
   if (existing) {

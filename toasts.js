@@ -72,7 +72,8 @@
   } catch(e) {}
   
   // Persistent loading / progress toast. Returns an object { update(percentOrText), close() }
-  window.showLoadingToast = function(initialMessage='Working...', options = {}) {
+  // Default message set to 'Saving...' to reflect common save flows. Callers can still pass text or update with a percent.
+  window.showLoadingToast = function(initialMessage='Saving...', options = {}) {
     const toast = document.createElement('div');
     toast.className = 'app-toast app-toast-loading';
     toast.style.background = '#f0f5ff';
@@ -90,28 +91,45 @@
 
     const line = document.createElement('div');
     line.textContent = String(initialMessage);
-    const progressWrap = document.createElement('div');
-    progressWrap.style.width = '100%';
-    progressWrap.style.background = 'rgba(0,0,0,0.04)';
-    progressWrap.style.borderRadius = '6px';
-    progressWrap.style.height = '8px';
-    const progressBar = document.createElement('div');
-    progressBar.style.width = '0%';
-    progressBar.style.height = '100%';
-    progressBar.style.background = options.color || '#0b66b2';
-    progressBar.style.borderRadius = '6px';
-    progressBar.style.transition = 'width 220ms linear';
-    progressWrap.appendChild(progressBar);
+  const progressWrap = document.createElement('div');
+  progressWrap.style.width = '100%';
+  progressWrap.style.background = 'rgba(0,0,0,0.04)';
+  progressWrap.style.borderRadius = '6px';
+  progressWrap.style.height = '8px';
+  const progressBar = document.createElement('div');
+  progressBar.style.width = '0%';
+  progressBar.style.height = '100%';
+  progressBar.style.background = options.color || '#0b66b2';
+  progressBar.style.borderRadius = '6px';
+  progressBar.style.transition = 'width 220ms linear';
+  progressWrap.appendChild(progressBar);
 
     const footer = document.createElement('div');
     footer.style.display = 'flex';
     footer.style.justifyContent = 'space-between';
     footer.style.alignItems = 'center';
 
-    const pct = document.createElement('div');
-    pct.textContent = '0%';
-    pct.style.fontSize = '12px';
-    pct.style.opacity = '0.85';
+  const pct = document.createElement('div');
+  pct.textContent = '0%';
+  pct.style.fontSize = '12px';
+  pct.style.opacity = '0.85';
+
+  // Create an indeterminate spinner element (hidden by default). If options.indeterminate is true
+  // we'll show this spinner and hide the progress bar/percent.
+    // Ensure spinner styles are present (inject CSS once so we don't rely on an external stylesheet)
+    (function ensureSpinnerStyles(){
+      try {
+        if (document.getElementById('nsuta-toasts-styles')) return;
+        const s = document.createElement('style');
+        s.id = 'nsuta-toasts-styles';
+        s.textContent = '\n.nsuta-spinner{width:16px;height:16px;border:2px solid rgba(0,0,0,0.12);border-top-color:' + (options.color || '#0b66b2') + ';border-radius:50%;display:inline-block;vertical-align:middle;margin-right:8px;animation:nsuta-spin 0.9s linear infinite}\n@keyframes nsuta-spin{to{transform:rotate(360deg)}}\n';
+        (document.head || document.documentElement).appendChild(s);
+      } catch (e) { /* ignore */ }
+    })();
+
+    const spinner = document.createElement('span');
+    spinner.className = 'nsuta-spinner';
+    spinner.style.display = 'none';
 
     const closeBtn = document.createElement('button');
     closeBtn.type = 'button';
@@ -121,7 +139,13 @@
     closeBtn.style.cursor = 'pointer';
     closeBtn.style.fontSize = '16px';
 
-    footer.appendChild(pct);
+  // Left side: pct (or spinner when indeterminate)
+  const leftWrap = document.createElement('div');
+  leftWrap.style.display = 'flex';
+  leftWrap.style.alignItems = 'center';
+  leftWrap.appendChild(spinner);
+  leftWrap.appendChild(pct);
+  footer.appendChild(leftWrap);
     footer.appendChild(closeBtn);
 
     toast.appendChild(line);
@@ -129,7 +153,29 @@
     toast.appendChild(footer);
     container.appendChild(toast);
 
+    function setIndeterminateMode(enabled) {
+      if (enabled) {
+        progressWrap.style.display = 'none';
+        pct.style.display = 'none';
+        spinner.style.display = 'inline-block';
+      } else {
+        progressWrap.style.display = '';
+        pct.style.display = '';
+        spinner.style.display = 'none';
+      }
+    }
+
+  // indeterminate default: true unless caller explicitly sets options.indeterminate
+  // This keeps the previous behavior but uses a CSS animation instead of a JS interval.
+  const useIndeterminate = (options && typeof options.indeterminate !== 'undefined') ? Boolean(options.indeterminate) : true;
+  setIndeterminateMode(Boolean(useIndeterminate));
+
     function update(v) {
+      if (options && options.indeterminate) {
+        // In indeterminate mode, only allow text updates (ignore numeric progress)
+        if (typeof v === 'string') line.textContent = v;
+        return;
+      }
       if (typeof v === 'number') {
         const clamped = Math.max(0, Math.min(100, Math.round(v)));
         progressBar.style.width = clamped + '%';
@@ -181,8 +227,8 @@
           <div style="color:#334;margin-top:4px">${String(message).replace(/\n/g, '<br/>')}</div>
           ${rememberKey ? '<label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.6rem"><input type="checkbox" id="app-confirm-dontask" /> <span style="font-size:13px;color:#556">Don\'t ask me again for this action</span></label>' : ''}
           <div style="display:flex;gap:0.5rem;justify-content:flex-end;margin-top:0.6rem">
-            <button class="app-confirm-cancel" type="button">Cancel</button>
-            <button class="app-confirm-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">OK</button>
+            <button class="app-confirm-cancel" type="button">No</button>
+            <button class="app-confirm-ok" type="button" style="background:#0b66b2;color:#fff;border:none;padding:0.45rem 0.8rem;border-radius:6px">Yes</button>
           </div>
         </div>`;
 
@@ -195,29 +241,67 @@
       const prevActive = document.activeElement;
       try { okBtn.focus(); } catch (e) {}
 
+      // Ensure cleanup only runs once (prevents double-invocation leaving the dialog in DOM)
+      let _confirmHandled = false;
+
       function cleanup(result) {
-        try { document.body.removeChild(backdrop); } catch (e) {}
-        try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
-        // If the user checked "Don't ask again" and this dialog was created with a rememberKey, persist preference
-        try {
-          if (rememberKey) {
-            const cb = dialog.querySelector('#app-confirm-dontask');
-            if (cb && cb.checked) {
+        if (_confirmHandled) return;
+        _confirmHandled = true;
+          // remove event listeners first
+          try {
+            okBtn.removeEventListener('click', onOk);
+            cancelBtn.removeEventListener('click', onCancel);
+            backdrop.removeEventListener('click', onBackdropClick);
+            dialog.removeEventListener('keydown', onKeyDown);
+          } catch (e) {}
+          // Read the "Don't ask again" checkbox state before removing the dialog
+          let _persistDontAsk = false;
+          try {
+            if (rememberKey) {
+              const cb = dialog.querySelector('#app-confirm-dontask');
+              if (cb && cb.checked) _persistDontAsk = true;
+            }
+          } catch (e) {}
+          // Hide then remove backdrop so the UI disappears immediately
+          try { backdrop.style.display = 'none'; } catch (e) {}
+          try { document.body.removeChild(backdrop); } catch (e) {}
+          // Defensive: remove any stray confirm backdrops left behind
+          try {
+            const others = Array.from(document.querySelectorAll('.app-confirm-backdrop'));
+            others.forEach(n => { try { if (n.parentNode) n.parentNode.removeChild(n); } catch (e) {} });
+          } catch (e) {}
+          try { if (prevActive && typeof prevActive.focus === 'function') prevActive.focus(); } catch (e) {}
+          // Persist preference if requested
+          try {
+            if (_persistDontAsk && rememberKey) {
               try { localStorage.setItem('nsuta_confirm_' + rememberKey, 'false'); } catch (e) { /* ignore */ }
             }
-          }
-        } catch (e) {}
+          } catch (e) {}
+          // Remove any global keydown listener we attached
+          try { document.removeEventListener('keydown', onKeyDown); } catch (e) {}
+        // Resolve after removal so callers won't see the modal still present
         resolve(Boolean(result));
       }
 
-      okBtn.addEventListener('click', () => cleanup(true));
-      cancelBtn.addEventListener('click', () => cleanup(false));
-      backdrop.addEventListener('click', (ev) => { if (ev.target === backdrop) cleanup(false); });
-      // keyboard
-      dialog.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') { ev.preventDefault(); cleanup(false); }
-        if (ev.key === 'Enter') { ev.preventDefault(); cleanup(true); }
-      });
+      // Use delegated listeners for robustness (buttons may vary across pages)
+      const onBackdropClick = (ev) => {
+        // If clicked outside the dialog content -> treat as cancel
+        if (ev.target === backdrop) return cleanup(false);
+        const okTarget = ev.target.closest && ev.target.closest('.app-confirm-ok');
+        if (okTarget) return cleanup(true);
+        const cancelTarget = ev.target.closest && ev.target.closest('.app-confirm-cancel');
+        if (cancelTarget) return cleanup(false);
+      };
+
+      const onKeyDown = (ev) => {
+        if (ev.key === 'Escape') { ev.preventDefault(); return cleanup(false); }
+        if (ev.key === 'Enter') { ev.preventDefault(); return cleanup(true); }
+      };
+
+      // Attach delegated click listener to backdrop (catches button clicks and outside clicks)
+      backdrop.addEventListener('click', onBackdropClick);
+      // Keyboard on document to ensure it catches Enter/Escape even if dialog isn't focused
+      document.addEventListener('keydown', onKeyDown);
     });
   };
 

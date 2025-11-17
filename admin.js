@@ -261,6 +261,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var mainClass = document.getElementById('main_class_select');
   var subClass = document.getElementById('sub_class_select');
   var hiddenClass = document.getElementById('class_teacher_class');
+  var hiddenClassMain = document.getElementById('class_teacher_class_main');
+  var hiddenClassSub = document.getElementById('class_teacher_subclass');
   if (mainClass && subClass && hiddenClass) {
     // ensure initial state matches hidden-select convention
     if (!(mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2')) {
@@ -276,24 +278,35 @@ document.addEventListener('DOMContentLoaded', function() {
         subClass.classList.remove('hidden-select');
         subClass.required = true;
         subClass.value = '';
-        hiddenClass.value = '';
+        if (hiddenClassMain) hiddenClassMain.value = '';
+        if (hiddenClassSub) hiddenClassSub.value = '';
+        if (hiddenClass) hiddenClass.value = '';
       } else if (mainClass.value === 'JHS 3') {
         subClass.classList.add('hidden-select');
         subClass.required = false;
         subClass.value = '';
-        hiddenClass.value = 'JHS 3';
+        if (hiddenClassMain) hiddenClassMain.value = 'JHS 3';
+        if (hiddenClassSub) hiddenClassSub.value = '';
+        if (hiddenClass) hiddenClass.value = 'JHS 3';
       } else {
         subClass.classList.add('hidden-select');
         subClass.required = false;
         subClass.value = '';
-        hiddenClass.value = '';
+        if (hiddenClassMain) hiddenClassMain.value = '';
+        if (hiddenClassSub) hiddenClassSub.value = '';
+        if (hiddenClass) hiddenClass.value = '';
       }
     });
     subClass.addEventListener('change', function() {
       if (mainClass.value && subClass.value) {
-        hiddenClass.value = mainClass.value + ' ' + subClass.value;
+        const combined = mainClass.value + ' ' + subClass.value;
+        if (hiddenClassMain) hiddenClassMain.value = mainClass.value;
+        if (hiddenClassSub) hiddenClassSub.value = subClass.value;
+        if (hiddenClass) hiddenClass.value = combined;
       } else {
-        hiddenClass.value = '';
+        if (hiddenClassMain) hiddenClassMain.value = '';
+        if (hiddenClassSub) hiddenClassSub.value = '';
+        if (hiddenClass) hiddenClass.value = '';
       }
     });
   }
@@ -305,6 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
       const mainClass = teacherForm.querySelector('[name="main_class_select"]');
       const subClass = teacherForm.querySelector('[name="sub_class_select"]');
       const classField = teacherForm.querySelector('[name="class_teacher_class"]');
+      const classMainField = teacherForm.querySelector('[name="class_teacher_class_main"]');
+  const classSubField = teacherForm.querySelector('[name="class_teacher_subclass"]');
       if (resp === 'Class Teacher') {
         if (!mainClass.value) {
           e.preventDefault();
@@ -319,16 +334,22 @@ document.addEventListener('DOMContentLoaded', function() {
           return;
         }
         if (mainClass.value === 'JHS 3') {
-          classField.value = 'JHS 3';
+          if (classMainField) classMainField.value = 'JHS 3';
+          if (classSubField) classSubField.value = '';
+          if (classField) classField.value = 'JHS 3';
         } else if (mainClass.value && subClass.value) {
-          classField.value = mainClass.value + ' ' + subClass.value;
+          if (classMainField) classMainField.value = mainClass.value;
+          if (classSubField) classSubField.value = subClass.value;
+          if (classField) classField.value = mainClass.value + ' ' + subClass.value;
         }
-        classField.disabled = false;
+        if (classField) classField.disabled = false;
       } else {
         if (classField) {
           classField.value = '';
           classField.disabled = true;
         }
+        if (classMainField) classMainField.value = '';
+        if (classSubField) classSubField.value = '';
       }
     });
   }
@@ -1026,6 +1047,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var mainClassSelect = document.getElementById('main_class_select');
   var teacherSubClass = document.getElementById('sub_class_select');
   var hiddenClassField = document.getElementById('class_teacher_class');
+  var hiddenClassMain = document.getElementById('class_teacher_class_main');
+  var hiddenClassSub = document.getElementById('class_teacher_subclass');
 
   function updateClassTeacherUI() {
     // attendance note
@@ -1039,12 +1062,18 @@ document.addEventListener('DOMContentLoaded', function() {
           if (mainClassSelect.value === 'JHS 1' || mainClassSelect.value === 'JHS 2') {
             if (teacherSubClass) { teacherSubClass.classList.remove('hidden-select'); teacherSubClass.required = true; }
             if (hiddenClassField) hiddenClassField.value = '';
+            if (hiddenClassMain) hiddenClassMain.value = '';
+            if (hiddenClassSub) hiddenClassSub.value = '';
           } else if (mainClassSelect.value === 'JHS 3') {
             if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
             if (hiddenClassField) hiddenClassField.value = 'JHS 3';
+            if (hiddenClassMain) hiddenClassMain.value = 'JHS 3';
+            if (hiddenClassSub) hiddenClassSub.value = '';
           } else {
             if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
             if (hiddenClassField) hiddenClassField.value = '';
+            if (hiddenClassMain) hiddenClassMain.value = '';
+            if (hiddenClassSub) hiddenClassSub.value = '';
           }
         }
       } else {
@@ -1066,12 +1095,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mainClassSelect.value === 'JHS 1' || mainClassSelect.value === 'JHS 2') {
           if (teacherSubClass) { teacherSubClass.classList.remove('hidden-select'); teacherSubClass.required = true; }
           if (hiddenClassField) hiddenClassField.value = '';
+          if (hiddenClassMain) hiddenClassMain.value = '';
+          if (hiddenClassSub) hiddenClassSub.value = '';
         } else if (mainClassSelect.value === 'JHS 3') {
           if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
           if (hiddenClassField) hiddenClassField.value = 'JHS 3';
+          if (hiddenClassMain) hiddenClassMain.value = 'JHS 3';
+          if (hiddenClassSub) hiddenClassSub.value = '';
         } else {
           if (teacherSubClass) { teacherSubClass.classList.add('hidden-select'); teacherSubClass.required = false; }
           if (hiddenClassField) hiddenClassField.value = '';
+          if (hiddenClassMain) hiddenClassMain.value = '';
+          if (hiddenClassSub) hiddenClassSub.value = '';
         }
       }
     });
@@ -1332,9 +1367,15 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
     const teacherSelectEl = document.getElementById('teacherSelect');
     if (teacherSelectEl) {
-      teacherSelectEl.addEventListener('change', function() {
-        try { if (typeof window.showSelectedTeacher === 'function') window.showSelectedTeacher(); } catch (e) { console.warn('showSelectedTeacher failed on change', e); }
-      });
+      // Use a shared, named handler so modal code can remove/add the same reference and avoid duplicates
+      if (!window._globalTeacherSelectHandler) {
+        window._globalTeacherSelectHandler = function() {
+          try { if (typeof window.showSelectedTeacher === 'function') window.showSelectedTeacher(); } catch (e) { console.warn('showSelectedTeacher failed on change', e); }
+        };
+      }
+      // Ensure we don't add multiple listeners
+      try { teacherSelectEl.removeEventListener('change', window._globalTeacherSelectHandler); } catch (e) {}
+      teacherSelectEl.addEventListener('change', window._globalTeacherSelectHandler);
     }
   } catch (e) {
     console.warn('Failed to attach studentSelect change listener', e);
