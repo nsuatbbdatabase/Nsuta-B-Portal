@@ -310,49 +310,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
-  // --- Teacher Form Submission Logic ---
-  const teacherForm = document.getElementById('teacherForm');
-  if (teacherForm) {
-    teacherForm.addEventListener('submit', async function(e) {
-      const resp = teacherForm.querySelector('[name="responsibility"]').value;
-      const mainClass = teacherForm.querySelector('[name="main_class_select"]');
-      const subClass = teacherForm.querySelector('[name="sub_class_select"]');
-      const classField = teacherForm.querySelector('[name="class_teacher_class"]');
-      const classMainField = teacherForm.querySelector('[name="class_teacher_class_main"]');
-  const classSubField = teacherForm.querySelector('[name="class_teacher_subclass"]');
-      if (resp === 'Class Teacher') {
-        if (!mainClass.value) {
-          e.preventDefault();
-          showToast('Please select the main class you are responsible for.', 'warning');
-          mainClass.focus();
-          return;
-        }
-        if ((mainClass.value === 'JHS 1' || mainClass.value === 'JHS 2') && !subClass.value) {
-          e.preventDefault();
-          showToast('Please select the subclass (A or B) for ' + mainClass.value + '.', 'warning');
-          subClass.focus();
-          return;
-        }
-        if (mainClass.value === 'JHS 3') {
-          if (classMainField) classMainField.value = 'JHS 3';
-          if (classSubField) classSubField.value = '';
-          if (classField) classField.value = 'JHS 3';
-        } else if (mainClass.value && subClass.value) {
-          if (classMainField) classMainField.value = mainClass.value;
-          if (classSubField) classSubField.value = subClass.value;
-          if (classField) classField.value = mainClass.value + ' ' + subClass.value;
-        }
-        if (classField) classField.disabled = false;
-      } else {
-        if (classField) {
-          classField.value = '';
-          classField.disabled = true;
-        }
-        if (classMainField) classMainField.value = '';
-        if (classSubField) classSubField.value = '';
-      }
-    });
-  }
+  // Teacher form handling centralized in `dashboard.js` to avoid duplicate listeners and
+  // conflicting validation flows. See `dashboard.js` for submit and responsibility handling.
   // --- Promotion Pass Mark UI Logic ---
   // --- Promotion Pass Mark Modal Logic ---
   const promotionPassMarkInput = document.getElementById('promotionPassMarkInput');
