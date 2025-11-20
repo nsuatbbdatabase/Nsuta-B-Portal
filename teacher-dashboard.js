@@ -1040,7 +1040,7 @@ async function loadStudents(section = 'sba') {
     const { term, year } = getTermYear();
     if (selectedSubject && term && year) {
       try {
-        // Fetch component-level SBA fields when available so we can edit them later
+        // Fetch component-level SBA fields for the selected subject/term/year
         const result = await supabaseClient
           .from('results')
           .select('student_id, class_score, individual, "group", class_test, project')
@@ -1049,16 +1049,20 @@ async function loadStudents(section = 'sba') {
           .eq('year', year);
         const marksData = result.data;
         if (Array.isArray(marksData)) {
+          // Filter to only include marks for students in the current class roster
+          const studentIds = new Set(students.map(s => s.id));
           marksData.forEach(m => {
-            // Normalize into an object with both scaled and component fields
-            marksMap[m.student_id] = {
-              class_score: (typeof m.class_score === 'number') ? m.class_score : null,
-              individual: (typeof m.individual === 'number') ? m.individual : null,
-              group: (typeof m["group"] === 'number') ? m["group"] : null,
-              class_test: (typeof m.class_test === 'number') ? m.class_test : null,
-              project: (typeof m.project === 'number') ? m.project : null
-            };
+            if (studentIds.has(m.student_id)) {
+              marksMap[m.student_id] = {
+                class_score: (typeof m.class_score === 'number') ? m.class_score : null,
+                individual: (typeof m.individual === 'number') ? m.individual : null,
+                group: (typeof m["group"] === 'number') ? m["group"] : null,
+                class_test: (typeof m.class_test === 'number') ? m.class_test : null,
+                project: (typeof m.project === 'number') ? m.project : null
+              };
+            }
           });
+          console.debug('SBA marks loaded:', Object.keys(marksMap).length, 'records for', students.length, 'students');
         }
       } catch (err) {
         console.error('SBA marks query failed:', err);
@@ -1077,7 +1081,14 @@ async function loadStudents(section = 'sba') {
         .eq('term', term)
         .eq('year', year);
       if (!examMarksError && Array.isArray(examMarksData)) {
-        examMarksData.forEach(m => { marksMap[m.student_id] = m.exam_score; });
+        // Filter to only include marks for students in the current class roster
+        const studentIds = new Set(students.map(s => s.id));
+        examMarksData.forEach(m => {
+          if (studentIds.has(m.student_id)) {
+            marksMap[m.student_id] = m.exam_score;
+          }
+        });
+        console.debug('Exam marks loaded:', Object.keys(marksMap).length, 'records for', students.length, 'students');
       }
     }
     renderExamForm(marksMap);
@@ -1094,9 +1105,35 @@ function renderExamForm(examMarksMap = {}) {
     tbody.appendChild(row);
     return;
   }
+
+  // Load draft key and drafts upfront
+  function getDraftKeyForExam() {
+    const classVal = document.getElementById('classSelectExam')?.value || '';
+    const subject = document.getElementById('subjectSelectExam')?.value || '';
+    const term = document.getElementById('termInputExam')?.value || '';
+    const year = document.getElementById('yearInputExam')?.value || '';
+    return `drafts:exam:${classVal}:${subject}:${term}:${year}`;
+  }
+  function loadDrafts(key) {
+    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
+  }
+  const draftKeyExam = getDraftKeyForExam();
+  const examDrafts = loadDrafts(draftKeyExam);
+
   students.forEach(student => {
-    // Pre-fill exam score if available
-    const examPrefill = examMarksMap[student.id] !== undefined ? examMarksMap[student.id] : 0;
+    // Pre-fill exam score: prefer drafts -> database -> 0
+    let examPrefill = 0;
+    
+    // First, load from database
+    if (examMarksMap[student.id] !== undefined) {
+      examPrefill = examMarksMap[student.id];
+    }
+    
+    // Then, override with drafts if they exist (drafts take precedence)
+    if (examDrafts[student.id] !== undefined) {
+      examPrefill = examDrafts[student.id];
+    }
+    
     const scaledPrefill = Math.round((examPrefill / 100) * 50);
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -1119,25 +1156,16 @@ function renderExamForm(examMarksMap = {}) {
   });
 
   // Wire per-row save/edit buttons and local draft storage
-  function getDraftKeyForExam() {
-    const classVal = document.getElementById('classSelectExam')?.value || '';
-    const subject = document.getElementById('subjectSelectExam')?.value || '';
-    const term = document.getElementById('termInputExam')?.value || '';
-    const year = document.getElementById('yearInputExam')?.value || '';
-    return `drafts:exam:${classVal}:${subject}:${term}:${year}`;
-  }
-  function loadDrafts(key) {
-    try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
-  }
   function saveDrafts(key, obj) {
     try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
   }
-  const draftKeyExam = getDraftKeyForExam();
-  const examDrafts = loadDrafts(draftKeyExam);
   document.querySelectorAll('#examTableBody .mark-save-btn').forEach(btn => {
     const id = btn.dataset.id;
     const editBtn = document.querySelector(`#examTableBody .mark-edit-btn[data-id="${id}"]`);
-    if (examDrafts && examDrafts[id] !== undefined) {
+    // Show "Saved" if either drafts or database records exist
+    const hasDraft = examDrafts[id] !== undefined;
+    const hasDBRecord = examMarksMap[id] !== undefined;
+    if (hasDraft || hasDBRecord) {
       btn.textContent = 'Saved';
       btn.disabled = true;
       if (editBtn) editBtn.classList.remove('hidden');
@@ -1244,6 +1272,14 @@ async function submitSBA() {
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
+  // Disable the submit button and show loader immediately so users see progress
+  const submitSbaBtn = document.querySelector('button[onclick="submitSBA()"]');
+  if (submitSbaBtn) {
+    submitSbaBtn.disabled = true;
+    submitSbaBtn.dataset.prevText = submitSbaBtn.textContent;
+    submitSbaBtn.textContent = 'Submitting...';
+  }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting SBA marks...') : null;
   // If drafts exist, use their component breakdown to build submissions; otherwise read component inputs from DOM where possible
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
@@ -1323,7 +1359,6 @@ async function submitSBA() {
   }
   if (submissions.length === 0) { notify('No valid SBA scores to submit.', 'warning'); return; }
   // Show progress using loading toast and submit sequentially to give progressive feedback
-  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting SBA marks...') : null;
   try {
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
@@ -1336,10 +1371,19 @@ async function submitSBA() {
     // Clear drafts after successful submit
     try { localStorage.removeItem(draftKey); } catch (e) {}
     notify('SBA scores submitted successfully.', 'info');
+    // Reload students to refresh the displayed marks from database
+    setTimeout(() => loadStudents('sba'), 500);
   } catch (err) {
     console.error('SBA upsert error:', err);
     notify('Failed to submit SBA scores: ' + (err.message || String(err)), 'error');
-  } finally { if (loader) loader.close(); }
+  } finally {
+    try { if (loader) loader.close(); } catch (e) {}
+    if (submitSbaBtn) {
+      submitSbaBtn.disabled = false;
+      submitSbaBtn.textContent = submitSbaBtn.dataset.prevText || 'Submit SBA';
+      delete submitSbaBtn.dataset.prevText;
+    }
+  }
 }
 
 // 🧪 Render Exam form
@@ -1352,23 +1396,49 @@ function renderSBAForm(marksMap = {}) {
     tbody.appendChild(row);
     return;
   }
+
+  // Load draft storage key and drafts upfront
+  function getDraftKeyForSBA() {
+    const classVal = document.getElementById('classSelect')?.value || '';
+    const subject = document.getElementById('subjectSelect')?.value || '';
+    const { term, year } = getTermYear();
+    return `drafts:sba:${classVal}:${subject}:${term}:${year}`;
+  }
+  function loadDraftsSBA() { try { return JSON.parse(localStorage.getItem(getDraftKeyForSBA()) || '{}'); } catch (e) { return {}; } }
+  const sbaDrafts = loadDraftsSBA();
+
   students.forEach(student => {
-    // Pre-fill all SBA components if available (prefer draft -> DB components -> scaled)
+    // Pre-fill all SBA components: prefer drafts -> DB components -> 0
     let individual = 0, group = 0, classTest = 0, project = 0, scaledPrefill = 0, totalPrefill = 0;
+    
+    // First, load from database (marksMap)
     const mm = marksMap[student.id];
     if (mm && typeof mm === 'object') {
       if (mm.individual !== null && mm.individual !== undefined) individual = mm.individual;
       if (mm.group !== null && mm.group !== undefined) group = mm.group;
       if (mm.class_test !== null && mm.class_test !== undefined) classTest = mm.class_test;
       if (mm.project !== null && mm.project !== undefined) project = mm.project;
-      if (mm.class_score !== null && mm.class_score !== undefined) {
-        scaledPrefill = mm.class_score;
-        totalPrefill = Math.round((scaledPrefill / 50) * 60);
-      } else if (individual || group || classTest || project) {
-        const totalComputed = Math.min(individual + group + classTest + project, 60);
-        totalPrefill = totalComputed;
-        scaledPrefill = Math.round((totalComputed / 60) * 50);
-      }
+    }
+    
+    // Then, override with drafts if they exist (drafts take precedence)
+    const draft = sbaDrafts[student.id];
+    if (draft && typeof draft === 'object') {
+      if (draft.individual !== null && draft.individual !== undefined) individual = draft.individual;
+      if (draft.group !== null && draft.group !== undefined) group = draft.group;
+      if (draft.classTest !== null && draft.classTest !== undefined) classTest = draft.classTest;
+      if (draft.project !== null && draft.project !== undefined) project = draft.project;
+    }
+    
+    // Calculate total and scaled
+    if (mm && mm.class_score !== null && mm.class_score !== undefined && !draft) {
+      // If DB has class_score and no draft override, use it
+      scaledPrefill = mm.class_score;
+      totalPrefill = Math.round((scaledPrefill / 50) * 60);
+    } else if (individual || group || classTest || project) {
+      // Calculate from components
+      const totalComputed = Math.min(individual + group + classTest + project, 60);
+      totalPrefill = totalComputed;
+      scaledPrefill = Math.round((totalComputed / 60) * 50);
     }
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -1388,21 +1458,17 @@ function renderSBAForm(marksMap = {}) {
   });
 
   // SBA draft storage and per-row save/edit wiring
-  function getDraftKeyForSBA() {
-    const classVal = document.getElementById('classSelect')?.value || '';
-    const subject = document.getElementById('subjectSelect')?.value || '';
-    const { term, year } = getTermYear();
-    return `drafts:sba:${classVal}:${subject}:${term}:${year}`;
-  }
-  const draftKeySBA = getDraftKeyForSBA();
-  function loadDraftsSBA() { try { return JSON.parse(localStorage.getItem(draftKeySBA) || '{}'); } catch (e) { return {}; } }
-  function saveDraftsSBA(obj) { try { localStorage.setItem(draftKeySBA, JSON.stringify(obj)); } catch (e) {} }
-  const sbaDrafts = loadDraftsSBA();
+  // ...existing code...
   document.querySelectorAll('#sbaTableBody .sba-save-btn').forEach(btn => {
     const id = btn.dataset.id;
     const editBtn = document.querySelector(`#sbaTableBody .sba-edit-btn[data-id="${id}"]`);
-    if (sbaDrafts && sbaDrafts[id]) {
-      btn.textContent = 'Saved'; btn.disabled = true; if (editBtn) editBtn.classList.remove('hidden');
+    // Show "Saved" if either drafts or database records exist
+    const hasDraft = sbaDrafts && sbaDrafts[id];
+    const hasDBRecord = marksMap[id];
+    if (hasDraft || hasDBRecord) {
+      btn.textContent = 'Saved'; 
+      btn.disabled = true; 
+      if (editBtn) editBtn.classList.remove('hidden');
     }
     btn.addEventListener('click', () => {
       // collect inputs for this student
@@ -1437,7 +1503,8 @@ function renderSBAForm(marksMap = {}) {
         const project = parseInt(row.querySelector(`input[data-id="${id}"][data-type="project"]`).value) || 0;
         sbaDrafts[id] = { individual, group, classTest, project };
       });
-      saveDraftsSBA(sbaDrafts);
+      const draftKey = getDraftKeyForSBA();
+      saveDrafts(draftKey, sbaDrafts);
       notify('All SBA marks saved locally as draft.', 'info');
       document.querySelectorAll('#sbaTableBody .sba-save-btn').forEach(b => { b.textContent = 'Saved'; b.disabled = true; const eb = document.querySelector(`#sbaTableBody .sba-edit-btn[data-id="${b.dataset.id}"]`); if (eb) eb.classList.remove('hidden'); });
     };
@@ -1458,6 +1525,15 @@ async function submitExams() {
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
+  // Disable the exam submit button and show loader immediately
+  const submitExamBtn = document.querySelector('button[onclick="submitExams()"]');
+  if (submitExamBtn) {
+    submitExamBtn.disabled = true;
+    submitExamBtn.dataset.prevText = submitExamBtn.textContent;
+    submitExamBtn.textContent = 'Submitting...';
+  }
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting exam marks...') : null;
+
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
       if (drafts[student.id] === undefined) continue;
@@ -1501,7 +1577,7 @@ async function submitExams() {
     return;
   }
   if (submissions.length === 0) { notify('No valid exam scores to submit.', 'warning'); return; }
-  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting exam marks...') : null;
+  // loader already created earlier to show immediate feedback
   try {
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
@@ -1518,7 +1594,14 @@ async function submitExams() {
   } catch (err) {
     console.error('Exam upsert error:', err);
     notify('Failed to submit exam scores: ' + (err.message || String(err)), 'error');
-  } finally { if (loader) loader.close(); }
+  } finally {
+    try { if (loader) loader.close(); } catch (e) {}
+    if (submitExamBtn) {
+      submitExamBtn.disabled = false;
+      submitExamBtn.textContent = submitExamBtn.dataset.prevText || 'Submit Exams';
+      delete submitExamBtn.dataset.prevText;
+    }
+  }
 }
 // 📤 Send assignment to students
 async function sendAssignment() {
@@ -1975,7 +2058,7 @@ function openEditMarksModal(studentId, section) {
           }
         }).catch(e => { /* ignore */ });
       }
-      sbaFields.style.display = '';
+      sbaFields.style.display = 'block';
       examFields.style.display = 'none';
       titleEl.textContent = 'Edit SBA Marks';
     } else {
@@ -1994,7 +2077,7 @@ function openEditMarksModal(studentId, section) {
         }).catch(e => { /* ignore */ });
       }
       sbaFields.style.display = 'none';
-      examFields.style.display = '';
+      examFields.style.display = 'block';
       titleEl.textContent = 'Edit Exam Marks';
     }
 
@@ -2015,8 +2098,9 @@ function openEditMarksModal(studentId, section) {
     if (examInp) examInp.oninput = () => { const v = Math.min(Math.max(parseInt(examInp.value) || 0,0),100); document.getElementById('edit_examScaled').textContent = Math.round((v/100)*50); };
 
     // Show modal
-    modal.classList.remove('hidden'); modal.style.display = '';
-    modal.setAttribute('aria-hidden','false');
+    modal.classList.remove('hidden');
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
   } catch (e) {
     console.debug('openEditMarksModal error', e);
   }
@@ -2025,7 +2109,9 @@ function openEditMarksModal(studentId, section) {
 function closeEditMarksModal() {
   const modal = document.getElementById('editMarksModal');
   if (!modal) return;
-  modal.classList.add('hidden'); modal.style.display = 'none'; modal.setAttribute('aria-hidden','true');
+  modal.classList.add('hidden');
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden', 'true');
 }
 
 // Save handler for edit modal

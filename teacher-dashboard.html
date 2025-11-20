@@ -186,14 +186,14 @@
               <option value="">-- Select Subject --</option>
             </select>
             <label for="termInputExam">Term:</label>
-            <select id="termInputExam" title="Select term (Exam)" aria-label="Select term for exams">
+            <select id="termInputExam" title="Select term (Exam)" aria-label="Select term for exams" onchange="loadStudents('exam')">
               <option value="">-- Select Term --</option>
               <option value="1st Term">1st Term</option>
               <option value="2nd Term">2nd Term</option>
               <option value="3rd Term">3rd Term</option>
             </select>
             <label for="yearInputExam">Academic Year:</label>
-            <input id="yearInputExam" title="Enter academic year for exams, e.g. 2025/2026" aria-label="Academic year for exams" placeholder="Academic Year (e.g. 2025/2026)">
+            <input id="yearInputExam" title="Enter academic year for exams, e.g. 2025/2026" aria-label="Academic year for exams" placeholder="Academic Year (e.g. 2025/2026)" oninput="loadStudents('exam')">
           </div>
           <table>
             <thead>
@@ -405,14 +405,14 @@
       <form id="editMarksForm">
         <input type="hidden" id="editMarksStudentId" />
         <input type="hidden" id="editMarksSection" />
-  <div id="editMarksSBAFields" class="hidden">
+  <div id="editMarksSBAFields" style="display: none;">
           <label>Individual (0-15): <input type="number" id="edit_individual" min="0" max="15" /></label><br/>
           <label>Group (0-15): <input type="number" id="edit_group" min="0" max="15" /></label><br/>
           <label>Class Test (0-15): <input type="number" id="edit_classTest" min="0" max="15" /></label><br/>
           <label>Project (0-15): <input type="number" id="edit_project" min="0" max="15" /></label><br/>
           <div class="edit-note">Computed Total: <span id="edit_total">0</span> · Scaled to 50: <span id="edit_scaled">0</span></div>
         </div>
-  <div id="editMarksExamFields" class="hidden">
+  <div id="editMarksExamFields" style="display: none;">
           <label>Exam Score (0-100): <input type="number" id="edit_examScore" min="0" max="100" /></label>
           <div class="edit-note">Scaled to 50 (preview): <span id="edit_examScaled">0</span></div>
         </div>
