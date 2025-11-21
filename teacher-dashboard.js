@@ -143,6 +143,13 @@ function setupAttendanceSection() {
   if (attendanceDate) {
     attendanceDate.valueAsDate = new Date();
     attendanceDate.addEventListener('change', loadAttendanceStudents);
+    // Wire up filter select change handler if present
+    const filterEl = document.getElementById('attendanceFilter');
+    if (filterEl) {
+      filterEl.addEventListener('change', function() {
+        try { applyAttendanceFilter(); } catch (e) {}
+      });
+    }
   }
   // Optionally, load students for the first class if desired
   // Optionally, load students for the first class if desired
@@ -198,13 +205,13 @@ async function loadAttendanceStudents() {
   }
 
   // Fetch students for the class, then do subclass filtering in JS to avoid case/collation issues
-  let q = supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classOnly);
+  let q = supabaseClient.from('students').select('id, register_id, first_name, surname, class, subclass').eq('class', classOnly);
   let { data, error } = await q;
   // Some installations store the subclass concatenated into the `class` column (e.g. 'JHS 2 A').
   // If we didn't find any rows by the base class, try querying the full class value including subclass.
   if ((!data || data.length === 0) && classVal && classVal !== classOnly) {
     try {
-      const alt = await supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classVal);
+      const alt = await supabaseClient.from('students').select('id, register_id, first_name, surname, class, subclass').eq('class', classVal);
       if (alt && alt.data && Array.isArray(alt.data) && alt.data.length > 0) {
         data = alt.data;
         error = alt.error || null;
@@ -229,6 +236,30 @@ async function loadAttendanceStudents() {
       return sc === subclassOnly || classField === classVal.toString().trim().toUpperCase();
     });
   }
+  // If teacher is Class Teacher and assigned a subclass but no students match, show helpful message
+
+  // Natural sort comparator for student IDs (handles numeric parts)
+  function naturalCompare(a, b) {
+    if (a === b) return 0;
+    const A = String(a || '').match(/(\d+|\D+)/g) || [String(a || '')];
+    const B = String(b || '').match(/(\d+|\D+)/g) || [String(b || '')];
+    const n = Math.min(A.length, B.length);
+    for (let i = 0; i < n; i++) {
+      if (A[i] === B[i]) continue;
+      const ad = /^\d+$/.test(A[i]);
+      const bd = /^\d+$/.test(B[i]);
+      if (ad && bd) {
+        const diff = parseInt(A[i], 10) - parseInt(B[i], 10);
+        if (diff !== 0) return diff;
+      } else {
+        return A[i].localeCompare(B[i]);
+      }
+    }
+    return A.length - B.length;
+  }
+
+  // Sort by register_id (assigned student ID) using natural comparison so FM1_1, FM1_2, FM1_10 order correctly
+  rowsToShow.sort((s1, s2) => naturalCompare(s1.register_id || s1.id, s2.register_id || s2.id));
 
   // If teacher is Class Teacher and assigned a subclass but no students match, show helpful message
   const assignedForCheck = getAssignedClass();
@@ -239,6 +270,24 @@ async function loadAttendanceStudents() {
     }
   }
 
+  // Populate filter select with student options using register_id (assigned ID) (preserve previous selection when possible)
+  const filterSelect = document.getElementById('attendanceFilter');
+  let prevFilterVal = '';
+  if (filterSelect) prevFilterVal = filterSelect.value || '';
+  if (filterSelect) {
+    filterSelect.innerHTML = '<option value="">All students</option>';
+    rowsToShow.forEach(s => {
+      const opt = document.createElement('option');
+      const regId = s.register_id || s.id || '';
+      opt.value = regId;
+      const fname = (s.first_name || '').toString().trim();
+      const sname = (s.surname || '').toString().trim();
+      opt.textContent = `${regId}${(fname || sname) ? ' — ' : ''}${fname} ${sname}`.trim();
+      filterSelect.appendChild(opt);
+    });
+    if (prevFilterVal) try { filterSelect.value = prevFilterVal; } catch(e) {}
+  }
+
   rowsToShow.forEach(student => {
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -247,6 +296,9 @@ async function loadAttendanceStudents() {
         <input type="checkbox" class="attendance-present" data-student-id="${student.id}" checked /> Present
       </td>
     `;
+    // Attach identifiers for filtering (use register_id for display, fallback to system id)
+    row.dataset.studentId = (student.register_id || student.id) || '';
+    row.dataset.studentName = `${(student.first_name || '').toString().trim()} ${(student.surname || '').toString().trim()}`.trim();
     tbody.appendChild(row);
   });
   // Add check all logic
@@ -259,6 +311,30 @@ async function loadAttendanceStudents() {
       });
     };
   }
+
+  // Apply any active filter after rendering
+  try { applyAttendanceFilter(); } catch (e) { /* ignore if function not present */ }
+}
+
+// Apply filter input to attendance table (hides rows that don't match id or name)
+function applyAttendanceFilter() {
+  const qEl = document.getElementById('attendanceFilter');
+  const tbody = document.getElementById('attendanceTableBody');
+  if (!tbody) return;
+  const q = qEl && qEl.value ? qEl.value.toString().trim() : '';
+  if (!q) {
+    // show all
+    Array.from(tbody.children).forEach(r => { r.style.display = ''; });
+    return;
+  }
+  // For select-based filter, match exact student id (case sensitive preserved), but compare lowercase for safety
+  const ql = q.toString().toLowerCase();
+  Array.from(tbody.children).forEach(r => {
+    const sid = (r.dataset.studentId || '').toString().toLowerCase();
+    const sname = (r.dataset.studentName || '').toString().toLowerCase();
+    if (sid === ql || sid.includes(ql) || sname.includes(ql)) r.style.display = '';
+    else r.style.display = 'none';
+  });
 }
 
 // Submit attendance to Supabase
