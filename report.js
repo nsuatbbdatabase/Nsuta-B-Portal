@@ -308,15 +308,18 @@ async function loadReportForStudent() {
     if (subject === "Career Tech") {
       // Find all Career Tech results for this student (multiple teachers/areas)
       const careerTechEntries = results.filter(r => r.subject === "Career Tech");
-      let sbaSum = 0;
-      let examSum = 0;
+      // For Career Tech we treat each area's contribution as half of that area's class_score and exam_score
+      // (rounded to nearest whole number) and then sum those halves so the combined values still map to 50+50.
+      let sbaAdjusted = 0;
+      let examAdjusted = 0;
       careerTechEntries.forEach(entry => {
-        sbaSum += entry?.class_score || 0;
-        examSum += entry?.exam_score || 0;
+        const s = Math.round((entry?.class_score || 0) / 2);
+        const e = Math.round((entry?.exam_score || 0) / 2);
+        sbaAdjusted += s;
+        examAdjusted += e;
       });
-      // Average and round to nearest whole number
-      const sbaAvg = careerTechEntries.length > 0 ? Math.round(sbaSum / careerTechEntries.length) : 0;
-      const examAvg = careerTechEntries.length > 0 ? Math.round(examSum / careerTechEntries.length) : 0;
+      const sbaAvg = careerTechEntries.length > 0 ? sbaAdjusted : 0;
+      const examAvg = careerTechEntries.length > 0 ? examAdjusted : 0;
       const total = sbaAvg + examAvg;
       const point = getGradePoint(total);
       const remark = getSubjectRemark(point).toUpperCase();

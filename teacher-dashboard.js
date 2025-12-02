@@ -1436,6 +1436,8 @@ async function submitSBA() {
     return;
   }
     const classVal = document.getElementById('classSelect').value;
+  // Capture Career Tech area if present
+  const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
   // Check for local drafts and prefer them if present
   const draftKey = `drafts:sba:${document.getElementById('classSelect')?.value || ''}:${document.getElementById('subjectSelect')?.value || ''}:${term}:${year}`;
   let drafts = {};
@@ -1468,6 +1470,7 @@ async function submitSBA() {
         class_test: Number(d.classTest || 0),
         project: Number(d.project || 0)
       };
+      if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
     }
   } else {
@@ -1519,6 +1522,7 @@ async function submitSBA() {
         class_test: Number(classTest || 0),
         project: Number(project || 0)
       };
+      if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
     }
   }
@@ -1529,11 +1533,22 @@ async function submitSBA() {
   if (submissions.length === 0) { notify('No valid SBA scores to submit.', 'warning'); return; }
   // Show progress using loading toast and submit sequentially to give progressive feedback
   try {
+    // Determine if the `results` table actually has an `area` column. If not, remove area from payloads.
+    let resultsHasArea = false;
+    try {
+      const testRes = await supabaseClient.from('results').select('area').limit(1);
+      if (!testRes.error) resultsHasArea = true;
+    } catch (e) { resultsHasArea = false; }
+    if (!resultsHasArea) {
+      submissions.forEach(s => { if (s.area) delete s.area; });
+    }
+    const includeArea = submissions.some(s => s.area);
+    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
       if (loader) loader.update(Math.round((i / submissions.length) * 100));
       // Upsert including component breakdown columns when present
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: ['student_id', 'subject', 'term', 'year'] });
+      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
       if (error) throw error;
     }
     if (loader) loader.update(100);
@@ -1690,6 +1705,8 @@ async function submitExams() {
     return;
   }
     const classVal = document.getElementById('classSelectExam').value;
+  // Capture Career Tech area if present
+  const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
   const draftKey = `drafts:exam:${document.getElementById('classSelectExam')?.value || ''}:${document.getElementById('subjectSelectExam')?.value || ''}:${term}:${year}`;
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
@@ -1706,7 +1723,9 @@ async function submitExams() {
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
       if (drafts[student.id] === undefined) continue;
-      submissions.push({ student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0 });
+      const rec = { student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0 };
+      if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
+      submissions.push(rec);
     }
   } else {
     for (const student of students) {
@@ -1738,7 +1757,9 @@ async function submitExams() {
             if (typeof existing.project === 'number') project = existing.project;
           }
         } catch (e) {}
-        submissions.push({ student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) });
+        const rec = { student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) };
+        if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
+        submissions.push(rec);
     }
   }
   if (submissions.length === 0) {
@@ -1748,10 +1769,21 @@ async function submitExams() {
   if (submissions.length === 0) { notify('No valid exam scores to submit.', 'warning'); return; }
   // loader already created earlier to show immediate feedback
   try {
+    // Determine if the `results` table actually has an `area` column. If not, remove area from payloads.
+    let resultsHasArea = false;
+    try {
+      const testRes = await supabaseClient.from('results').select('area').limit(1);
+      if (!testRes.error) resultsHasArea = true;
+    } catch (e) { resultsHasArea = false; }
+    if (!resultsHasArea) {
+      submissions.forEach(s => { if (s.area) delete s.area; });
+    }
+    const includeArea = submissions.some(s => s.area);
+    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
       if (loader) loader.update(Math.round((i / submissions.length) * 100));
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: ['student_id', 'subject', 'term', 'year'] });
+      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
       if (error) throw error;
     }
     if (loader) loader.update(100);
