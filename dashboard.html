@@ -29,6 +29,12 @@
         <!-- Class options should be dynamically populated by JS -->
       </select>
 
+      <label for="sortBy">Sort by:</label>
+      <select id="sortBy" onchange="loadProfiles()">
+        <option value="name">Name</option>
+        <option value="assigned_id">Assigned ID</option>
+      </select>
+
       <button onclick="loadProfiles()">Load Profiles</button>
     </div>
 

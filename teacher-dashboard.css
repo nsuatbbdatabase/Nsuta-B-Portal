@@ -1764,3 +1764,43 @@ button:hover {
 
 /* Error text helper for inline JS-inserted messages */
 .text-error { color: red; }
+
+/* Floating submit button: stays visible while scrolling on desktop and mobile */
+.floating-submit {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  border-radius: 28px;
+  padding: 12px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(90deg, #0059b3, #0074d9);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+}
+
+/* Mobile: center and expand horizontally with comfortable margins */
+@media (max-width: 640px) {
+  .floating-submit {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-width: 680px;
+    border-radius: 10px;
+    padding: 12px 16px;
+    justify-content: center;
+  }
+}
+
+/* Slightly lift when focused for accessibility */
+.floating-submit:focus {
+  outline: 3px solid rgba(0,116,217,0.18);
+  transform: translateX(-50%) translateY(-2px);
+}

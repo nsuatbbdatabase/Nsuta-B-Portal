@@ -70,6 +70,120 @@ function getValueByIds(...ids) {
   return el ? (el.value || '').toString().trim() : '';
 }
 
+// Track whether profile inputs have unsaved changes
+let profilesDirty = false;
+function setProfilesDirty(val) {
+  profilesDirty = !!val;
+  const btn = document.getElementById('saveAllProfilesBtn');
+  if (btn) btn.disabled = !profilesDirty;
+}
+
+// Show a modern floating confirmation dialog. Returns a Promise<boolean>.
+function showFloatingConfirm(message, opts = {}) {
+  return new Promise(resolve => {
+    try {
+      // If a dialog already exists, do not stack
+      if (document.getElementById('floatingConfirmOverlay')) {
+        // fallback to native confirm
+        try { resolve(window.confirm(message)); } catch (e) { resolve(false); }
+        return;
+      }
+
+      const title = opts.title || '';
+
+      const overlay = document.createElement('div');
+      overlay.id = 'floatingConfirmOverlay';
+      overlay.style.position = 'fixed';
+      overlay.style.left = '0';
+      overlay.style.top = '0';
+      overlay.style.width = '100%';
+      overlay.style.height = '100%';
+      overlay.style.background = 'rgba(0,0,0,0.35)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+      overlay.style.zIndex = 100000;
+
+      const card = document.createElement('div');
+      card.style.width = 'min(560px, 92%)';
+      card.style.background = '#fff';
+      card.style.borderRadius = '10px';
+      card.style.boxShadow = '0 16px 40px rgba(2,6,23,0.3)';
+      card.style.padding = '18px 20px';
+      card.style.fontFamily = 'Segoe UI, Roboto, Arial, sans-serif';
+      card.style.color = '#0b2540';
+
+      if (title) {
+        const h = document.createElement('div');
+        h.textContent = title;
+        h.style.fontSize = '18px';
+        h.style.fontWeight = '700';
+        h.style.marginBottom = '8px';
+        card.appendChild(h);
+      }
+
+      const txt = document.createElement('div');
+      txt.innerHTML = `<div style="font-size:14px;line-height:1.45;color:#123;">${String(message).replace(/\n/g,'<br/>')}</div>`;
+      card.appendChild(txt);
+
+      const actions = document.createElement('div');
+      actions.style.display = 'flex';
+      actions.style.justifyContent = 'flex-end';
+      actions.style.gap = '10px';
+      actions.style.marginTop = '18px';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.padding = '8px 12px';
+      cancelBtn.style.border = '1px solid #cbd5e1';
+      cancelBtn.style.background = '#fff';
+      cancelBtn.style.borderRadius = '8px';
+      cancelBtn.style.cursor = 'pointer';
+
+      const okBtn = document.createElement('button');
+      okBtn.textContent = 'Confirm';
+      okBtn.style.padding = '8px 12px';
+      okBtn.style.border = 'none';
+      okBtn.style.background = '#004080';
+      okBtn.style.color = '#fff';
+      okBtn.style.borderRadius = '8px';
+      okBtn.style.cursor = 'pointer';
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(okBtn);
+      card.appendChild(actions);
+
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+
+      // Prevent background scrolling
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      function cleanup() {
+        try { document.body.removeChild(overlay); } catch (e) {}
+        try { document.body.style.overflow = prevOverflow || ''; } catch (e) {}
+        window.removeEventListener('keydown', onKey);
+      }
+
+      function onKey(e) {
+        if (e.key === 'Escape') { cleanup(); resolve(false); }
+        if (e.key === 'Enter') { cleanup(); resolve(true); }
+      }
+
+      window.addEventListener('keydown', onKey);
+
+      cancelBtn.addEventListener('click', function() { cleanup(); resolve(false); });
+      okBtn.addEventListener('click', function() { cleanup(); resolve(true); });
+
+      // Focus confirm button for quick keyboard access
+      setTimeout(() => { try { okBtn.focus(); } catch (e) {} }, 10);
+    } catch (e) {
+      try { resolve(window.confirm(message)); } catch (err) { resolve(false); }
+    }
+  });
+}
+
 // 🔍 Load profiles by term/class
 async function loadProfiles() {
   const term = getValueByIds('termFilter','term');
@@ -91,8 +205,9 @@ async function loadProfiles() {
     subclassOnly = m[2].toString().trim();
   }
 
-  // Query students by class and subclass (if provided). Always request subclass in the select.
-  let studentsQuery = supabaseClient.from('students').select('id, first_name, surname, class, subclass').eq('class', classOnly);
+  // Query students by class and subclass (if provided). Always request subclass and register_id in the select.
+  // register_id is the assigned student ID (used for sorting/filtering).
+  let studentsQuery = supabaseClient.from('students').select('id, register_id, first_name, surname, class, subclass').eq('class', classOnly);
   if (subclassOnly) studentsQuery = studentsQuery.eq('subclass', subclassOnly);
   const { data: students, error: studentError } = await studentsQuery;
 
@@ -100,6 +215,43 @@ async function loadProfiles() {
     console.error('Failed to load students:', studentError.message);
     return;
   }
+
+  // Sorting: allow sorting by name or assigned id. Read `#sortBy` select (added in the filters).
+  try {
+    const sortBy = (document.getElementById('sortBy') && document.getElementById('sortBy').value) ? document.getElementById('sortBy').value : 'name';
+    // Natural compare for assigned IDs (handles numeric parts like FM1_2 vs FM1_10)
+    function naturalCompare(a, b) {
+      if (a === b) return 0;
+      const A = String(a || '').match(/(\d+|\D+)/g) || [String(a || '')];
+      const B = String(b || '').match(/(\d+|\D+)/g) || [String(b || '')];
+      const n = Math.min(A.length, B.length);
+      for (let i = 0; i < n; i++) {
+        if (A[i] === B[i]) continue;
+        const ad = /^\d+$/.test(A[i]);
+        const bd = /^\d+$/.test(B[i]);
+        if (ad && bd) {
+          const diff = parseInt(A[i], 10) - parseInt(B[i], 10);
+          if (diff !== 0) return diff;
+        } else {
+          return A[i].localeCompare(B[i]);
+        }
+      }
+      return A.length - B.length;
+    }
+
+    if (sortBy === 'assigned_id') {
+      students.sort((a, b) => naturalCompare(a.register_id || a.id || '', b.register_id || b.id || ''));
+    } else {
+      // Default: sort by surname then first name
+      students.sort((a, b) => {
+        const sa = ((a.surname || '') + ' ' + (a.first_name || '')).toLowerCase();
+        const sb = ((b.surname || '') + ' ' + (b.first_name || '')).toLowerCase();
+        if (sa < sb) return -1;
+        if (sa > sb) return 1;
+        return 0;
+      });
+    }
+  } catch (e) { /* ignore sorting errors */ }
 
   // Fetch global attendance total (Y) from school_dates
   let attendanceTotalDays = 0;
@@ -177,7 +329,10 @@ async function loadProfiles() {
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
       <td>${classDisplay}</td>
-      <td>${presentCount} out of ${attendanceActualDisplay}</td>
+      <td>
+        <input type="number" data-student="${student.id}" data-field="attendance_total" value="${presentCount}" min="0" style="width:86px" />
+        &nbsp;out of&nbsp;${attendanceActualDisplay}
+      </td>
       <td>
         <select data-student="${student.id}" data-field="interest">
           ${generateInterestOptions(profile?.interest ?? '')}
@@ -194,6 +349,8 @@ async function loadProfiles() {
     `;
     tbody.appendChild(row);
   });
+  // Reset dirty flag since freshly loaded values match persisted data
+  try { setProfilesDirty(false); } catch (e) {}
 }
 
 // 🎭 Generate interest options
@@ -285,11 +442,28 @@ async function upsertProfile(studentId) {
 
   inputs.forEach(input => {
     const field = input.dataset.field;
-    let value = input.tagName === 'SELECT' ? input.value : parseInt(input.value);
-    if ((field === 'attendance_total' || field === 'attendance_actual') && (isNaN(value) || value === null)) {
-      value = 0;
+    // Allow manual override of attendance_total (and attendance_actual) only when a
+    // non-empty numeric value is provided. Otherwise keep the computed presentCountForStudent.
+    if (field === 'attendance_total' || field === 'attendance_actual') {
+      if (input.tagName === 'INPUT') {
+        const raw = (input.value || '').toString().trim();
+        if (raw !== '') {
+          let num = parseInt(raw, 10);
+          if (isNaN(num)) num = 0;
+          payload[field] = num;
+        } else {
+          // leave payload[field] as computed above
+        }
+      } else {
+        let num = parseInt(input.value, 10);
+        if (isNaN(num)) num = 0;
+        payload[field] = num;
+      }
+    } else {
+      // For selects (interest/conduct) and other inputs, take the provided value
+      if (input.tagName === 'SELECT') payload[field] = input.value;
+      else payload[field] = input.value;
     }
-    payload[field] = value;
   });
 
   // Provide attendance_actual as the canonical number of days in session (if known)
@@ -309,3 +483,132 @@ async function upsertProfile(studentId) {
     loadProfiles();
   }
 }
+
+// Bulk save: collect all editable profile rows and upsert in one request
+async function saveAllProfiles() {
+  const term = getValueByIds('termFilter','term');
+  const year = getValueByIds('yearFilter','year');
+  if (!term) { try { notify('Please select a term before saving all.', 'warning'); } catch (e) {} return; }
+  const tbody = document.querySelector('#profileTable tbody');
+  if (!tbody) { try { notify('Profiles table not found.', 'error'); } catch (e) {} return; }
+
+  // Read global attendance_actual (attendance_total_days) to store as attendance_actual
+  let attendanceTotalDays = 0;
+  try {
+    const { data: sd, error: sdErr } = await supabaseClient
+      .from('school_dates')
+      .select('attendance_total_days')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    if (!sdErr && sd && sd.length > 0) attendanceTotalDays = sd[0].attendance_total_days || 0;
+  } catch (e) { attendanceTotalDays = 0; }
+
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const payloads = [];
+  rows.forEach(row => {
+    // find any input/select with data-student attribute inside this row
+    const inputs = row.querySelectorAll('[data-student]');
+    const pdata = { interest: null, conduct: null, attendance_total: null, student_id: null };
+    inputs.forEach(inp => {
+      const field = inp.dataset.field;
+      const sid = inp.dataset.student;
+      if (sid) pdata.student_id = sid;
+      if (field === 'attendance_total') {
+        const raw = inp.value || '';
+        pdata.attendance_total = raw.toString().trim() === '' ? null : (parseInt(raw,10) || 0);
+      } else if (field === 'interest') pdata.interest = inp.value;
+      else if (field === 'conduct') pdata.conduct = inp.value;
+    });
+    if (pdata.student_id) {
+      const p = {
+        student_id: pdata.student_id,
+        term,
+        year,
+        updated_at: new Date().toISOString()
+      };
+      // If teacher provided a value for attendance_total, use it; otherwise do not include it so DB computed value (via existing logic) remains authoritative when using per-row save.
+      if (pdata.attendance_total !== null) p.attendance_total = pdata.attendance_total;
+      // Always set attendance_actual to the global attendance days (this mirrors per-row behavior)
+      if (attendanceTotalDays !== null && attendanceTotalDays !== undefined) p.attendance_actual = attendanceTotalDays;
+      if (pdata.interest !== null) p.interest = pdata.interest;
+      if (pdata.conduct !== null) p.conduct = pdata.conduct;
+      payloads.push(p);
+    }
+  });
+
+  if (payloads.length === 0) {
+    try { notify('No profile updates found to save.', 'warning'); } catch (e) {}
+    return;
+  }
+
+  // Confirm bulk save with a modern floating dialog
+  try {
+    const confirmMsg = `Save ${payloads.length} profile update${payloads.length === 1 ? '' : 's'}? This will overwrite saved interest, conduct and any manually-entered attendance totals.`;
+    const confirmed = await showFloatingConfirm(confirmMsg, { title: 'Confirm Save All' });
+    if (!confirmed) return;
+  } catch (e) {}
+
+  let loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Saving all profiles...') : null;
+  try {
+    if (loader) loader.update(10);
+    const { error } = await supabaseClient
+      .from('profiles')
+      .upsert(payloads, { onConflict: ['student_id', 'term', 'year'] });
+    if (error) {
+      try { notify('Failed to save profiles: ' + error.message, 'error'); } catch (e) {}
+    } else {
+      try { notify('All profiles saved successfully.', 'info'); } catch (e) {}
+      // Refresh the list to show persisted values
+      await loadProfiles();
+      // Clear dirty flag after successful save
+      try { setProfilesDirty(false); } catch (e) {}
+    }
+  } catch (e) {
+    try { notify('Unexpected error saving profiles.', 'error'); } catch (err) {}
+  } finally {
+    try { if (loader) loader.close(); } catch (e) {}
+  }
+}
+window.saveAllProfiles = saveAllProfiles;
+
+// Inject a "Save All" button above the profile table for convenience
+document.addEventListener('DOMContentLoaded', function() {
+  try {
+    const table = document.getElementById('profileTable');
+    if (!table) return;
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.justifyContent = 'flex-end';
+    wrapper.style.margin = '0 0 8px 0';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'saveAllProfilesBtn';
+    btn.textContent = 'Save All';
+      // Disabled by default until a change is detected
+      btn.disabled = true;
+    btn.style.padding = '8px 12px';
+    btn.style.background = '#004080';
+    btn.style.color = '#fff';
+    btn.style.border = 'none';
+    btn.style.borderRadius = '6px';
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', saveAllProfiles);
+    wrapper.appendChild(btn);
+    table.parentNode.insertBefore(wrapper, table);
+
+    // Attach delegated change listeners to mark the table as dirty when inputs/selects change
+    try {
+      const tbody = table.querySelector('tbody');
+      if (tbody) {
+        tbody.addEventListener('input', function(e) {
+          const target = e.target;
+          if (target && target.dataset && target.dataset.student) setProfilesDirty(true);
+        }, { passive: true });
+        tbody.addEventListener('change', function(e) {
+          const target = e.target;
+          if (target && target.dataset && target.dataset.student) setProfilesDirty(true);
+        });
+      }
+    } catch (e) {}
+  } catch (e) { /* ignore injection errors */ }
+});

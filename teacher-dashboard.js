@@ -64,7 +64,54 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 // ------------------- Attendance Feature -------------------
+// Global helpers to persist last attendance dates per class+term in localStorage
+function _attendanceStorage() {
+  try { return JSON.parse(localStorage.getItem('attendanceLastDates') || '{}'); } catch (e) { return {}; }
+}
+function getLastAttendanceDate(classVal, termVal) {
+  try {
+    const store = _attendanceStorage();
+    const key = `${classVal || ''}::${termVal || ''}`;
+    return store[key] || null;
+  } catch (e) { return null; }
+}
+function setLastAttendanceDate(classVal, termVal, dateStr) {
+  try {
+    const store = _attendanceStorage();
+    const key = `${classVal || ''}::${termVal || ''}`;
+    store[key] = dateStr;
+    localStorage.setItem('attendanceLastDates', JSON.stringify(store));
+  } catch (e) { /* ignore */ }
+}
+function _nextDateISO(dateStr) {
+  try {
+    // parse as UTC date to avoid timezone shifts
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0,10);
+  } catch (e) { return null; }
+}
 function setupAttendanceSection() {
+  // Helpers: store last attendance dates per class+term in localStorage
+  function _attendanceStorage() {
+    try { return JSON.parse(localStorage.getItem('attendanceLastDates') || '{}'); } catch (e) { return {}; }
+  }
+  function getLastAttendanceDate(classVal, termVal) {
+    try {
+      const store = _attendanceStorage();
+      const key = `${classVal || ''}::${termVal || ''}`;
+      return store[key] || null;
+    } catch (e) { return null; }
+  }
+  function setLastAttendanceDate(classVal, termVal, dateStr) {
+    try {
+      const store = _attendanceStorage();
+      const key = `${classVal || ''}::${termVal || ''}`;
+      store[key] = dateStr;
+      localStorage.setItem('attendanceLastDates', JSON.stringify(store));
+    } catch (e) { /* ignore storage errors */ }
+  }
+
   const attendanceClassSelect = document.getElementById('attendanceClassSelect');
   // If teacher is a Class Teacher with a single class (class_teacher_class), prefer that
   // and lock the attendance selector to that class (including subclass if present).
@@ -141,18 +188,25 @@ function setupAttendanceSection() {
   }
   const attendanceDate = document.getElementById('attendanceDate');
   if (attendanceDate) {
-    attendanceDate.valueAsDate = new Date();
+    // Do not auto-set to today here. The date will be initialized to the last submitted
+    // date for the selected class/term inside `loadAttendanceStudents()` so teachers
+    // always see the most recent submitted date by default.
     attendanceDate.addEventListener('change', loadAttendanceStudents);
     // Wire up filter select change handler if present
     const filterEl = document.getElementById('attendanceFilter');
     if (filterEl) {
-      filterEl.addEventListener('change', function() {
-        try { applyAttendanceFilter(); } catch (e) {}
-      });
+      filterEl.addEventListener('change', function() { try { applyAttendanceFilter(); } catch (e) {} });
     }
   }
-  // Optionally, load students for the first class if desired
-  // Optionally, load students for the first class if desired
+  // Ensure we initialize the attendance view once if a class is already selected.
+  // This will set the date field to the last submitted date (if present) so teachers
+  // can continue marking from where they left off without manually changing the date.
+  try {
+    const classSelectEl = document.getElementById('attendanceClassSelect');
+    if (classSelectEl && classSelectEl.value) {
+      setTimeout(loadAttendanceStudents, 50);
+    }
+  } catch (e) { /* ignore */ }
 }
 
 // Load students for selected class and date
@@ -225,6 +279,32 @@ async function loadAttendanceStudents() {
     tbody.innerHTML = '<tr><td colspan="2" style="color:red;">No students found for this class. If you are the class teacher, please check that students are registered for this class in the system.</td></tr>';
     return;
   }
+
+  // Initialize attendance date to last submitted date for this class+term if present
+  try {
+    const dateEl = document.getElementById('attendanceDate');
+    const termVal = document.getElementById('attendanceTerm') ? document.getElementById('attendanceTerm').value : '';
+    if (dateEl) {
+      // getLastAttendanceDate is defined in setupAttendanceSection scope; if not available, fallback to localStorage read
+      let last = null;
+      try { if (typeof getLastAttendanceDate === 'function') last = getLastAttendanceDate(classVal, termVal); } catch(e) { last = null; }
+      try {
+        if (!last) {
+          const store = JSON.parse(localStorage.getItem('attendanceLastDates') || '{}');
+          const key = `${classVal || ''}::${termVal || ''}`;
+          last = store[key] || null;
+        }
+      } catch (e) { last = null; }
+      const badge = document.getElementById('attendanceLastSubmitted');
+      if (last) {
+        dateEl.value = last;
+        if (badge) { badge.textContent = 'Last submitted: ' + last; badge.style.display = ''; }
+      } else {
+        if (!dateEl.value) dateEl.valueAsDate = new Date();
+        if (badge) { badge.style.display = 'none'; }
+      }
+    }
+  } catch (e) { /* ignore date init errors */ }
 
   // If a subclass is specified (either selected or assigned), filter results to that subclass only
   let rowsToShow = data;
@@ -406,6 +486,19 @@ async function submitAttendance() {
     } else {
       if (loader) loader.update(20);
       notify('Attendance submitted successfully!', 'info');
+      try {
+        // Persist the last submitted date for this class+term and advance the date field
+        try { setLastAttendanceDate(classVal, termVal, dateVal); } catch (e) {}
+        // Update badge to show the last submitted date
+        try { const badge = document.getElementById('attendanceLastSubmitted'); if (badge) { badge.textContent = 'Last submitted: ' + dateVal; badge.style.display = ''; } } catch (e) {}
+        const next = _nextDateISO(dateVal);
+        if (next) {
+          const dateEl = document.getElementById('attendanceDate');
+          if (dateEl) dateEl.value = next;
+          // Refresh students view for the new date so teacher can continue marking
+          setTimeout(() => { try { loadAttendanceStudents(); } catch (e) {} }, 120);
+        }
+      } catch (e) { /* ignore persistence errors */ }
     }
   } finally { try { if (loader) loader.close(); } catch(e) {} }
   // After attendance is saved, recompute attendance totals per student for this term and upsert into profiles

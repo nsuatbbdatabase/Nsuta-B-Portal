@@ -90,6 +90,7 @@
             </select>
             <label for="attendanceDate">Date:</label>
             <input type="date" id="attendanceDate" />
+            <span id="attendanceLastSubmitted" class="muted-small" style="margin-left:8px;display:none;">&nbsp;</span>
             <label for="attendanceFilter">Filter student:</label>
             <select id="attendanceFilter">
               <option value="">All students</option>
@@ -107,7 +108,7 @@
             </thead>
             <tbody id="attendanceTableBody"></tbody>
           </table>
-          <button onclick="submitAttendance()">Submit Attendance</button>
+          <button class="floating-submit" onclick="submitAttendance()">Submit Attendance</button>
         </div>
       </div>
     </div>
@@ -161,7 +162,7 @@
           <!-- Toolbar placeholder for Save All (Draft) / Save buttons inserted by JS -->
           <div id="sbaToolbar" class="marks-toolbar" aria-hidden="false"></div>
           <div class="row-actions">
-            <button onclick="submitSBA()">Submit SBA</button>
+            <button class="floating-submit" onclick="submitSBA()">Submit SBA</button>
           </div>
         </div>
       </div>
@@ -212,7 +213,7 @@
           <!-- Toolbar placeholder for Save All (Draft) / Save buttons inserted by JS -->
           <div id="examToolbar" class="marks-toolbar" aria-hidden="false"></div>
           <div class="row-actions">
-            <button onclick="submitExams()">Submit Exams</button>
+            <button class="floating-submit" onclick="submitExams()">Submit Exams</button>
           </div>
         </div>
       </div>
