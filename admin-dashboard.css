@@ -1,0 +1,65 @@
+:root{
+  --bg: #f6f8fb;
+  --card: #ffffff;
+  --muted: #6b7280;
+  --accent: #0b66b2;
+  --radius: 10px;
+}
+*{box-sizing:border-box}
+body.admin-dashboard{
+  font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  margin:0; background:var(--bg); color:#111827;
+}
+.sidebar{
+  position:fixed; left:0; top:0; bottom:0; width:260px; background:linear-gradient(180deg,#0b66b2 0%, #0a5a95 100%); color:#fff; padding:1rem; display:flex; flex-direction:column; gap:1rem; z-index:50;
+}
+.sidebar .school-title{font-weight:700; font-size:1.1rem}
+.sidebar .motto{font-size:0.85rem; opacity:0.9}
+.sidebar-nav{display:flex; flex-direction:column; gap:0.3rem}
+.sidebar-item{background:transparent; color:#fff; border:0; text-align:left; padding:0.6rem 0.5rem; border-radius:8px; cursor:pointer}
+.sidebar-item:hover,.sidebar-item.active{background:rgba(255,255,255,0.06)}
+.dashboard-main{margin-left:260px; min-height:100vh;}
+.dashboard-header{display:flex; justify-content:space-between; align-items:center; padding:0.8rem 1.2rem; background:transparent; border-bottom:1px solid rgba(0,0,0,0.04)}
+.dashboard-header .right{display:flex; gap:0.6rem; align-items:center}
+input#globalSearch, input#studentSearch{padding:0.5rem 0.75rem; border-radius:8px; border:1px solid #e6edf3}
+main{padding:1.1rem}
+.dashboard-cards-bg{display:grid; grid-template-columns:1fr 360px; gap:1rem}
+.kpi-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:0.75rem}
+.card.kpi{background:var(--card); border-radius:var(--radius); padding:1rem; box-shadow:0 6px 18px rgba(11,102,178,0.06); font-weight:600}
+.overview-panels{display:flex; flex-direction:column; gap:0.75rem}
+.panel{background:var(--card); padding:0.8rem; border-radius:8px}
+.recent-activity-section{list-style:none; padding:0; margin:0; max-height:240px; overflow:auto}
+.dashboard-section{display:none; margin-top:1rem}
+.dashboard-section h2{margin:0 0 0.8rem 0}
+.controls{display:flex; gap:0.6rem; align-items:center; margin-bottom:0.8rem}
+.table-wrap{background:var(--card); border-radius:10px; padding:0.6rem; box-shadow:0 8px 24px rgba(16,24,40,0.04)}
+table{width:100%; border-collapse:collapse}
+thead th{background:transparent; text-align:left; padding:0.6rem 0.5rem; color:var(--muted); font-weight:600}
+tbody td{padding:0.6rem 0.5rem; border-top:1px solid rgba(0,0,0,0.04)}
+.btn{background:var(--accent); color:#fff; border:0; padding:0.45rem 0.7rem; border-radius:8px; cursor:pointer}
+.btn.small{padding:0.3rem 0.5rem; font-size:0.9rem}
+.hidden{display:none !important}
+.modal{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(3,7,18,0.45); z-index:120}
+.modal form{background:var(--card); padding:1rem; border-radius:8px; min-width:320px; max-width:720px}
+
+/* responsive layout */
+@media (max-width: 1000px){
+  .dashboard-cards-bg{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{width:72px}
+  .dashboard-main{margin-left:72px}
+  .sidebar .school-title,.sidebar .motto{display:none}
+  .sidebar-item{padding:0.5rem; font-size:0.9rem}
+}
+@media (max-width:700px){
+  .dashboard-main{margin-left:0}
+  .sidebar{position:fixed; left:-260px; transition:left .28s ease}
+  .sidebar.open{left:0}
+  main{padding:0.6rem}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .kpi{font-size:0.95rem}
+  table, thead, tbody, th, td, tr{display:block}
+  thead{display:none}
+  tbody tr{margin-bottom:0.6rem; background:transparent}
+  tbody td{display:flex; justify-content:space-between; padding:0.6rem; border:1px solid rgba(0,0,0,0.04); border-radius:8px}
+}

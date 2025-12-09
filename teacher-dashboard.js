@@ -903,19 +903,67 @@ async function loadTeacherDashboard(staffId) {
   // For Career Tech, show area dropdown if needed
   const subjectSelect = document.getElementById('subjectSelect');
   const areaSelect = document.getElementById('careerTechAreaSelect');
+  const areaLabel = document.getElementById('careerTechAreaLabel');
   if (subjectSelect && areaSelect) {
     subjectSelect.addEventListener('change', function() {
       if (subjectSelect.value === 'Career Tech') {
-        areaSelect.style.display = '';
+        areaSelect.classList.remove('hidden');
+        if (areaLabel) areaLabel.classList.remove('hidden');
         // Only show areas assigned to this teacher
         areaSelect.innerHTML = '<option value="">Select Area</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
       } else {
-        areaSelect.style.display = 'none';
+        areaSelect.classList.add('hidden');
+        if (areaLabel) areaLabel.classList.add('hidden');
         areaSelect.innerHTML = '';
       }
     });
     // Hide area dropdown by default
-    areaSelect.style.display = 'none';
+    areaSelect.classList.add('hidden');
+    if (areaLabel) areaLabel.classList.add('hidden');
+  }
+  
+  // For Career Tech Exam, show area dropdown if needed
+  const subjectSelectExam = document.getElementById('subjectSelectExam');
+  const areaSelectExam = document.getElementById('careerTechAreaSelectExam');
+  const areaLabelExam = document.getElementById('careerTechAreaLabelExam');
+  if (subjectSelectExam && areaSelectExam) {
+    subjectSelectExam.addEventListener('change', function() {
+      if (subjectSelectExam.value === 'Career Tech') {
+        areaSelectExam.classList.remove('hidden');
+        if (areaLabelExam) areaLabelExam.classList.remove('hidden');
+        // Only show areas assigned to this teacher
+        areaSelectExam.innerHTML = '<option value="">Select Area</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+      } else {
+        areaSelectExam.classList.add('hidden');
+        if (areaLabelExam) areaLabelExam.classList.add('hidden');
+        areaSelectExam.innerHTML = '';
+      }
+    });
+    // Hide area dropdown by default
+    areaSelectExam.classList.add('hidden');
+    if (areaLabelExam) areaLabelExam.classList.add('hidden');
+  }
+  
+  // For Career Tech Promotion Exam, show area dropdown if needed
+  const promotionSubjectSelect = document.getElementById('promotionSubjectSelect');
+  const promotionAreaSelect = document.getElementById('promotionCareerTechAreaSelect');
+  const promotionAreaLabel = document.getElementById('promotionCareerTechAreaLabel');
+  if (promotionSubjectSelect && promotionAreaSelect) {
+    promotionSubjectSelect.addEventListener('change', function() {
+      if (promotionSubjectSelect.value === 'Career Tech') {
+        promotionAreaSelect.classList.remove('hidden');
+        if (promotionAreaLabel) promotionAreaLabel.classList.remove('hidden');
+        // Only show areas assigned to this teacher
+        promotionAreaSelect.innerHTML = '<option value="">Select Area</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+      } else {
+        promotionAreaSelect.classList.add('hidden');
+        if (promotionAreaLabel) promotionAreaLabel.classList.add('hidden');
+        promotionAreaSelect.innerHTML = '';
+      }
+    });
+    // Hide area dropdown by default
+    promotionAreaSelect.classList.add('hidden');
+    if (promotionAreaLabel) promotionAreaLabel.classList.add('hidden');
   }
   // Show/hide attendance section based on responsibility
   const attendanceSection = document.getElementById('attendanceSection');
@@ -1073,17 +1121,25 @@ async function submitPromotionExam() {
     notify('Invalid term value.', 'warning');
     return;
   }
+  
+  // Capture Career Tech area if present
+  const areaVal = document.getElementById('promotionCareerTechAreaSelect')?.value || null;
+  
   const scoreInputs = document.querySelectorAll('.promotion-score');
-  const records = Array.from(scoreInputs).map(input => ({
-    student_id: input.getAttribute('data-student-id'),
-    class: classVal,
-    subject: subjectVal,
-    term: termVal,
-    year: yearVal, // year is TEXT in schema
-    score: parseInt(input.value, 10) || 0,
-    marked_by: teacher.id,
-    submitted_to_admin: true
-  }));
+  const records = Array.from(scoreInputs).map(input => {
+    const rec = {
+      student_id: input.getAttribute('data-student-id'),
+      class: classVal,
+      subject: subjectVal,
+      term: termVal,
+      year: yearVal, // year is TEXT in schema
+      score: parseInt(input.value, 10) || 0,
+      marked_by: teacher?.name || teacher?.id || localStorage.getItem('teacherId') || 'Unknown',
+      submitted_to_admin: true
+    };
+    if (subjectVal === 'Career Tech' && areaVal) rec.area = areaVal;
+    return rec;
+  });
   if (records.length === 0) {
     notify('No students to mark.', 'warning');
     return;
@@ -1092,19 +1148,42 @@ async function submitPromotionExam() {
   try {
     loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting promotion exam marks...') : null;
     if (loader) loader.update(10);
-    const { error, data } = await supabaseClient
-      .from('promotion_exams')
-      .upsert(records, { onConflict: ['student_id', 'class', 'subject', 'term', 'year'] });
-    if (error) {
-      console.error('Promotion exam upsert error:', error);
-      notify('Failed to submit promotion exam: ' + (error.message || JSON.stringify(error)), 'error');
-    } else {
-      if (loader) loader.update(100);
-      notify('Promotion exam submitted to admin!', 'info');
-      document.getElementById('promotionExamTableBody').innerHTML = '';
-      // Optionally reload students to repopulate form with latest marks
-      loadPromotionExamStudents();
+    
+    // Submit each record: try update first, if no rows updated then insert
+    for (let i = 0; i < records.length; i++) {
+      const rec = records[i];
+      if (loader) loader.update(Math.round(10 + (i / records.length) * 80));
+      
+      // Build update query
+      const updateQuery = supabaseClient
+        .from('promotion_exams')
+        .update(rec)
+        .eq('student_id', rec.student_id)
+        .eq('class', rec.class)
+        .eq('subject', rec.subject)
+        .eq('term', rec.term)
+        .eq('year', rec.year);
+      
+      if (rec.area) {
+        updateQuery.eq('area', rec.area);
+      }
+      
+      const { error: updateError, count } = await updateQuery;
+      
+      // If no rows were updated, try to insert
+      if (!updateError && count === 0) {
+        const { error: insertError } = await supabaseClient.from('promotion_exams').insert([rec]);
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
     }
+    
+    if (loader) loader.update(100);
+    notify('Promotion exam submitted to admin!', 'info');
+    document.getElementById('promotionExamTableBody').innerHTML = '';
+    // Optionally reload students to repopulate form with latest marks
+    loadPromotionExamStudents();
   } catch (err) {
     console.error('Promotion exam upsert exception:', err);
     notify('Unexpected error: ' + err.message, 'error');
@@ -1468,7 +1547,8 @@ async function submitSBA() {
         individual: Number(d.individual || 0),
         "group": Number(d.group || 0),
         class_test: Number(d.classTest || 0),
-        project: Number(d.project || 0)
+        project: Number(d.project || 0),
+        marked_by: teacher?.name || localStorage.getItem('teacherId') || 'Unknown'
       };
       if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
@@ -1520,7 +1600,8 @@ async function submitSBA() {
         individual: Number(individual || 0),
         "group": Number(groupVal || 0),
         class_test: Number(classTest || 0),
-        project: Number(project || 0)
+        project: Number(project || 0),
+        marked_by: teacher?.name || localStorage.getItem('teacherId') || 'Unknown'
       };
       if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
@@ -1542,14 +1623,34 @@ async function submitSBA() {
     if (!resultsHasArea) {
       submissions.forEach(s => { if (s.area) delete s.area; });
     }
-    const includeArea = submissions.some(s => s.area);
-    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
+    
+    // Submit each record: try update first, if no rows updated then insert
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
       if (loader) loader.update(Math.round((i / submissions.length) * 100));
-      // Upsert including component breakdown columns when present
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
-      if (error) throw error;
+      
+      // Build update query
+      const updateQuery = supabaseClient
+        .from('results')
+        .update(rec)
+        .eq('student_id', rec.student_id)
+        .eq('subject', rec.subject)
+        .eq('term', rec.term)
+        .eq('year', rec.year);
+      
+      if (rec.area) {
+        updateQuery.eq('area', rec.area);
+      }
+      
+      const { error: updateError, count } = await updateQuery;
+      
+      // If no rows were updated, try to insert
+      if (!updateError && count === 0) {
+        const { error: insertError } = await supabaseClient.from('results').insert([rec]);
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
     }
     if (loader) loader.update(100);
     // Clear drafts after successful submit
@@ -1706,7 +1807,7 @@ async function submitExams() {
   }
     const classVal = document.getElementById('classSelectExam').value;
   // Capture Career Tech area if present
-  const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
+  const areaVal = document.getElementById('careerTechAreaSelectExam')?.value || null;
   const draftKey = `drafts:exam:${document.getElementById('classSelectExam')?.value || ''}:${document.getElementById('subjectSelectExam')?.value || ''}:${term}:${year}`;
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
@@ -1723,7 +1824,7 @@ async function submitExams() {
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
       if (drafts[student.id] === undefined) continue;
-      const rec = { student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0 };
+      const rec = { student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0, marked_by: teacher?.name || localStorage.getItem('teacherId') || 'Unknown' };
       if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
     }
@@ -1757,7 +1858,7 @@ async function submitExams() {
             if (typeof existing.project === 'number') project = existing.project;
           }
         } catch (e) {}
-        const rec = { student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) };
+        const rec = { student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0), marked_by: teacher?.name || localStorage.getItem('teacherId') || 'Unknown' };
         if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
         submissions.push(rec);
     }
@@ -1778,13 +1879,34 @@ async function submitExams() {
     if (!resultsHasArea) {
       submissions.forEach(s => { if (s.area) delete s.area; });
     }
-    const includeArea = submissions.some(s => s.area);
-    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
+    
+    // Submit each record: try update first, if no rows updated then insert
     for (let i = 0; i < submissions.length; i++) {
       const rec = submissions[i];
       if (loader) loader.update(Math.round((i / submissions.length) * 100));
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
-      if (error) throw error;
+      
+      // Build update query
+      const updateQuery = supabaseClient
+        .from('results')
+        .update(rec)
+        .eq('student_id', rec.student_id)
+        .eq('subject', rec.subject)
+        .eq('term', rec.term)
+        .eq('year', rec.year);
+      
+      if (rec.area) {
+        updateQuery.eq('area', rec.area);
+      }
+      
+      const { error: updateError, count } = await updateQuery;
+      
+      // If no rows were updated, try to insert
+      if (!updateError && count === 0) {
+        const { error: insertError } = await supabaseClient.from('results').insert([rec]);
+        if (insertError) throw insertError;
+      } else if (updateError) {
+        throw updateError;
+      }
     }
     if (loader) loader.update(100);
     // Clear drafts after successful submit
