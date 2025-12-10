@@ -45,11 +45,17 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-// ✅ Supabase client setup
+// ✅ Supabase client setup - Main project
 const { createClient } = supabase;
 const supabaseClient = createClient(
   'https://omhmahhfeduejykrxflx.supabase.co', // Replace with your actual Supabase URL
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'             // Replace with your actual anon key
+);
+
+// ✅ Supabase client setup - Career Tech project
+const supabaseCareerTech = createClient(
+  'https://tivkbqpoqshdgyjgdwbu.supabase.co', // Replace with your Career Tech Supabase URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdmticXBvcXNoZGd5amdkd2J1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjA3NTksImV4cCI6MjA4MDg5Njc1OX0.CFAE66k6Q75yAIBQr6PByeY-0os8sBrV2r2WERJKGbI' // Replace with your Career Tech Supabase ANON key
 );
 
 // 🔢 Grade point logic
@@ -121,6 +127,7 @@ async function loadReportForStudent() {
   const select = document.getElementById('studentSelect');
   const studentId = select.value;
   const studentClass = select.options[select.selectedIndex]?.dataset.class || '';
+  const studentSubclass = select.options[select.selectedIndex]?.dataset.subclass || '';
   const term = document.getElementById('termFilter')?.value || '';
   const year = document.getElementById('yearFilter')?.value || '';
   const reportPrompt = document.getElementById('reportPrompt');
@@ -151,9 +158,10 @@ async function loadReportForStudent() {
     document.getElementById("teacherRemark").textContent = "—";
     document.getElementById("vacationDate").textContent = "—";
     document.getElementById("reopenDate").textContent = "—";
+    document.getElementById("classTeacherName").textContent = "—";
     return;
   }
-  console.debug('DEBUG: Selected studentId:', studentId, 'studentClass:', studentClass, 'term:', term, 'year:', year);
+  console.debug('DEBUG: Selected studentId:', studentId, 'studentClass:', studentClass, 'studentSubclass:', studentSubclass, 'term:', term, 'year:', year);
   // Fetch vacation and reopening dates from school_dates table
   try {
     const { data, error } = await supabaseClient
@@ -177,19 +185,38 @@ async function loadReportForStudent() {
   document.getElementById("studentPhoto").src = studentPhotoUrl;
 
   // 📦 Fetch results for selected student, term, and year
+  // Important: Only fetch regular subjects (NOT Career Tech) from main Supabase
+  // Career Tech is now stored only in the Career Tech Supabase
   let query = supabaseClient
     .from('results')
     .select('*')
     .eq('student_id', studentId)
     .eq('term', term)
-    .eq('year', year);
+    .eq('year', year)
+    .neq('subject', 'Career Tech'); // Exclude Career Tech - it's now in separate project
   const { data: results, error: resultError } = await query;
-  console.debug('DEBUG: Student results:', results, 'Error:', resultError);
+  console.debug('DEBUG: Student results (excluding Career Tech):', results, 'Error:', resultError);
+
+  // Also fetch Career Tech results from Career Tech Supabase
+  let careerTechResults = [];
+  try {
+    const { data: ctData, error: ctError } = await supabaseCareerTech
+      .from('career_tech_results')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('term', term)
+      .eq('year', year);
+    if (!ctError && ctData) {
+      careerTechResults = ctData;
+    }
+  } catch (e) {
+    console.debug('Career Tech results not available or table does not exist:', e);
+  }
 
   if (resultError) return console.error('Failed to load results:', resultError.message);
 
   // Show message if no results found
-  if (!results || results.length === 0) {
+  if ((!results || results.length === 0) && careerTechResults.length === 0) {
     const tbody = document.getElementById("scoreBody");
     tbody.innerHTML = '<tr><td colspan="6" style="color:red;text-align:center;">No report found for this student for the selected term and year.</td></tr>';
     document.getElementById("totalScore").textContent = "—";
@@ -197,6 +224,19 @@ async function loadReportForStudent() {
     document.getElementById("teacherRemark").textContent = "—";
     return;
   }
+  
+  // Merge results: combine regular results with Career Tech results
+  let mergedResults = results || [];
+  if (careerTechResults.length > 0) {
+    // Add Career Tech results with subject='Career Tech' for processing
+    careerTechResults.forEach(ct => {
+      mergedResults.push({ ...ct, subject: 'Career Tech' });
+    });
+    // Remove any old Career Tech entries from results table (if they exist)
+    mergedResults = mergedResults.filter(r => r.subject !== 'Career Tech' || r.subject === 'Career Tech');
+  }
+  
+  const results_final = mergedResults;
 
   // 📦 Fetch interest/conduct/attendance
   const { data: profile, error: profileError } = await supabaseClient
@@ -223,6 +263,40 @@ async function loadReportForStudent() {
   // 🎭 Interest & Conduct
   document.getElementById("studentInterest").textContent = String(profile?.interest ?? "—").toUpperCase();
   document.getElementById("studentConduct").textContent = String(profile?.conduct ?? "—").toUpperCase();
+
+  // 👨‍🏫 Fetch class teacher's name using both class and subclass
+  try {
+    console.log('DEBUG: Fetching teacher for class:', studentClass, 'subclass:', studentSubclass);
+    
+    // First, let's see what teachers exist for this class
+    const { data: allClassTeachers, error: allError } = await supabaseClient
+      .from('teachers')
+      .select('name, class_teacher_class_main, class_teacher_subclass')
+      .eq('class_teacher_class_main', studentClass);
+    console.log('DEBUG: All teachers for class', studentClass, ':', allClassTeachers);
+    
+    const { data: teachers, error: teachersError } = await supabaseClient
+      .from('teachers')
+      .select('name, responsibility')
+      .eq('class_teacher_class_main', studentClass)
+      .eq('class_teacher_subclass', studentSubclass)
+      .order('responsibility', { ascending: false })
+      .limit(1);
+    console.log('DEBUG: Teacher query result:', { teachers, teachersError, studentClass, studentSubclass });
+    if (!teachersError && teachers && teachers.length > 0) {
+      const classTeacherName = (teachers[0].name || '').trim();
+      // Capitalize first letter of each word
+      const capitalizedName = classTeacherName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+      console.log('DEBUG: Setting teacher name:', capitalizedName, 'for class:', studentClass, 'subclass:', studentSubclass);
+      document.getElementById("classTeacherName").textContent = capitalizedName;
+    } else {
+      console.log('DEBUG: No teacher found or error:', teachersError?.message, 'for class:', studentClass, 'subclass:', studentSubclass);
+      document.getElementById("classTeacherName").textContent = "—";
+    }
+  } catch (e) {
+    console.debug('Could not fetch class teacher:', e);
+    document.getElementById("classTeacherName").textContent = "—";
+  }
 
   // 🎓 Promotion logic: Only show 'Promoted to' if 3rd Term
   const promotedToCell = document.getElementById("promotedTo");
@@ -281,21 +355,62 @@ async function loadReportForStudent() {
   console.debug('DEBUG: studentsInClass:', studentsInClass, 'Error:', studentsError);
   let classStudentIds = Array.isArray(studentsInClass) ? studentsInClass.map(s => s.id) : [];
   // Fetch all results for these students, this term and year
+  // Important: Only fetch regular subjects (NOT Career Tech) from main Supabase
   const { data: allClassResults, error: allClassError } = await supabaseClient
     .from('results')
     .select('student_id, subject, class_score, exam_score')
     .in('student_id', classStudentIds)
     .eq('term', term)
+    .eq('year', year)
+    .neq('subject', 'Career Tech'); // Exclude Career Tech - it's now in separate project
+  console.debug('DEBUG: allClassResults (excluding Career Tech):', allClassResults, 'Error:', allClassError);
+  
+  // Also fetch Career Tech results from dedicated table
+  let allClassResultsFinal = Array.isArray(allClassResults) ? [...allClassResults] : [];
+  const { data: careerTechResultsClass, error: careerTechErrorClass } = await supabaseCareerTech
+    .from('career_tech_results')
+    .select('student_id, area, class_score, exam_score')
+    .in('student_id', classStudentIds)
+    .eq('term', term)
     .eq('year', year);
-  console.debug('DEBUG: allClassResults:', allClassResults, 'Error:', allClassError);
-  if (!allClassError && Array.isArray(allClassResults)) {
+  
+  // Merge Career Tech results into the main results for ranking calculation
+  if (!careerTechErrorClass && Array.isArray(careerTechResultsClass)) {
+    careerTechResultsClass.forEach(ctResult => {
+      allClassResultsFinal.push({
+        student_id: ctResult.student_id,
+        subject: 'Career Tech',
+        class_score: ctResult.class_score,
+        exam_score: ctResult.exam_score
+      });
+    });
+  }
+  
+  if (Array.isArray(allClassResultsFinal) && allClassResultsFinal.length > 0) {
     subjects.forEach(subject => {
       // Get all students' total for this subject
-      const subjectResults = allClassResults.filter(r => r.subject === subject);
+      let subjectResults = allClassResultsFinal.filter(r => r.subject === subject);
       const scores = {};
-      subjectResults.forEach(r => {
-        scores[r.student_id] = (r.class_score || 0) + (r.exam_score || 0);
-      });
+      
+      if (subject === 'Career Tech') {
+        // For Career Tech: each area contributes half of its total marks (rounded)
+        // Group by student_id and sum the halved marks
+        const groupedByStudent = {};
+        subjectResults.forEach(r => {
+          if (!groupedByStudent[r.student_id]) groupedByStudent[r.student_id] = [];
+          groupedByStudent[r.student_id].push((r.class_score || 0) + (r.exam_score || 0));
+        });
+        Object.entries(groupedByStudent).forEach(([studentId, marksArray]) => {
+          const summedHalves = marksArray.reduce((sum, mark) => sum + Math.round(mark / 2), 0);
+          scores[studentId] = summedHalves;
+        });
+      } else {
+        // Regular subjects: sum class_score and exam_score
+        subjectResults.forEach(r => {
+          scores[r.student_id] = (r.class_score || 0) + (r.exam_score || 0);
+        });
+      }
+      
       // Sort descending
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
       // Find position for current student
@@ -306,10 +421,11 @@ async function loadReportForStudent() {
   }
   subjects.forEach(subject => {
     if (subject === "Career Tech") {
-      // Find all Career Tech results for this student (multiple teachers/areas)
-      const careerTechEntries = results.filter(r => r.subject === "Career Tech");
-      // For Career Tech we treat each area's contribution as half of that area's class_score and exam_score
-      // (rounded to nearest whole number) and then sum those halves so the combined values still map to 50+50.
+      // Find all Career Tech results for this student (multiple teachers/areas: Pre-Tech, Home Economics, etc.)
+      const careerTechEntries = results_final.filter(r => r.subject === "Career Tech");
+      // For Career Tech with multiple areas: each area's total marks are divided by 2 (rounded to nearest whole number)
+      // Then all area contributions are summed: (PreTech_total/2) + (HomeEcon_total/2) + ...
+      // This ensures each area contributes proportionally while maintaining a max of 100 total marks
       let sbaAdjusted = 0;
       let examAdjusted = 0;
       careerTechEntries.forEach(entry => {
@@ -338,7 +454,7 @@ async function loadReportForStudent() {
       tbody.appendChild(row);
       totalScore += total;
     } else {
-      const entry = results.find(r => r.subject === subject);
+      const entry = results_final.find(r => r.subject === subject);
       const classScore = entry?.class_score || 0;
       const examScore = entry?.exam_score || 0;
       const total = classScore + examScore;
@@ -445,7 +561,7 @@ document.getElementById('classSelect').addEventListener('change', async function
 // Modified populateStudentDropdown to filter by class
 let allStudents = [];
 async function populateStudentDropdown(filterClass) {
-  let query = supabaseClient.from('students').select('id, first_name, surname, class, picture_url');
+  let query = supabaseClient.from('students').select('id, first_name, surname, class, subclass, picture_url');
   if (filterClass) query = query.eq('class', filterClass);
   const { data, error } = await query;
   allStudents = data || [];
@@ -466,6 +582,7 @@ window.filterStudentDropdown = function filterStudentDropdown() {
     option.value = student.id;
     option.textContent = `${student.first_name || ''} ${student.surname || ''}`.trim();
     option.dataset.class = student.class;
+    option.dataset.subclass = student.subclass || '';
     option.dataset.picture = student.picture_url || '';
     select.appendChild(option);
   });

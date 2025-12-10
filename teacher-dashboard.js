@@ -638,11 +638,18 @@ async function populateMotivationStudentDropdown() {
     });
   }
 }
-// ✅ Supabase client setup
+// ✅ Supabase client setup - Main project (students, teachers, results, etc.)
 const { createClient } = supabase;
 const supabaseClient = createClient(
   'https://omhmahhfeduejykrxflx.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
+);
+
+// ✅ Supabase client setup - Career Tech project (career_tech_results table only)
+// Replace with your Career Tech Supabase URL and ANON key
+const supabaseCareerTech = createClient(
+  'https://tivkbqpoqshdgyjgdwbu.supabase.co', // Replace with your Career Tech Supabase URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdmticXBvcXNoZGd5amdkd2J1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjA3NTksImV4cCI6MjA4MDg5Njc1OX0.CFAE66k6Q75yAIBQr6PByeY-0os8sBrV2r2WERJKGbI' // Replace with your Career Tech Supabase ANON key
 );
 
 let teacher = {};
@@ -1238,20 +1245,33 @@ async function loadStudents(section = 'sba') {
     const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
     if (selectedSubject && term && year) {
       try {
-        // Build query: fetch component-level SBA fields for the selected subject/term/year
-        // If Career Tech and area is selected, filter by area; otherwise ignore area
-        let query = supabaseClient
-          .from('results')
-          .select('student_id, class_score, individual, "group", class_test, project, area')
-          .eq('subject', selectedSubject)
-          .eq('term', term)
-          .eq('year', year);
-        // Only filter by area if subject is Career Tech AND area is selected
-        if (selectedSubject === 'Career Tech' && areaVal) {
-          query = query.eq('area', areaVal);
+        let marksData = [];
+        
+        if (selectedSubject === 'Career Tech') {
+          // For Career Tech, fetch from career_tech_results table in Career Tech Supabase
+          let query = supabaseCareerTech
+            .from('career_tech_results')
+            .select('student_id, class_score, individual, "group", class_test, project, area')
+            .eq('term', term)
+            .eq('year', year);
+          // If area is selected, filter by it; otherwise fetch all areas
+          if (areaVal) {
+            query = query.eq('area', areaVal);
+          }
+          const result = await query;
+          marksData = result.data || [];
+        } else {
+          // For other subjects, fetch from results table
+          let query = supabaseClient
+            .from('results')
+            .select('student_id, class_score, individual, "group", class_test, project, area')
+            .eq('subject', selectedSubject)
+            .eq('term', term)
+            .eq('year', year);
+          const result = await query;
+          marksData = result.data || [];
         }
-        const result = await query;
-        const marksData = result.data;
+        
         if (Array.isArray(marksData)) {
           // Filter to only include marks for students in the current class roster
           const studentIds = new Set(students.map(s => s.id));
@@ -1270,7 +1290,7 @@ async function loadStudents(section = 'sba') {
         }
       } catch (err) {
         console.error('SBA marks query failed:', err);
-      notify('Failed to load SBA marks. Please check your database columns.', 'error');
+        notify('Failed to load SBA marks. Please check your database columns.', 'error');
       }
     }
     renderSBAForm(marksMap);
@@ -1279,26 +1299,47 @@ async function loadStudents(section = 'sba') {
     const year = document.getElementById('yearInputExam')?.value || '';
     const areaValExam = document.getElementById('careerTechAreaSelectExam')?.value || null;
     if (selectedSubject && term && year) {
-      let query = supabaseClient
-        .from('results')
-        .select('student_id, exam_score, area')
-        .eq('subject', selectedSubject)
-        .eq('term', term)
-        .eq('year', year);
-      // Only filter by area if subject is Career Tech AND area is selected
-      if (selectedSubject === 'Career Tech' && areaValExam) {
-        query = query.eq('area', areaValExam);
-      }
-      const { data: examMarksData, error: examMarksError } = await query;
-      if (!examMarksError && Array.isArray(examMarksData)) {
-        // Filter to only include marks for students in the current class roster
-        const studentIds = new Set(students.map(s => s.id));
-        examMarksData.forEach(m => {
-          if (studentIds.has(m.student_id)) {
-            marksMap[m.student_id] = m.exam_score;
+      try {
+        let marksData = [];
+        
+        if (selectedSubject === 'Career Tech') {
+          // For Career Tech, fetch from career_tech_results table in Career Tech Supabase
+          let query = supabaseCareerTech
+            .from('career_tech_results')
+            .select('student_id, exam_score, area')
+            .eq('term', term)
+            .eq('year', year);
+          // If area is selected, filter by it; otherwise fetch all areas
+          if (areaValExam) {
+            query = query.eq('area', areaValExam);
           }
-        });
-        console.debug('Exam marks loaded:', Object.keys(marksMap).length, 'records for', students.length, 'students');
+          const result = await query;
+          marksData = result.data || [];
+        } else {
+          // For other subjects, fetch from results table
+          let query = supabaseClient
+            .from('results')
+            .select('student_id, exam_score, area')
+            .eq('subject', selectedSubject)
+            .eq('term', term)
+            .eq('year', year);
+          const result = await query;
+          marksData = result.data || [];
+        }
+        
+        if (Array.isArray(marksData)) {
+          // Filter to only include marks for students in the current class roster
+          const studentIds = new Set(students.map(s => s.id));
+          marksData.forEach(m => {
+            if (studentIds.has(m.student_id)) {
+              marksMap[m.student_id] = m.exam_score;
+            }
+          });
+          console.debug('Exam marks loaded:', Object.keys(marksMap).length, 'records for', students.length, 'students');
+        }
+      } catch (err) {
+        console.error('Exam marks query failed:', err);
+        notify('Failed to load exam marks. Please check your database columns.', 'error');
       }
     }
     renderExamForm(marksMap);
@@ -1658,49 +1699,42 @@ async function submitSBA() {
   if (submissions.length === 0) { notify('No valid SBA scores to submit.', 'warning'); return; }
   // Show progress using loading toast and submit sequentially to give progressive feedback
   try {
-    // Determine if the `results` table actually has an `area` column. If not, remove area from payloads.
-    let resultsHasArea = false;
-    try {
-      const testRes = await supabaseClient.from('results').select('area').limit(1);
-      if (!testRes.error) resultsHasArea = true;
-    } catch (e) { resultsHasArea = false; }
-    if (!resultsHasArea) {
-      submissions.forEach(s => { if (s.area) delete s.area; });
-    }
-    
     const includeArea = submissions.some(s => s.area);
-    // If area is included (Career Tech), always use the base conflict key without area
-    // because the DB constraint doesn't include area yet. We'll manually update area field.
-    const conflictKey = ['student_id', 'subject', 'term', 'year'];
+    // Separate Career Tech (with area) from regular submissions
+    const careerTechSubmissions = submissions.filter(s => s.area).map(s => {
+      // Remove 'subject' field from Career Tech records (they use 'area' instead)
+      const { subject, ...rest } = s;
+      return rest;
+    });
+    const regularSubmissions = submissions.filter(s => !s.area); // All other subjects
     
     // Batch upserts to reduce number of requests and provide smooth progress updates
     const BATCH_SIZE = 20;
-    for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
-      const batch = submissions.slice(i, i + BATCH_SIZE);
-      if (loader) loader.update(Math.round(((i + batch.length) / submissions.length) * 100));
-      // yield to the event loop so the progress toast can repaint before the network call
-      if (loader) await new Promise(r => setTimeout(r, 25));
-      
-      // If area is included, we need to handle the upsert carefully:
-      // First try to upsert without area, then update area field if needed
-      if (includeArea) {
-        // Separate submissions into those with and without area
-        const withArea = batch.filter(s => s.area);
-        const withoutArea = batch.filter(s => !s.area);
+    
+    // Process Career Tech submissions (use career_tech_results table in Career Tech Supabase)
+    if (careerTechSubmissions.length > 0) {
+      for (let i = 0; i < careerTechSubmissions.length; i += BATCH_SIZE) {
+        const batch = careerTechSubmissions.slice(i, i + BATCH_SIZE);
+        if (loader) loader.update(Math.round(((i + batch.length) / (submissions.length || 1)) * 100));
+        if (loader) await new Promise(r => setTimeout(r, 25));
         
-        // Upsert those with area (without area in conflict)
-        if (withArea.length > 0) {
-          const { error: areaErr } = await supabaseClient.from('results').upsert(withArea, { onConflict: conflictKey });
-          if (areaErr) throw areaErr;
-        }
+        // For Career Tech: upsert to career_tech_results table in Career Tech Supabase
+        // Use conflict on (student_id, area, term, year) which is the proper unique key
+        const { error: ctErr } = await supabaseCareerTech.from('career_tech_results').upsert(batch, { 
+          onConflict: ['student_id', 'area', 'term', 'year'] 
+        });
+        if (ctErr) throw ctErr;
+      }
+    }
+    
+    // Process regular subjects (non-Career Tech submissions to results table)
+    if (regularSubmissions.length > 0) {
+      const conflictKey = ['student_id', 'subject', 'term', 'year'];
+      for (let i = 0; i < regularSubmissions.length; i += BATCH_SIZE) {
+        const batch = regularSubmissions.slice(i, i + BATCH_SIZE);
+        if (loader) loader.update(Math.round(((i + batch.length) / (submissions.length || 1)) * 100));
+        if (loader) await new Promise(r => setTimeout(r, 25));
         
-        // Upsert those without area
-        if (withoutArea.length > 0) {
-          const { error: noAreaErr } = await supabaseClient.from('results').upsert(withoutArea, { onConflict: conflictKey });
-          if (noAreaErr) throw noAreaErr;
-        }
-      } else {
-        // No area, standard upsert
         const { error } = await supabaseClient.from('results').upsert(batch, { onConflict: conflictKey });
         if (error) throw error;
       }
@@ -1956,41 +1990,42 @@ async function submitExams() {
   if (submissions.length === 0) { notify('No valid exam scores to submit.', 'warning'); return; }
   // loader already created earlier to show immediate feedback
   try {
-    // Determine if the `results` table actually has an `area` column. If not, remove area from payloads.
-    let resultsHasArea = false;
-    try {
-      const testRes = await supabaseClient.from('results').select('area').limit(1);
-      if (!testRes.error) resultsHasArea = true;
-    } catch (e) { resultsHasArea = false; }
-    if (!resultsHasArea) {
-      submissions.forEach(s => { if (s.area) delete s.area; });
+    const includeArea = submissions.some(s => s.area);
+    // Separate Career Tech (with area) from regular submissions
+    const careerTechSubmissions = submissions.filter(s => s.area).map(s => {
+      // Remove 'subject' field from Career Tech records (they use 'area' instead)
+      const { subject, ...rest } = s;
+      return rest;
+    });
+    const regularSubmissions = submissions.filter(s => !s.area); // All other subjects
+    
+    // Batch upserts to reduce number of requests and provide smooth progress updates
+    const BATCH_SIZE = 20;
+    
+    // Process Career Tech submissions (use career_tech_results table in Career Tech Supabase)
+    if (careerTechSubmissions.length > 0) {
+      for (let i = 0; i < careerTechSubmissions.length; i += BATCH_SIZE) {
+        const batch = careerTechSubmissions.slice(i, i + BATCH_SIZE);
+        if (loader) loader.update(Math.round(((i + batch.length) / (submissions.length || 1)) * 100));
+        if (loader) await new Promise(r => setTimeout(r, 25));
+        
+        // For Career Tech: upsert to career_tech_results table in Career Tech Supabase
+        // Use conflict on (student_id, area, term, year) which is the proper unique key
+        const { error: ctErr } = await supabaseCareerTech.from('career_tech_results').upsert(batch, { 
+          onConflict: ['student_id', 'area', 'term', 'year'] 
+        });
+        if (ctErr) throw ctErr;
+      }
     }
     
-    const includeArea = submissions.some(s => s.area);
-    // Always use the base conflict key without area because the DB constraint doesn't include it yet
-    const conflictKey = ['student_id', 'subject', 'term', 'year'];
-    
-    const BATCH_SIZE = 20;
-    for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
-      const batch = submissions.slice(i, i + BATCH_SIZE);
-      if (loader) loader.update(Math.round(((i + batch.length) / submissions.length) * 100));
-      // yield so the toast progress can visually update before the network request
-      if (loader) await new Promise(res => setTimeout(res, 25));
-      
-      // If area is included, handle upsert carefully to avoid constraint violation
-      if (includeArea) {
-        const withArea = batch.filter(s => s.area);
-        const withoutArea = batch.filter(s => !s.area);
+    // Process regular subjects (non-Career Tech submissions to results table)
+    if (regularSubmissions.length > 0) {
+      const conflictKey = ['student_id', 'subject', 'term', 'year'];
+      for (let i = 0; i < regularSubmissions.length; i += BATCH_SIZE) {
+        const batch = regularSubmissions.slice(i, i + BATCH_SIZE);
+        if (loader) loader.update(Math.round(((i + batch.length) / (submissions.length || 1)) * 100));
+        if (loader) await new Promise(r => setTimeout(r, 25));
         
-        if (withArea.length > 0) {
-          const { error: areaErr } = await supabaseClient.from('results').upsert(withArea, { onConflict: conflictKey });
-          if (areaErr) throw areaErr;
-        }
-        if (withoutArea.length > 0) {
-          const { error: noAreaErr } = await supabaseClient.from('results').upsert(withoutArea, { onConflict: conflictKey });
-          if (noAreaErr) throw noAreaErr;
-        }
-      } else {
         const { error } = await supabaseClient.from('results').upsert(batch, { onConflict: conflictKey });
         if (error) throw error;
       }
@@ -2677,7 +2712,19 @@ async function exportSBAToCSV() {
     if (studentsErr) throw studentsErr;
     const studentIds = (studentsData || []).map(s => s.id);
     if (loader) loader.update(30);
-    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, individual, "group", class_test, project, class_score, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    // Use appropriate client: Career Tech Supabase for Career Tech, main Supabase for others
+    const client = isCareerTech ? supabaseCareerTech : supabaseClient;
+    const tableName = isCareerTech ? 'career_tech_results' : 'results';
+    let resultsData, resultsErr;
+    if (isCareerTech) {
+      const result = await client.from(tableName).select('student_id, individual, "group", class_test, project, class_score, exam_score, area').in('student_id', studentIds).eq('term', term).eq('year', year);
+      resultsData = result.data;
+      resultsErr = result.error;
+    } else {
+      const result = await client.from(tableName).select('student_id, individual, "group", class_test, project, class_score, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+      resultsData = result.data;
+      resultsErr = result.error;
+    }
     if (resultsErr) throw resultsErr;
     const resultsMap = {};
     (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
@@ -2715,7 +2762,19 @@ async function exportExamsToCSV() {
     if (studentsErr) throw studentsErr;
     const studentIds = (studentsData || []).map(s => s.id);
     if (loader) loader.update(30);
-    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    // Use appropriate client: Career Tech Supabase for Career Tech, main Supabase for others
+    const client = isCareerTech ? supabaseCareerTech : supabaseClient;
+    const tableName = isCareerTech ? 'career_tech_results' : 'results';
+    let resultsData, resultsErr;
+    if (isCareerTech) {
+      const result = await client.from(tableName).select('student_id, exam_score, area').in('student_id', studentIds).eq('term', term).eq('year', year);
+      resultsData = result.data;
+      resultsErr = result.error;
+    } else {
+      const result = await client.from(tableName).select('student_id, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+      resultsData = result.data;
+      resultsErr = result.error;
+    }
     if (resultsErr) throw resultsErr;
     const resultsMap = {};
     (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
@@ -2788,8 +2847,21 @@ async function importSBAFromFile(file) {
     if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('SBA import errors:', errors); }
     if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }
     if (loader) loader.update(60);
-    const { error: upsertErr } = await supabaseClient.from('results').upsert(payloads, { onConflict: ['student_id','subject','term','year'] });
-    if (upsertErr) throw upsertErr;
+    // Separate Career Tech from regular subjects
+    const careerTechPayloads = payloads.filter(p => p.subject === 'Career Tech').map(p => {
+      const { subject, ...rest } = p;
+      return rest;
+    });
+    const regularPayloads = payloads.filter(p => p.subject !== 'Career Tech');
+    // Upsert to appropriate tables
+    if (careerTechPayloads.length > 0) {
+      const { error: ctErr } = await supabaseCareerTech.from('career_tech_results').upsert(careerTechPayloads, { onConflict: ['student_id','area','term','year'] });
+      if (ctErr) throw ctErr;
+    }
+    if (regularPayloads.length > 0) {
+      const { error: regErr } = await supabaseClient.from('results').upsert(regularPayloads, { onConflict: ['student_id','subject','term','year'] });
+      if (regErr) throw regErr;
+    }
     if (loader) loader.update(100);
     notify(`Imported ${payloads.length} SBA rows.`, 'info');
     await loadStudents('sba');
@@ -2844,11 +2916,36 @@ async function importExamsFromFile(file) {
     if (loader) loader.update(60);
     const upsertPayloads = [];
     for (const p of payloads) {
-      const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project, area').eq('student_id', p.student_id).eq('subject', p.subject).eq('term', p.term).eq('year', p.year).single();
-      upsertPayloads.push({ student_id: p.student_id, subject: p.subject, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0, area: p.area });
+      // Use appropriate client for querying existing data
+      const client = p.subject === 'Career Tech' ? supabaseCareerTech : supabaseClient;
+      const tableName = p.subject === 'Career Tech' ? 'career_tech_results' : 'results';
+      let query = client.from(tableName).select('class_score, individual, "group", class_test, project, area').eq('student_id', p.student_id).eq('term', p.term).eq('year', p.year);
+      if (p.subject === 'Career Tech') {
+        query = query.eq('area', p.area);
+      } else {
+        query = query.eq('subject', p.subject);
+      }
+      const { data: existing } = await query.single().catch(() => ({ data: null }));
+      const payload = { student_id: p.student_id, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0 };
+      if (p.subject === 'Career Tech') {
+        payload.area = p.area;
+      } else {
+        payload.subject = p.subject;
+      }
+      upsertPayloads.push(payload);
     }
-    const { error: upsertErr } = await supabaseClient.from('results').upsert(upsertPayloads, { onConflict: ['student_id','subject','term','year'] });
-    if (upsertErr) throw upsertErr;
+    // Separate Career Tech from regular subjects
+    const careerTechUpserts = upsertPayloads.filter((_, idx) => payloads[idx].subject === 'Career Tech');
+    const regularUpserts = upsertPayloads.filter((_, idx) => payloads[idx].subject !== 'Career Tech');
+    // Upsert to appropriate tables
+    if (careerTechUpserts.length > 0) {
+      const { error: ctErr } = await supabaseCareerTech.from('career_tech_results').upsert(careerTechUpserts, { onConflict: ['student_id','area','term','year'] });
+      if (ctErr) throw ctErr;
+    }
+    if (regularUpserts.length > 0) {
+      const { error: regErr } = await supabaseClient.from('results').upsert(regularUpserts, { onConflict: ['student_id','subject','term','year'] });
+      if (regErr) throw regErr;
+    }
     if (loader) loader.update(100);
     notify(`Imported ${upsertPayloads.length} exam rows.`, 'info');
     await loadStudents('exam');

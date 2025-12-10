@@ -2045,10 +2045,19 @@ function headerPrev() {
       // Compute accumulated score per student
       const totals = {};
       const studentClassMap = {};
+      const careerTechCounts = {}; // Track number of Career Tech entries per student
       resultRows.forEach(r => {
         if (!r || !r.student_id) return;
         const n = (Number(r.class_score) || 0) + (Number(r.exam_score) || 0);
-        totals[r.student_id] = (totals[r.student_id] || 0) + n;
+        
+        // For Career Tech, divide by 2 and round (each area contributes half)
+        let scoreToAdd = n;
+        if (r.subject === 'Career Tech') {
+          scoreToAdd = Math.round(n / 2);
+          careerTechCounts[r.student_id] = (careerTechCounts[r.student_id] || 0) + 1;
+        }
+        
+        totals[r.student_id] = (totals[r.student_id] || 0) + scoreToAdd;
         // If results table stores class per-row, capture it to avoid extra lookups
         if (r.class) studentClassMap[r.student_id] = (r.class || '').toString().trim();
       });
