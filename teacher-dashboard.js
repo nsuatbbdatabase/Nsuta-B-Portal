@@ -900,22 +900,50 @@ async function loadTeacherDashboard(staffId) {
     }
   }
   setupRestrictedDropdowns();
-  // For Career Tech, show area dropdown if needed
+  // For Career Tech, show area dropdown if needed (SBA section)
   const subjectSelect = document.getElementById('subjectSelect');
   const areaSelect = document.getElementById('careerTechAreaSelect');
-  if (subjectSelect && areaSelect) {
+  const careerTechAreaLabel = document.getElementById('careerTechAreaLabel');
+  if (subjectSelect && areaSelect && careerTechAreaLabel) {
     subjectSelect.addEventListener('change', function() {
       if (subjectSelect.value === 'Career Tech') {
-        areaSelect.style.display = '';
+        areaSelect.classList.remove('hidden');
+        careerTechAreaLabel.classList.remove('hidden');
         // Only show areas assigned to this teacher
-        areaSelect.innerHTML = '<option value="">Select Area</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+        areaSelect.innerHTML = '<option value="">-- Select Area --</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
       } else {
-        areaSelect.style.display = 'none';
+        areaSelect.classList.add('hidden');
+        careerTechAreaLabel.classList.add('hidden');
         areaSelect.innerHTML = '';
+        areaSelect.value = '';
       }
     });
     // Hide area dropdown by default
-    areaSelect.style.display = 'none';
+    areaSelect.classList.add('hidden');
+    careerTechAreaLabel.classList.add('hidden');
+  }
+
+  // For Career Tech, show area dropdown if needed (Exam section)
+  const subjectSelectExam = document.getElementById('subjectSelectExam');
+  const areaSelectExam = document.getElementById('careerTechAreaSelectExam');
+  const careerTechAreaLabelExam = document.getElementById('careerTechAreaLabelExam');
+  if (subjectSelectExam && areaSelectExam && careerTechAreaLabelExam) {
+    subjectSelectExam.addEventListener('change', function() {
+      if (subjectSelectExam.value === 'Career Tech') {
+        areaSelectExam.classList.remove('hidden');
+        careerTechAreaLabelExam.classList.remove('hidden');
+        // Only show areas assigned to this teacher
+        areaSelectExam.innerHTML = '<option value="">-- Select Area --</option>' + teacher.areas.map(a => `<option value="${a}">${a}</option>`).join('');
+      } else {
+        areaSelectExam.classList.add('hidden');
+        careerTechAreaLabelExam.classList.add('hidden');
+        areaSelectExam.innerHTML = '';
+        areaSelectExam.value = '';
+      }
+    });
+    // Hide area dropdown by default
+    areaSelectExam.classList.add('hidden');
+    careerTechAreaLabelExam.classList.add('hidden');
   }
   // Show/hide attendance section based on responsibility
   const attendanceSection = document.getElementById('attendanceSection');
@@ -1207,15 +1235,22 @@ async function loadStudents(section = 'sba') {
   let marksMap = {};
   if (section === 'sba') {
     const { term, year } = getTermYear();
+    const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
     if (selectedSubject && term && year) {
       try {
-        // Fetch component-level SBA fields for the selected subject/term/year
-        const result = await supabaseClient
+        // Build query: fetch component-level SBA fields for the selected subject/term/year
+        // If Career Tech and area is selected, filter by area; otherwise ignore area
+        let query = supabaseClient
           .from('results')
-          .select('student_id, class_score, individual, "group", class_test, project')
+          .select('student_id, class_score, individual, "group", class_test, project, area')
           .eq('subject', selectedSubject)
           .eq('term', term)
           .eq('year', year);
+        // Only filter by area if subject is Career Tech AND area is selected
+        if (selectedSubject === 'Career Tech' && areaVal) {
+          query = query.eq('area', areaVal);
+        }
+        const result = await query;
         const marksData = result.data;
         if (Array.isArray(marksData)) {
           // Filter to only include marks for students in the current class roster
@@ -1242,13 +1277,19 @@ async function loadStudents(section = 'sba') {
   } else if (section === 'exam') {
     const term = document.getElementById('termInputExam')?.value || '';
     const year = document.getElementById('yearInputExam')?.value || '';
+    const areaValExam = document.getElementById('careerTechAreaSelectExam')?.value || null;
     if (selectedSubject && term && year) {
-      const { data: examMarksData, error: examMarksError } = await supabaseClient
+      let query = supabaseClient
         .from('results')
-        .select('student_id, exam_score')
+        .select('student_id, exam_score, area')
         .eq('subject', selectedSubject)
         .eq('term', term)
         .eq('year', year);
+      // Only filter by area if subject is Career Tech AND area is selected
+      if (selectedSubject === 'Career Tech' && areaValExam) {
+        query = query.eq('area', areaValExam);
+      }
+      const { data: examMarksData, error: examMarksError } = await query;
       if (!examMarksError && Array.isArray(examMarksData)) {
         // Filter to only include marks for students in the current class roster
         const studentIds = new Set(students.map(s => s.id));
@@ -1279,9 +1320,11 @@ function renderExamForm(examMarksMap = {}) {
   function getDraftKeyForExam() {
     const classVal = document.getElementById('classSelectExam')?.value || '';
     const subject = document.getElementById('subjectSelectExam')?.value || '';
+    const area = document.getElementById('careerTechAreaSelectExam')?.value || '';
     const term = document.getElementById('termInputExam')?.value || '';
     const year = document.getElementById('yearInputExam')?.value || '';
-    return `drafts:exam:${classVal}:${subject}:${term}:${year}`;
+    // Include area in the draft key for Career Tech to separate marks by area
+    return `drafts:exam:${classVal}:${subject}:${area}:${term}:${year}`;
   }
   function loadDrafts(key) {
     try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch (e) { return {}; }
@@ -1381,6 +1424,25 @@ function renderExamForm(examMarksMap = {}) {
       document.querySelectorAll('#examTableBody .mark-save-btn').forEach(b => { b.textContent = 'Saved'; b.disabled = true; const eb = document.querySelector(`#examTableBody .mark-edit-btn[data-id="${b.dataset.id}"]`); if (eb) eb.classList.remove('hidden'); });
     };
   }
+
+  // If required selects (class/subject/term/year) are not set, disable inputs to prevent entry
+  const requiredSetExam = (document.getElementById('classSelectExam')?.value && document.getElementById('subjectSelectExam')?.value && document.getElementById('termInputExam')?.value && document.getElementById('yearInputExam')?.value);
+  if (!requiredSetExam) {
+    setEntryLockFor('exam', true);
+    const toolbar = document.getElementById('examToolbar');
+    if (toolbar && !toolbar.querySelector('.exam-require-note')) {
+      const note = document.createElement('div');
+      note.className = 'exam-require-note';
+      note.style.fontSize = '13px';
+      note.style.color = '#664d03';
+      note.style.margin = '8px 0';
+      note.textContent = 'Select Class, Subject, Term and Year to enable Exam entry.';
+      toolbar.appendChild(note);
+    }
+  } else {
+    const note = document.querySelector('#examToolbar .exam-require-note'); if (note) note.remove();
+    setEntryLockFor('exam', false);
+  }
 }
 
 // 🧮 Calculate SBA scaled score
@@ -1393,6 +1455,60 @@ function calculateSBAScore(studentId) {
   const scaled = Math.round((total / 60) * 50);
   document.getElementById(`total-${studentId}`).textContent = total;
   document.getElementById(`scaled-${studentId}`).textContent = scaled;
+}
+
+// Small helpers to disable/enable groups of inputs during async submissions
+function setElementsDisabled(selectors = [], disabled = true) {
+  try {
+    selectors.forEach(sel => {
+      document.querySelectorAll(sel).forEach(el => {
+        try { el.disabled = disabled; } catch (e) {}
+      });
+    });
+  } catch (e) { /* ignore */ }
+}
+
+function setSubmissionLockFor(type, disabled) {
+  if (type === 'sba') {
+    setElementsDisabled([
+      '#sbaTableBody input',
+      '#sbaTableBody select',
+      '#sbaTableBody textarea',
+      '#sbaTableBody button',
+      '#sbaToolbar button',
+      '#classSelect', '#subjectSelect', '#termInput', '#yearInput'
+    ], disabled);
+  } else if (type === 'exam') {
+    setElementsDisabled([
+      '#examTableBody input',
+      '#examTableBody select',
+      '#examTableBody textarea',
+      '#examTableBody button',
+      '#examToolbar button',
+      '#classSelectExam', '#subjectSelectExam', '#termInputExam', '#yearInputExam'
+    ], disabled);
+  }
+}
+
+// Lock only the entry inputs (table inputs and per-row buttons), but leave the global selects enabled
+function setEntryLockFor(type, disabled) {
+  if (type === 'sba') {
+    setElementsDisabled([
+      '#sbaTableBody input',
+      '#sbaTableBody select',
+      '#sbaTableBody textarea',
+      '#sbaTableBody button',
+      '#sbaToolbar button'
+    ], disabled);
+  } else if (type === 'exam') {
+    setElementsDisabled([
+      '#examTableBody input',
+      '#examTableBody select',
+      '#examTableBody textarea',
+      '#examTableBody button',
+      '#examToolbar button'
+    ], disabled);
+  }
 }
 
 // Get term and year from input fields when submitting SBA/exam/assignment
@@ -1438,19 +1554,28 @@ async function submitSBA() {
     const classVal = document.getElementById('classSelect').value;
   // Capture Career Tech area if present
   const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
+  // For Career Tech, area must be selected
+  if (subject === 'Career Tech' && !areaVal) {
+    notify('Please select a Career Tech area.', 'warning');
+    return;
+  }
   // Check for local drafts and prefer them if present
-  const draftKey = `drafts:sba:${document.getElementById('classSelect')?.value || ''}:${document.getElementById('subjectSelect')?.value || ''}:${term}:${year}`;
+  // Include area in draft key for Career Tech separation
+  const draftKey = `drafts:sba:${classVal}:${subject}:${areaVal || ''}:${term}:${year}`;
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
-  // Disable the submit button and show loader immediately so users see progress
+  // Disable the submit button and show determinate loader immediately so users see progress
   const submitSbaBtn = document.querySelector('button[onclick="submitSBA()"]');
   if (submitSbaBtn) {
     submitSbaBtn.disabled = true;
     submitSbaBtn.dataset.prevText = submitSbaBtn.textContent;
     submitSbaBtn.textContent = 'Submitting...';
   }
-  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting SBA marks...') : null;
+  // Request a determinate loader so .update(percent) is shown
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting SBA marks...', {indeterminate: false}) : null;
+  // Disable the whole SBA area to prevent edits during upload
+  setSubmissionLockFor('sba', true);
   // If drafts exist, use their component breakdown to build submissions; otherwise read component inputs from DOM where possible
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
@@ -1542,14 +1667,43 @@ async function submitSBA() {
     if (!resultsHasArea) {
       submissions.forEach(s => { if (s.area) delete s.area; });
     }
+    
     const includeArea = submissions.some(s => s.area);
-    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
-    for (let i = 0; i < submissions.length; i++) {
-      const rec = submissions[i];
-      if (loader) loader.update(Math.round((i / submissions.length) * 100));
-      // Upsert including component breakdown columns when present
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
-      if (error) throw error;
+    // If area is included (Career Tech), always use the base conflict key without area
+    // because the DB constraint doesn't include area yet. We'll manually update area field.
+    const conflictKey = ['student_id', 'subject', 'term', 'year'];
+    
+    // Batch upserts to reduce number of requests and provide smooth progress updates
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
+      const batch = submissions.slice(i, i + BATCH_SIZE);
+      if (loader) loader.update(Math.round(((i + batch.length) / submissions.length) * 100));
+      // yield to the event loop so the progress toast can repaint before the network call
+      if (loader) await new Promise(r => setTimeout(r, 25));
+      
+      // If area is included, we need to handle the upsert carefully:
+      // First try to upsert without area, then update area field if needed
+      if (includeArea) {
+        // Separate submissions into those with and without area
+        const withArea = batch.filter(s => s.area);
+        const withoutArea = batch.filter(s => !s.area);
+        
+        // Upsert those with area (without area in conflict)
+        if (withArea.length > 0) {
+          const { error: areaErr } = await supabaseClient.from('results').upsert(withArea, { onConflict: conflictKey });
+          if (areaErr) throw areaErr;
+        }
+        
+        // Upsert those without area
+        if (withoutArea.length > 0) {
+          const { error: noAreaErr } = await supabaseClient.from('results').upsert(withoutArea, { onConflict: conflictKey });
+          if (noAreaErr) throw noAreaErr;
+        }
+      } else {
+        // No area, standard upsert
+        const { error } = await supabaseClient.from('results').upsert(batch, { onConflict: conflictKey });
+        if (error) throw error;
+      }
     }
     if (loader) loader.update(100);
     // Clear drafts after successful submit
@@ -1562,6 +1716,8 @@ async function submitSBA() {
     notify('Failed to submit SBA scores: ' + (err.message || String(err)), 'error');
   } finally {
     try { if (loader) loader.close(); } catch (e) {}
+    // Re-enable SBA UI
+    setSubmissionLockFor('sba', false);
     if (submitSbaBtn) {
       submitSbaBtn.disabled = false;
       submitSbaBtn.textContent = submitSbaBtn.dataset.prevText || 'Submit SBA';
@@ -1585,8 +1741,10 @@ function renderSBAForm(marksMap = {}) {
   function getDraftKeyForSBA() {
     const classVal = document.getElementById('classSelect')?.value || '';
     const subject = document.getElementById('subjectSelect')?.value || '';
+    const area = document.getElementById('careerTechAreaSelect')?.value || '';
     const { term, year } = getTermYear();
-    return `drafts:sba:${classVal}:${subject}:${term}:${year}`;
+    // Include area in the draft key for Career Tech to separate marks by area
+    return `drafts:sba:${classVal}:${subject}:${area}:${term}:${year}`;
   }
   function loadDraftsSBA() { try { return JSON.parse(localStorage.getItem(getDraftKeyForSBA()) || '{}'); } catch (e) { return {}; } }
   const sbaDrafts = loadDraftsSBA();
@@ -1640,6 +1798,27 @@ function renderSBAForm(marksMap = {}) {
   document.querySelectorAll('#sbaTableBody input.sba-component').forEach(input => {
     input.addEventListener('input', () => calculateSBAScore(input.dataset.id));
   });
+
+  // If required selects (class/subject/term/year) are not set, disable inputs to prevent entry
+  const requiredSet = (document.getElementById('classSelect')?.value && document.getElementById('subjectSelect')?.value && document.getElementById('termInput')?.value && document.getElementById('yearInput')?.value);
+  if (!requiredSet) {
+    setEntryLockFor('sba', true);
+    // Show a gentle notice to the user
+    const toolbar = document.getElementById('sbaToolbar');
+    if (toolbar && !toolbar.querySelector('.sba-require-note')) {
+      const note = document.createElement('div');
+      note.className = 'sba-require-note';
+      note.style.fontSize = '13px';
+      note.style.color = '#664d03';
+      note.style.margin = '8px 0';
+      note.textContent = 'Select Class, Subject, Term and Year to enable SBA entry.';
+      toolbar.appendChild(note);
+    }
+    } else {
+    // ensure toolbar notice removed and enable entry inputs
+    const note = document.querySelector('#sbaToolbar .sba-require-note'); if (note) note.remove();
+    setEntryLockFor('sba', false);
+  }
 
   // SBA draft storage and per-row save/edit wiring
   // ...existing code...
@@ -1706,8 +1885,14 @@ async function submitExams() {
   }
     const classVal = document.getElementById('classSelectExam').value;
   // Capture Career Tech area if present
-  const areaVal = document.getElementById('careerTechAreaSelect')?.value || null;
-  const draftKey = `drafts:exam:${document.getElementById('classSelectExam')?.value || ''}:${document.getElementById('subjectSelectExam')?.value || ''}:${term}:${year}`;
+  const areaVal = document.getElementById('careerTechAreaSelectExam')?.value || null;
+  // For Career Tech, area must be selected
+  if (subject === 'Career Tech' && !areaVal) {
+    notify('Please select a Career Tech area.', 'warning');
+    return;
+  }
+  // Include area in draft key for Career Tech separation
+  const draftKey = `drafts:exam:${classVal}:${subject}:${areaVal || ''}:${term}:${year}`;
   let drafts = {};
   try { drafts = JSON.parse(localStorage.getItem(draftKey) || '{}'); } catch (e) { drafts = {}; }
   const submissions = [];
@@ -1718,7 +1903,9 @@ async function submitExams() {
     submitExamBtn.dataset.prevText = submitExamBtn.textContent;
     submitExamBtn.textContent = 'Submitting...';
   }
-  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting exam marks...') : null;
+  const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Submitting exam marks...', {indeterminate: false}) : null;
+  // Lock the exam UI while uploading
+  setSubmissionLockFor('exam', true);
 
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
@@ -1778,13 +1965,35 @@ async function submitExams() {
     if (!resultsHasArea) {
       submissions.forEach(s => { if (s.area) delete s.area; });
     }
+    
     const includeArea = submissions.some(s => s.area);
-    const conflictKey = includeArea ? ['student_id', 'subject', 'term', 'year', 'area'] : ['student_id', 'subject', 'term', 'year'];
-    for (let i = 0; i < submissions.length; i++) {
-      const rec = submissions[i];
-      if (loader) loader.update(Math.round((i / submissions.length) * 100));
-      const { error } = await supabaseClient.from('results').upsert([rec], { onConflict: conflictKey });
-      if (error) throw error;
+    // Always use the base conflict key without area because the DB constraint doesn't include it yet
+    const conflictKey = ['student_id', 'subject', 'term', 'year'];
+    
+    const BATCH_SIZE = 20;
+    for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
+      const batch = submissions.slice(i, i + BATCH_SIZE);
+      if (loader) loader.update(Math.round(((i + batch.length) / submissions.length) * 100));
+      // yield so the toast progress can visually update before the network request
+      if (loader) await new Promise(res => setTimeout(res, 25));
+      
+      // If area is included, handle upsert carefully to avoid constraint violation
+      if (includeArea) {
+        const withArea = batch.filter(s => s.area);
+        const withoutArea = batch.filter(s => !s.area);
+        
+        if (withArea.length > 0) {
+          const { error: areaErr } = await supabaseClient.from('results').upsert(withArea, { onConflict: conflictKey });
+          if (areaErr) throw areaErr;
+        }
+        if (withoutArea.length > 0) {
+          const { error: noAreaErr } = await supabaseClient.from('results').upsert(withoutArea, { onConflict: conflictKey });
+          if (noAreaErr) throw noAreaErr;
+        }
+      } else {
+        const { error } = await supabaseClient.from('results').upsert(batch, { onConflict: conflictKey });
+        if (error) throw error;
+      }
     }
     if (loader) loader.update(100);
     // Clear drafts after successful submit
@@ -1797,6 +2006,8 @@ async function submitExams() {
     notify('Failed to submit exam scores: ' + (err.message || String(err)), 'error');
   } finally {
     try { if (loader) loader.close(); } catch (e) {}
+    // unlock exam UI
+    setSubmissionLockFor('exam', false);
     if (submitExamBtn) {
       submitExamBtn.disabled = false;
       submitExamBtn.textContent = submitExamBtn.dataset.prevText || 'Submit Exams';
@@ -2457,6 +2668,8 @@ async function exportSBAToCSV() {
     notify('Please select class, subject, term and year to export SBA marks.', 'warning');
     return;
   }
+  const isCareerTech = subject === 'Career Tech';
+  const area = isCareerTech ? (document.getElementById('careerTechAreaSelect')?.value || null) : null;
   const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Preparing SBA CSV...') : null;
   try {
     if (loader) loader.update(10);
@@ -2464,16 +2677,16 @@ async function exportSBAToCSV() {
     if (studentsErr) throw studentsErr;
     const studentIds = (studentsData || []).map(s => s.id);
     if (loader) loader.update(30);
-    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, individual, "group", class_test, project, class_score, exam_score').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, individual, "group", class_test, project, class_score, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
     if (resultsErr) throw resultsErr;
     const resultsMap = {};
     (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
     if (loader) loader.update(70);
-    const header = ['register_id','student_id','first_name','surname','individual','group','class_test','project','class_score','exam_score'];
+    const header = ['register_id','student_id','first_name','surname','individual','group','class_test','project','class_score','exam_score','area'];
     const lines = [header.join(',')];
     (studentsData || []).forEach(s => {
       const r = resultsMap[s.id] || {};
-      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.individual || 0, r['group'] || 0, r.class_test || 0, r.project || 0, r.class_score || 0, r.exam_score || 0];
+      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.individual || 0, r['group'] || 0, r.class_test || 0, r.project || 0, r.class_score || 0, r.exam_score || 0, r.area || ''];
       const row = cols.map(c => (typeof c === 'string' && c.includes(',')) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',');
       lines.push(row);
     });
@@ -2493,6 +2706,8 @@ async function exportExamsToCSV() {
   const term = document.getElementById('termInputExam')?.value;
   const year = document.getElementById('yearInputExam')?.value;
   if (!classVal || !subject || !term || !year) { notify('Please select class, subject, term and year to export exam marks.', 'warning'); return; }
+  const isCareerTech = subject === 'Career Tech';
+  const area = isCareerTech ? (document.getElementById('careerTechAreaSelectExam')?.value || null) : null;
   const loader = (typeof window.showLoadingToast === 'function') ? window.showLoadingToast('Preparing Exam CSV...') : null;
   try {
     if (loader) loader.update(10);
@@ -2500,16 +2715,16 @@ async function exportExamsToCSV() {
     if (studentsErr) throw studentsErr;
     const studentIds = (studentsData || []).map(s => s.id);
     if (loader) loader.update(30);
-    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, exam_score').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
+    const { data: resultsData, error: resultsErr } = await supabaseClient.from('results').select('student_id, exam_score, area').in('student_id', studentIds).eq('subject', subject).eq('term', term).eq('year', year);
     if (resultsErr) throw resultsErr;
     const resultsMap = {};
     (resultsData || []).forEach(r => { resultsMap[r.student_id] = r; });
     if (loader) loader.update(70);
-    const header = ['register_id','student_id','first_name','surname','exam_score'];
+    const header = ['register_id','student_id','first_name','surname','exam_score','area'];
     const lines = [header.join(',')];
     (studentsData || []).forEach(s => {
       const r = resultsMap[s.id] || {};
-      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.exam_score || 0];
+      const cols = [s.register_id || '', s.id || '', s.first_name || '', s.surname || '', r.exam_score || 0, r.area || ''];
       const row = cols.map(c => (typeof c === 'string' && c.includes(',')) ? '"' + c.replace(/"/g,'""') + '"' : c).join(',');
       lines.push(row);
     });
@@ -2552,6 +2767,15 @@ async function importSBAFromFile(file) {
       if (studentIdCol && byId[studentIdCol]) student = byId[studentIdCol];
       else if (regCol && byReg[String(regCol).trim()]) student = byReg[String(regCol).trim()];
       if (!student) { errors.push(`Row ${idx+2}: student not found (student_id/register_id missing or mismatched)`); return; }
+      
+      // Handle area for Career Tech
+      let importArea = null;
+      if (subject === 'Career Tech') {
+        const areaCol = r['area'] || r['Area'] || r['AREA'] || '';
+        if (!areaCol) { errors.push(`Row ${idx+2}: Career Tech requires area field but it's missing or empty`); return; }
+        importArea = String(areaCol).trim();
+      }
+      
       const getVal = keys => { for (const k of keys) { if (r[k] !== undefined && r[k] !== '') return r[k]; } return ''; };
       const individual = Number(getVal(['individual','ind','i'])) || 0;
       const groupVal = Number(getVal(['group','grp','g'])) || 0;
@@ -2559,7 +2783,7 @@ async function importSBAFromFile(file) {
       const project = Number(getVal(['project','proj','p'])) || 0;
       const total = Math.min(individual + groupVal + class_test + project, 60);
       const class_score = Math.round((total / 60) * 50);
-      payloads.push({ student_id: student.id, subject, term, year, class_score, exam_score: 0, individual, "group": groupVal, class_test, project });
+      payloads.push({ student_id: student.id, subject, term, year, class_score, exam_score: 0, individual, "group": groupVal, class_test, project, area: importArea });
     });
     if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('SBA import errors:', errors); }
     if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }
@@ -2603,16 +2827,25 @@ async function importExamsFromFile(file) {
       if (studentIdCol && byId[studentIdCol]) student = byId[studentIdCol];
       else if (regCol && byReg[String(regCol).trim()]) student = byReg[String(regCol).trim()];
       if (!student) { errors.push(`Row ${idx+2}: student not found (student_id/register_id missing or mismatched)`); return; }
+      
+      // Handle area for Career Tech
+      let importArea = null;
+      if (subject === 'Career Tech') {
+        const areaCol = r['area'] || r['Area'] || r['AREA'] || '';
+        if (!areaCol) { errors.push(`Row ${idx+2}: Career Tech requires area field but it's missing or empty`); return; }
+        importArea = String(areaCol).trim();
+      }
+      
       const exam_score = Number(r['exam_score'] || r['score'] || r['exam'] || 0) || 0;
-      payloads.push({ student_id: student.id, subject, term, year, exam_score });
+      payloads.push({ student_id: student.id, subject, term, year, exam_score, area: importArea });
     });
     if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('Exam import errors:', errors); }
     if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }
     if (loader) loader.update(60);
     const upsertPayloads = [];
     for (const p of payloads) {
-      const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project').eq('student_id', p.student_id).eq('subject', p.subject).eq('term', p.term).eq('year', p.year).single();
-      upsertPayloads.push({ student_id: p.student_id, subject: p.subject, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0 });
+      const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project, area').eq('student_id', p.student_id).eq('subject', p.subject).eq('term', p.term).eq('year', p.year).single();
+      upsertPayloads.push({ student_id: p.student_id, subject: p.subject, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0, area: p.area });
     }
     const { error: upsertErr } = await supabaseClient.from('results').upsert(upsertPayloads, { onConflict: ['student_id','subject','term','year'] });
     if (upsertErr) throw upsertErr;
