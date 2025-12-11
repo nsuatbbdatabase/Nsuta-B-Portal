@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Student List — Nsuta B Portal</title>
+	<link rel="stylesheet" href="dashboard.css" />
+	<style>
+		/* Student List Page Styles */
+		.student-list-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 2rem;
+			flex-wrap: wrap;
+			gap: 1rem;
+		}
+
+		.student-list-filters {
+			display: flex;
+			gap: 1rem;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.student-list-filters input,
+		.student-list-filters select {
+			padding: 0.6rem 0.8rem;
+			border: 1px solid #ddd;
+			border-radius: 6px;
+			font-size: 0.95rem;
+		}
+
+		.student-list-filters input {
+			min-width: 200px;
+		}
+
+		.student-list-filters select {
+			min-width: 150px;
+		}
+
+		.student-list-container {
+			background: #fff;
+			border-radius: 12px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+			overflow: hidden;
+		}
+
+		.student-tiles-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			gap: 1.5rem;
+			padding: 2rem;
+		}
+
+		.student-tile {
+			background: #fff;
+			border-radius: 12px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+			overflow: hidden;
+			transition: transform 0.2s, box-shadow 0.2s;
+			cursor: pointer;
+			border: 1px solid #f0f0f0;
+		}
+
+		.student-tile:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+		}
+
+		.student-tile-header {
+			background: linear-gradient(135deg, #0ea5a4, #047857);
+			padding: 1.5rem;
+			text-align: center;
+		}
+
+		.student-tile-image {
+			width: 120px;
+			height: 120px;
+			border-radius: 50%;
+			background: #e5e7eb;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto 0.8rem;
+			overflow: hidden;
+			border: 4px solid #fff;
+		}
+
+		.student-tile-image img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+		}
+
+		.student-tile-name {
+			font-weight: 700;
+			font-size: 1.2rem;
+			color: #fff;
+			margin: 0;
+		}
+
+		.student-tile-content {
+			padding: 1.5rem;
+		}
+
+		.student-detail {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 0.8rem 0;
+			border-bottom: 1px solid #f0f0f0;
+		}
+
+		.student-detail:last-of-type {
+			border-bottom: none;
+		}
+
+		.student-detail-label {
+			font-size: 0.9rem;
+			color: #666;
+			font-weight: 600;
+		}
+
+		.student-detail-value {
+			font-size: 1rem;
+			color: #333;
+			font-weight: 500;
+			text-align: right;
+			max-width: 60%;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.student-tile-actions {
+			display: flex;
+			gap: 0.6rem;
+			margin-top: 1.2rem;
+			padding-top: 1.2rem;
+			border-top: 1px solid #f0f0f0;
+		}
+
+		.student-tile-actions button {
+			flex: 1;
+			padding: 0.7rem;
+			font-size: 0.9rem;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			transition: background 0.2s;
+			font-weight: 600;
+		}
+
+		.edit-btn {
+			background: #0ea5a4;
+			color: #fff;
+		}
+
+		.edit-btn:hover {
+			background: #0d8a89;
+		}
+
+		.delete-btn {
+			background: #f87171;
+			color: #fff;
+		}
+
+		.delete-btn:hover {
+			background: #ef4444;
+		}
+
+		.back-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.5rem;
+			padding: 0.7rem 1.2rem;
+			background: #6b7280;
+			color: #fff;
+			border: none;
+			border-radius: 6px;
+			cursor: pointer;
+			font-size: 0.95rem;
+			text-decoration: none;
+			transition: background 0.2s;
+		}
+
+		.back-btn:hover {
+			background: #4b5563;
+		}
+
+		.no-students {
+			text-align: center;
+			padding: 3rem 2rem;
+			color: #999;
+			font-size: 1.1rem;
+		}
+
+		.student-count {
+			background: #f0f9ff;
+			border-left: 4px solid #0ea5a4;
+			padding: 1rem;
+			border-radius: 6px;
+			font-weight: 600;
+			color: #0ea5a4;
+		}
+
+		@media (max-width: 900px) {
+			.student-tiles-grid {
+				grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+				gap: 1rem;
+				padding: 1rem;
+			}
+
+			.student-list-header {
+				flex-direction: column;
+				align-items: stretch;
+			}
+
+			.student-list-filters {
+				flex-direction: column;
+			}
+
+			.student-list-filters input,
+			.student-list-filters select {
+				width: 100%;
+			}
+
+			.student-tile-image {
+				width: 100px;
+				height: 100px;
+			}
+
+			.student-tile-header {
+				padding: 1rem;
+			}
+
+			.student-tile-content {
+				padding: 1rem;
+			}
+		}
+
+		/* Edit modal styles */
+		.modal-backdrop {
+			position: fixed;
+			inset: 0;
+			background: rgba(0,0,0,0.45);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			z-index: 9999;
+		}
+
+		.modal-card {
+			background: #fff;
+			border-radius: 10px;
+			width: 720px;
+			max-width: calc(100% - 32px);
+			box-shadow: 0 12px 40px rgba(2,6,23,0.2);
+			padding: 1rem 1.2rem;
+		}
+
+		.modal-row { display:flex; gap:0.8rem; margin-bottom:0.6rem; }
+		.modal-row .field { flex:1; display:flex; flex-direction:column; }
+		.modal-row label { font-weight:600; font-size:0.9rem; margin-bottom:0.2rem; }
+		.modal-row input, .modal-row select { padding:0.5rem; border:1px solid #ddd; border-radius:6px; }
+
+		.modal-actions { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.6rem; }
+		.modal-actions button { padding:0.6rem 0.9rem; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
+		.modal-close { background:#e5e7eb; }
+		.modal-save { background:#0ea5a4; color:#fff; }
+
+		/* Modal spinner */
+		.modal-spinner { display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0; color:#064e3b; font-weight:600; }
+		.modal-spinner .spinner { width:18px; height:18px; border:3px solid rgba(0,0,0,0.08); border-top-color:#0ea5a4; border-radius:50%; animation:spin 0.9s linear infinite; }
+		@keyframes spin { to { transform: rotate(360deg); } }
+	</style>
+</head>
+<body>
+	<!-- Navigation -->
+	<nav class="nav-bar">
+		<div class="nav-brand">
+			<h1>📚 Student Directory</h1>
+		</div>
+		<div class="nav-links">
+			<a href="admin.html" class="back-btn">← Back to Dashboard</a>
+		</div>
+	</nav>
+
+	<!-- Main Content -->
+	<main class="dashboard-main">
+		<div class="dashboard-container">
+			<section class="dashboard-section">
+				<div class="section-card">
+					<div class="student-list-header">
+						<div>
+							<h2>All Students</h2>
+							<p class="muted-small">Complete directory of registered students</p>
+						</div>
+						<div class="student-count" id="studentCountDisplay">Total: 0 students</div>
+					</div>
+
+					<div class="student-list-filters">
+						<select id="classFilterList" title="Filter by class">
+							<option value="">-- All Classes --</option>
+							<option value="JHS 1">JHS 1</option>
+							<option value="JHS 2">JHS 2</option>
+							<option value="JHS 3">JHS 3</option>
+						</select>
+						<input type="text" id="studentSearchList" placeholder="🔍 Search by name..." />
+						<button onclick="exportStudentsCSV()" class="action-btn">📥 Export to CSV</button>
+					</div>
+
+					<div class="student-list-container">
+						<div id="studentTilesContainer" class="student-tiles-grid"></div>
+					</div>
+				</div>
+			</section>
+		</div>
+	</main>
+
+	<!-- Scripts -->
+	<script src="supabase-init.js"></script>
+	<script>
+		let allStudents = [];
+
+		// Fallback helpers: some pages expect `showLoadingToast` and `notify` from site-wide helpers.
+		// If those are not available, provide minimal no-op implementations that log to console.
+		if (typeof showLoadingToast !== 'function') {
+			function showLoadingToast(message, opts) {
+				console.log('[showLoadingToast]', message, opts || {});
+				return { close: () => console.log('[showLoadingToast] closed') };
+			}
+		}
+
+		if (typeof notify !== 'function') {
+			function notify(message, type = 'info') {
+				console.log(`[notify:${type}] ${message}`);
+			}
+		}
+
+		// Small utility to escape HTML inserted into template strings
+		function escapeHtml(str) {
+			return String(str || '').replace(/[&<>"'`]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[s]));
+		}
+
+		// Initialize page when Supabase client is ready (avoid race with async loader)
+		function initPage() {
+			fetchAllStudents().then(() => {
+				setupEventListeners();
+				renderStudentTiles();
+			});
+		}
+
+		window.addEventListener('DOMContentLoaded', () => {
+			if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+				initPage();
+				return;
+			}
+			// Wait for the supabase-init.js to dispatch 'supabase:ready'
+			document.addEventListener('supabase:ready', function onReady() {
+				initPage();
+			}, { once: true });
+			// Safety timeout: if client still doesn't appear, show helpful message
+			setTimeout(() => {
+				if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+					notify('Supabase client not initialized after delay. Check network or `supabase-init.js`.', 'error');
+					console.error('student-list: supabase client not ready after 3s');
+				}
+			}, 3000);
+		});
+
+		async function fetchAllStudents() {
+			// Defensive check: ensure supabase client is available before attempting network calls
+			if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+				notify('Supabase client not found. Ensure `supabase-init.js` is present and sets `supabaseClient`.', 'error');
+				console.error('fetchAllStudents: window.supabaseClient is not available');
+				return;
+			}
+			const loader = showLoadingToast('Loading students...', { color: '#0b66b2' });
+			try {
+				const { data, error } = await supabaseClient.from('students').select('*');
+				if (error) {
+					notify('Failed to fetch students', 'error');
+					return;
+				}
+				// Sort by register_id
+				allStudents = (data || []).slice().sort((a, b) => {
+					if (!a.register_id || !b.register_id) return 0;
+					const [ac, an] = a.register_id.split('_');
+					const [bc, bn] = b.register_id.split('_');
+					if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+					return ac.localeCompare(bc);
+				});
+				updateStudentCount();
+				console.log('Loaded', allStudents.length, 'students');
+			} catch (e) {
+				console.error('Error fetching students:', e);
+				notify('Error loading students: ' + e.message, 'error');
+			} finally {
+				try { loader && loader.close(); } catch (e) {}
+			}
+		}
+
+		function setupEventListeners() {
+			const classFilter = document.getElementById('classFilterList');
+			const searchInput = document.getElementById('studentSearchList');
+
+			if (classFilter) {
+				classFilter.addEventListener('change', () => renderStudentTiles());
+			}
+			if (searchInput) {
+				searchInput.addEventListener('input', () => renderStudentTiles());
+			}
+		}
+
+		function getFilteredStudents() {
+			const classValue = document.getElementById('classFilterList')?.value.trim() || '';
+			const search = document.getElementById('studentSearchList')?.value.trim().toLowerCase() || '';
+
+			let filtered = classValue
+				? allStudents.filter(s => (s.class || '').trim() === classValue)
+				: allStudents;
+
+			if (search) {
+				filtered = filtered.filter(s => {
+					const name = ((s.first_name || '') + ' ' + (s.surname || '')).toLowerCase();
+					return name.includes(search);
+				});
+			}
+
+			return filtered;
+		}
+
+		function renderStudentTiles() {
+			const container = document.getElementById('studentTilesContainer');
+			if (!container) return;
+
+			const filtered = getFilteredStudents();
+			container.innerHTML = '';
+
+			if (filtered.length === 0) {
+				container.innerHTML = '<div class="no-students" style="grid-column: 1/-1;">No students found</div>';
+				return;
+			}
+
+			filtered.forEach(student => {
+				const tile = document.createElement('div');
+				tile.className = 'student-tile';
+
+				const name = `${student.first_name || ''} ${student.surname || ''}`.trim() || '[No Name]';
+				const imageHtml = student.picture_url
+					? `<img src="${student.picture_url}" alt="${name}" />`
+					: '<div style="font-size: 3rem; color: #999;">👤</div>';
+
+				tile.innerHTML = `
+					<div class="student-tile-header">
+						<div class="student-tile-image">
+							${imageHtml}
+						</div>
+						<div class="student-tile-name">${name}</div>
+					</div>
+					<div class="student-tile-content">
+						<div class="student-detail">
+							<span class="student-detail-label">ID:</span>
+							<span class="student-detail-value">${student.register_id || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">Class:</span>
+							<span class="student-detail-value">${student.class || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">Area:</span>
+							<span class="student-detail-value">${student.area || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">Gender:</span>
+							<span class="student-detail-value">${student.gender || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">DOB:</span>
+							<span class="student-detail-value">${student.dob || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">NHIS:</span>
+							<span class="student-detail-value">${student.nhis_number || '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">Parent:</span>
+							<span class="student-detail-value">${student.parent_name ? student.parent_name.substring(0, 15) : '—'}</span>
+						</div>
+						<div class="student-detail">
+							<span class="student-detail-label">Contact:</span>
+							<span class="student-detail-value">${student.parent_contact || '—'}</span>
+						</div>
+						<div class="student-tile-actions">
+							<button class="edit-btn" onclick="editStudent('${student.id}')">✏️ Edit</button>
+							<button class="delete-btn" onclick="deleteStudent('${student.id}')">🗑️ Delete</button>
+						</div>
+					</div>
+				`;
+
+				container.appendChild(tile);
+			});
+		}
+
+		function updateStudentCount() {
+			const filtered = getFilteredStudents();
+			const countDisplay = document.getElementById('studentCountDisplay');
+			if (countDisplay) {
+				const total = allStudents.length;
+				const shown = filtered.length;
+				if (shown === total) {
+					countDisplay.textContent = `Total: ${total} student${total !== 1 ? 's' : ''}`;
+				} else {
+					countDisplay.textContent = `Showing: ${shown} of ${total} student${total !== 1 ? 's' : ''}`;
+				}
+			}
+		}
+
+		function editStudent(studentId) {
+            // Open in-page edit modal instead of redirecting to admin dashboard
+            openEditModal(studentId);
+		}
+
+		// --- Edit modal functionality ---
+
+		function openEditModal(studentId) {
+			const student = allStudents.find(s => s.id === studentId);
+			if (!student) {
+				notify('Student not found in memory, fetching...', 'info');
+				// fallback: fetch single student
+				return fetchAndOpen(studentId);
+			}
+			renderEditModal(student);
+		}
+
+		async function fetchAndOpen(studentId) {
+			try {
+				const { data, error } = await supabaseClient.from('students').select('*').eq('id', studentId).limit(1).single();
+				if (error) {
+					notify('Failed to load student: ' + error.message, 'error');
+					return;
+				}
+				renderEditModal(data);
+			} catch (e) {
+				console.error('fetchAndOpen error', e);
+				notify('Error loading student: ' + e.message, 'error');
+			}
+		}
+
+		function renderEditModal(student) {
+			const existing = document.getElementById('studentEditModal');
+			if (existing) existing.remove();
+			const backdrop = document.createElement('div');
+			backdrop.className = 'modal-backdrop';
+			backdrop.id = 'studentEditModal';
+			// Use the same structure and classes as the admin `#studentForm` modal for consistency
+			backdrop.innerHTML = `
+				<div class="modal-card">
+					<div class="modal-content">
+						<div class="modal-header"><h3>Edit Student</h3></div>
+						<div class="modal-body">
+							<form id="studentForm" enctype="multipart/form-data" novalidate>
+								<div class="form-group">
+									<label for="register_id">Student ID</label>
+									<input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly class="input-readonly" value="${escapeHtml(student.register_id || '')}" />
+									<input type="hidden" name="student_id" value="${escapeHtml(student.id || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="student_dob">Date of Birth</label>
+									<input type="date" id="student_dob" name="dob" value="${escapeHtml(student.dob || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="nhis_number">NHIS Number</label>
+									<input type="text" id="nhis_number" name="nhis_number" placeholder="NHIS Number" value="${escapeHtml(student.nhis_number || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="first_name">First Name</label>
+									<input type="text" id="first_name" name="first_name" placeholder="First Name" value="${escapeHtml(student.first_name || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="surname">Surname</label>
+									<input type="text" id="surname" name="surname" placeholder="Surname" value="${escapeHtml(student.surname || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="area">Area</label>
+									<input type="text" id="area" name="area" placeholder="Area" value="${escapeHtml(student.area || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="gender">Gender</label>
+									<select name="gender" id="gender" title="Gender">
+										<option value="">Select Gender</option>
+										<option value="Male" ${student.gender==='Male'?'selected':''}>Male</option>
+										<option value="Female" ${student.gender==='Female'?'selected':''}>Female</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Class</label>
+									<div class="class-select-row">
+										<select name="main_class_select" id="student_main_class_select" title="Main Class">
+											<option value="">Select Class</option>
+											<option value="JHS 1" ${student.class==='JHS 1'?'selected':''}>JHS 1</option>
+											<option value="JHS 2" ${student.class==='JHS 2'?'selected':''}>JHS 2</option>
+											<option value="JHS 3" ${student.class==='JHS 3'?'selected':''}>JHS 3</option>
+										</select>
+										<select name="sub_class_select" id="student_sub_class_select" class="hidden-select" title="Subclass">
+											<option value="">Select Subclass</option>
+											<option value="A" ${student.subclass==='A'?'selected':''}>A</option>
+											<option value="B" ${student.subclass==='B'?'selected':''}>B</option>
+										</select>
+										<input type="hidden" name="class" id="student_class_hidden" value="${escapeHtml(student.class || '')}" />
+									</div>
+								</div>
+								<div class="form-group">
+									<label for="parent_name">Parent/Guardian Name</label>
+									<input type="text" id="parent_name" name="parent_name" placeholder="Parent/Guardian Name" value="${escapeHtml(student.parent_name || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="parent_contact">Parent/Guardian Contact</label>
+									<input type="tel" id="parent_contact" name="parent_contact" placeholder="Parent/Guardian Number" value="${escapeHtml(student.parent_contact || '')}" />
+								</div>
+								<div class="form-group">
+									<label for="picture">Picture</label>
+									<input type="file" id="picture" name="picture" accept="image/*" title="Upload Picture" />
+								</div>
+								<!-- spinner and actions -->
+								<div id="modalSpinner" class="modal-spinner" style="display:none;"><div class="spinner"></div>Saving...</div>
+								<div class="form-actions">
+									<button type="button" id="studentSaveBtn" class="action-btn modal-save" onclick="saveStudentChanges('${student.id}')">Save</button>
+									<button type="button" class="action-btn modal-close" onclick="closeEditModal()">Cancel</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			`;
+			document.body.appendChild(backdrop);
+		}
+
+		function closeEditModal() {
+			const el = document.getElementById('studentEditModal');
+			if (el) el.remove();
+		}
+
+		async function saveStudentChanges(studentId) {
+			const form = document.getElementById('studentForm');
+			if (!form) return notify('Form not found', 'error');
+			// Gather individual fields matching admin.js behavior; convert empty dates to null
+			const firstName = (form.querySelector('[name="first_name"]')?.value || '').trim();
+			const surname = (form.querySelector('[name="surname"]')?.value || '').trim();
+			const area = (form.querySelector('[name="area"]')?.value || '').trim();
+			const dob = form.querySelector('[name="dob"]')?.value || null;
+			const nhis = (form.querySelector('[name="nhis_number"]')?.value || '').trim();
+			const gender = form.querySelector('[name="gender"]')?.value || '';
+			const mainClass = form.querySelector('[name="main_class_select"]')?.value || '';
+			const subClass = form.querySelector('[name="sub_class_select"]')?.value || '';
+			const parentName = (form.querySelector('[name="parent_name"]')?.value || '').trim();
+			const parentContact = (form.querySelector('[name="parent_contact"]')?.value || '').trim();
+
+			// Build payload explicitly with only schema fields; convert empty values to null or empty string
+			const payload = {
+				first_name: firstName || '',
+				surname: surname || '',
+				area: area || null,
+				dob: dob || null,
+				nhis_number: nhis || '',
+				gender: gender || '',
+				class: mainClass || '',
+				subclass: subClass || null,
+				parent_name: parentName || '',
+				parent_contact: parentContact || ''
+			};
+
+			// Handle picture upload if file selected
+			const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
+			if (pictureFile && supabaseClient) {
+				try {
+					const fileName = `${studentId}_${Date.now()}_${pictureFile.name}`;
+					const uploadPath = `${studentId}/${fileName}`;
+					const { data: uploadData, error: uploadError } = await supabaseClient
+						.storage
+						.from('student-pictures')
+						.upload(uploadPath, pictureFile);
+					if (uploadError) {
+						notify('Picture upload failed: ' + uploadError.message, 'error');
+						return;
+					}
+					// Get public URL for the uploaded picture
+					const { data: urlData } = supabaseClient
+						.storage
+						.from('student-pictures')
+						.getPublicUrl(uploadData.path);
+					payload.picture_url = urlData.publicUrl;
+				} catch (e) {
+					console.error('Picture upload error', e);
+					notify('Error uploading picture: ' + e.message, 'error');
+					return;
+				}
+			}
+
+			const spinner = document.getElementById('modalSpinner');
+			const saveBtn = document.getElementById('studentSaveBtn') || document.querySelector('.modal-save');
+			if (spinner) spinner.style.display = 'flex';
+			if (saveBtn) { saveBtn.disabled = true; saveBtn.style.opacity = '0.7'; }
+			const loader = showLoadingToast('Saving...', { color: '#0ea5a4' });
+			try {
+				const { data, error } = await supabaseClient.from('students').update(payload).eq('id', studentId).select().single();
+				if (error) {
+					notify('Failed to save: ' + error.message, 'error');
+					return;
+				}
+				// update in-memory list
+				const idx = allStudents.findIndex(s => s.id === studentId);
+				if (idx !== -1) allStudents[idx] = data;
+				notify('Student saved successfully', 'success');
+				closeEditModal();
+				renderStudentTiles();
+				updateStudentCount();
+			} catch (e) {
+				console.error('saveStudentChanges error', e);
+				notify('Error saving student: ' + e.message, 'error');
+			} finally {
+				if (spinner) spinner.style.display = 'none';
+				if (saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = '1'; }
+				try { loader && loader.close(); } catch (e) {}
+			}
+		}
+
+		async function deleteStudent(studentId) {
+			if (!confirm('Are you sure you want to delete this student?')) return;
+			const loader = showLoadingToast('Deleting student...', { color: '#ef4444' });
+			try {
+				const { error } = await supabaseClient.from('students').delete().eq('id', studentId);
+				if (error) {
+					notify('Failed to delete student: ' + error.message, 'error');
+					return;
+				}
+				// remove from in-memory list and update UI
+				allStudents = allStudents.filter(s => s.id !== studentId);
+				renderStudentTiles();
+				updateStudentCount();
+				notify('Student deleted', 'success');
+			} catch (e) {
+				console.error('deleteStudent error', e);
+				notify('Error deleting student: ' + e.message, 'error');
+			} finally {
+				try { loader && loader.close(); } catch (e) {}
+			}
+		}
+
+		function exportStudentsCSV() {
+			const filtered = getFilteredStudents();
+			if (filtered.length === 0) {
+				notify('No students to export', 'warning');
+				return;
+			}
+
+			let csv = 'Register ID,First Name,Surname,Class,Area,Gender,DOB,NHIS,Parent Name,Parent Contact,Username\n';
+			filtered.forEach(s => {
+				csv += `"${s.register_id || ''}","${s.first_name || ''}","${s.surname || ''}","${s.class || ''}","${s.area || ''}","${s.gender || ''}","${s.dob || ''}","${s.nhis_number || ''}","${s.parent_name || ''}","${s.parent_contact || ''}","${s.username || ''}"\n`;
+			});
+
+			const blob = new Blob([csv], { type: 'text/csv' });
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement('a');
+			a.href = url;
+			a.download = `students-${new Date().toISOString().split('T')[0]}.csv`;
+			a.click();
+			window.URL.revokeObjectURL(url);
+			notify('Students exported successfully', 'success');
+		}
+	</script>
+</body>
+</html>

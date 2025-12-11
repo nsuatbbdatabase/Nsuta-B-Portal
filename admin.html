@@ -153,6 +153,155 @@
 		</style>
 
 	<style>
+	  /* Student Tiles Grid */
+	  .student-tiles-section {
+	    margin-top: 2rem;
+	  }
+	  
+	  .student-tiles-grid {
+	    display: grid;
+	    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	    gap: 1.5rem;
+	    margin-top: 1rem;
+	  }
+	  
+	  .student-tile {
+	    background: #fff;
+	    border-radius: 12px;
+	    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	    overflow: hidden;
+	    transition: transform 0.2s, box-shadow 0.2s;
+	    cursor: pointer;
+	  }
+	  
+	  .student-tile:hover {
+	    transform: translateY(-4px);
+	    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+	  }
+	  
+	  .student-tile-header {
+	    background: linear-gradient(135deg, #0ea5a4, #047857);
+	    padding: 1rem;
+	    text-align: center;
+	  }
+	  
+	  .student-tile-image {
+	    width: 100px;
+	    height: 100px;
+	    border-radius: 50%;
+	    background: #e5e7eb;
+	    display: flex;
+	    align-items: center;
+	    justify-content: center;
+	    margin: 0 auto 0.5rem;
+	    overflow: hidden;
+	    border: 3px solid #fff;
+	  }
+	  
+	  .student-tile-image img {
+	    width: 100%;
+	    height: 100%;
+	    object-fit: cover;
+	  }
+	  
+	  .student-tile-name {
+	    font-weight: 700;
+	    font-size: 1.1rem;
+	    color: #fff;
+	    margin: 0.5rem 0 0 0;
+	  }
+	  
+	  .student-tile-content {
+	    padding: 1.2rem;
+	  }
+	  
+	  .student-detail {
+	    display: flex;
+	    justify-content: space-between;
+	    align-items: center;
+	    padding: 0.6rem 0;
+	    border-bottom: 1px solid #f0f0f0;
+	  }
+	  
+	  .student-detail:last-child {
+	    border-bottom: none;
+	  }
+	  
+	  .student-detail-label {
+	    font-size: 0.85rem;
+	    color: #666;
+	    font-weight: 600;
+	  }
+	  
+	  .student-detail-value {
+	    font-size: 0.95rem;
+	    color: #333;
+	    font-weight: 500;
+	    text-align: right;
+	  }
+	  
+	  .student-tile-actions {
+	    display: flex;
+	    gap: 0.5rem;
+	    margin-top: 1rem;
+	    padding-top: 1rem;
+	    border-top: 1px solid #f0f0f0;
+	  }
+	  
+	  .student-tile-actions button {
+	    flex: 1;
+	    padding: 0.6rem;
+	    font-size: 0.85rem;
+	    border: none;
+	    border-radius: 6px;
+	    cursor: pointer;
+	    transition: background 0.2s;
+	  }
+	  
+	  .student-tile-actions .edit-btn {
+	    background: #0ea5a4;
+	    color: #fff;
+	  }
+	  
+	  .student-tile-actions .edit-btn:hover {
+	    background: #0d8a89;
+	  }
+	  
+	  .student-tile-actions .delete-btn {
+	    background: #f87171;
+	    color: #fff;
+	  }
+	  
+	  .student-tile-actions .delete-btn:hover {
+	    background: #ef4444;
+	  }
+	  
+	  @media (max-width: 900px) {
+	    .student-tiles-grid {
+	      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+	      gap: 1rem;
+	    }
+	    
+	    .student-tile-header {
+	      padding: 0.8rem;
+	    }
+	    
+	    .student-tile-image {
+	      width: 80px;
+	      height: 80px;
+	    }
+	    
+	    .student-tile-content {
+	      padding: 1rem;
+	    }
+	    
+	    .student-detail {
+	      padding: 0.4rem 0;
+	    }
+	  }
+	</style>
+
+	<style>
 	  /* Hide the large in-page management sections since these are now exposed via modal tiles */
 	  .grid-sections > section#students,
 	  .grid-sections > section#teachers,
@@ -396,6 +545,19 @@
 			  </div>
 			</div>
 
+			<!-- Student List Tile -->
+			<div class="flip-card">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" role="button" aria-label="Student List" onclick="window.location.href='student-list.html'">
+			      <div class="card-icon">👥</div>
+			      <div class="card-body"><div class="card-title">Student Directory</div><div class="card-desc">View all students</div></div>
+			    </div>
+			    <div class="flip-card-back" aria-hidden="true">
+			      <div class="body"><div class="back-title">Student Directory</div><div class="back-desc">Browse and manage all registered students</div></div>
+			    </div>
+			  </div>
+			</div>
+
 			<!-- Gallery Modal -->
 			<div id="galleryModal" class="modal hidden">
 			  <div class="modal-content">
@@ -558,6 +720,11 @@
 							<tbody>
 							</tbody>
 						</table>
+						</div>
+						<!-- Student Tiles View -->
+						<div class="student-tiles-section">
+							<h3>Student Profiles</h3>
+							<div id="studentTilesContainer" class="student-tiles-grid"></div>
 						</div>
 					</div>
 				</section>

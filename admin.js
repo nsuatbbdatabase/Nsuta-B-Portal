@@ -40,6 +40,102 @@ window.filterStudentDropdown = function filterStudentDropdown() {
     studentSelect.appendChild(opt);
   });
 };
+
+// Render student tiles view
+window.renderStudentTiles = function renderStudentTiles() {
+  const container = document.getElementById('studentTilesContainer');
+  if (!container) return;
+  
+  const search = document.getElementById('studentSearch')?.value.trim().toLowerCase() || '';
+  const classValue = document.getElementById('classFilter')?.value.trim().toUpperCase() || '';
+  
+  let filtered = classValue
+    ? allStudents.filter(s => (s.class || '').trim().toUpperCase() === classValue)
+    : allStudents;
+  
+  // Sort by register_id (roll number)
+  filtered = filtered.slice().sort((a, b) => {
+    if (!a.register_id || !b.register_id) return 0;
+    const [ac, an] = a.register_id.split('_');
+    const [bc, bn] = b.register_id.split('_');
+    if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
+    return ac.localeCompare(bc);
+  });
+  
+  if (search) {
+    filtered = filtered.filter(s => {
+      const name = ((s.first_name || '') + ' ' + (s.surname || '')).toLowerCase();
+      return name.includes(search);
+    });
+  }
+  
+  container.innerHTML = '';
+  
+  if (filtered.length === 0) {
+    container.innerHTML = '<p style="text-align: center; color: #999; grid-column: 1/-1;">No students found</p>';
+    return;
+  }
+  
+  filtered.forEach(student => {
+    const tile = document.createElement('div');
+    tile.className = 'student-tile';
+    
+    const name = `${student.first_name || ''} ${student.surname || ''}`.trim() || '[No Name]';
+    const imageHtml = student.picture_url
+      ? `<img src="${student.picture_url}" alt="${name}" />`
+      : '<div style="font-size: 2.5rem; color: #999;">👤</div>';
+    
+    tile.innerHTML = `
+      <div class="student-tile-header">
+        <div class="student-tile-image">
+          ${imageHtml}
+        </div>
+        <div class="student-tile-name">${name}</div>
+      </div>
+      <div class="student-tile-content">
+        <div class="student-detail">
+          <span class="student-detail-label">ID:</span>
+          <span class="student-detail-value">${student.register_id || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Class:</span>
+          <span class="student-detail-value">${student.class || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Area:</span>
+          <span class="student-detail-value">${student.area || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Gender:</span>
+          <span class="student-detail-value">${student.gender || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">DOB:</span>
+          <span class="student-detail-value">${student.dob || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Parent:</span>
+          <span class="student-detail-value">${student.parent_name ? student.parent_name.substring(0, 20) + '...' : '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Contact:</span>
+          <span class="student-detail-value">${student.parent_contact || '—'}</span>
+        </div>
+        <div class="student-detail">
+          <span class="student-detail-label">Username:</span>
+          <span class="student-detail-value">${student.username || '—'}</span>
+        </div>
+        <div class="student-tile-actions">
+          <button class="edit-btn" onclick="editStudent('${student.id}')">Edit</button>
+          <button class="delete-btn" onclick="deleteStudent('${student.id}')">Delete</button>
+        </div>
+      </div>
+    `;
+    
+    container.appendChild(tile);
+  });
+};
+
 // Modal open/close logic
 function openModal(modalId) {
   const modal = document.getElementById(modalId);
@@ -146,6 +242,27 @@ function closeModal(modalId) {
       modal.style.transform = '';
       modal.style.zIndex = '';
     } catch(e) {}
+    
+    // Clear student form data when closing studentModal
+    if (modalId === 'studentModal') {
+      try {
+        const studentForm = document.getElementById('studentForm');
+        if (studentForm) {
+          studentForm.reset();
+          // Clear all input fields and selects
+          studentForm.querySelectorAll('input[type="text"], input[type="date"], input[type="tel"], input[type="file"], input[type="email"], input[type="number"], select, textarea').forEach(field => {
+            field.value = '';
+          });
+          // Reset hidden fields
+          const classHidden = studentForm.querySelector('[name="class"]');
+          if (classHidden) classHidden.value = '';
+          const studentIdHidden = studentForm.querySelector('[name="student_id"]');
+          if (studentIdHidden) studentIdHidden.value = '';
+        }
+      } catch(e) {
+        console.debug('Error clearing student form:', e);
+      }
+    }
   }
   // Also hide the shared backdrop if present
   try {
@@ -1314,6 +1431,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   await fetchAndRenderStudents();
   const classFilterEl = document.getElementById('classFilter');
   if (classFilterEl) classFilterEl.addEventListener('change', filterStudentsByClass);
+  // Add search listener for real-time filtering of student tiles
+  const studentSearchEl = document.getElementById('studentSearch');
+  if (studentSearchEl) {
+    studentSearchEl.addEventListener('input', () => {
+      try { window.renderStudentTiles(); } catch (e) { console.warn('renderStudentTiles failed on search', e); }
+    });
+  }
   // Ensure selecting a student shows the student table. Attach change listener here so it
   // remains active even if the students section is moved into a modal (moving nodes keeps
   // event listeners, but attaching here guarantees behavior on initial load).
@@ -1357,7 +1481,10 @@ async function fetchAndRenderStudents() {
     if (ac === bc) return parseInt(an, 10) - parseInt(bn, 10);
     return ac.localeCompare(bc);
   });
-  filterStudentsByClass();
+  console.log('DEBUG: Loaded', allStudents.length, 'students');
+  // Populate dropdown and render tiles
+  window.filterStudentDropdown();
+  window.renderStudentTiles();
   } finally {
     try { loader && loader.close(); } catch (e) {}
   }
@@ -1365,12 +1492,51 @@ async function fetchAndRenderStudents() {
 
 function filterStudentsByClass() {
   window.filterStudentDropdown();
-  // Clear student table and show message
+  // Clear student table
   const tbody = document.querySelector('#studentTable tbody');
-  tbody.innerHTML = '';
-  const row = document.createElement('tr');
-  row.innerHTML = '<td colspan="12" style="text-align:center;">No student selected</td>';
-  tbody.appendChild(row);
+  if (tbody) {
+    tbody.innerHTML = '';
+    const classValue = document.getElementById('classFilter')?.value.trim().toUpperCase() || '';
+    if (!classValue) {
+      // No class selected: show all students in table
+      allStudents.forEach(student => {
+        const name = (student.first_name && student.surname)
+          ? student.first_name + ' ' + student.surname
+          : (student.first_name || student.surname || '[No Name]');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="photo">${student.picture_url ? `<img src="${student.picture_url}" alt="pic" />` : ''}</td>
+          <td class="name">${name}</td>
+          <td class="mono">${student.area || ''}</td>
+          <td class="center">${student.dob || ''}</td>
+          <td class="mono">${student.nhis_number || ''}</td>
+          <td class="center">${student.gender || ''}</td>
+          <td class="center">${student.class || ''}</td>
+          <td class="mono">${student.parent_name || ''}</td>
+          <td class="mono">${student.parent_contact || ''}</td>
+          <td class="mono">${student.username || ''}</td>
+          <td class="center">${student.pin ? '••••' : ''}</td>
+          <td class="actions">
+            <button class="btn" onclick="editStudent('${student.id}')">Edit</button>
+            <button class="btn" onclick="deleteStudent('${student.id}')">Delete</button>
+            <button class="btn" onclick="resetStudentPin('${student.id}')">Reset PIN</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } else {
+      const row = document.createElement('tr');
+      row.innerHTML = '<td colspan="12" style="text-align:center;">Select a student from the dropdown above</td>';
+      tbody.appendChild(row);
+    }
+  }
+  // Reset student select to empty
+  const studentSelect = document.getElementById('studentSelect');
+  if (studentSelect) {
+    studentSelect.value = '';
+  }
+  // Render student tiles
+  window.renderStudentTiles();
 }
 
 /* ------------------------------------------------------------------
