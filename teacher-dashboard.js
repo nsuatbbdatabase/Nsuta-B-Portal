@@ -1375,25 +1375,25 @@ function renderExamForm(examMarksMap = {}) {
   const examDrafts = loadDrafts(draftKeyExam);
 
   students.forEach(student => {
-    // Pre-fill exam score: prefer drafts -> database -> 0
-    let examPrefill = 0;
+    // Pre-fill exam score: prefer drafts -> database -> empty
+    let examPrefill = '';
     
     // First, load from database
     if (examMarksMap[student.id] !== undefined) {
-      examPrefill = examMarksMap[student.id];
+      examPrefill = examMarksMap[student.id] || '';
     }
     
     // Then, override with drafts if they exist (drafts take precedence)
     if (examDrafts[student.id] !== undefined) {
-      examPrefill = examDrafts[student.id];
+      examPrefill = examDrafts[student.id] || '';
     }
     
-    const scaledPrefill = Math.round((examPrefill / 100) * 50);
+    const scaledPrefill = examPrefill ? Math.round((examPrefill / 100) * 50) : 0;
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
       <td style="display:flex;align-items:center;gap:8px">
-        <input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" value="${examPrefill}" style="width:80px" />
+        <input type="number" data-type="exam" data-id="${student.id}" max="100" min="0" value="${examPrefill}" style="width:80px" placeholder="0-100" />
         <button class="mark-save-btn" data-id="${student.id}" type="button">Save</button>
         <button class="mark-edit-btn hidden" data-id="${student.id}" type="button">Edit</button>
       </td>
@@ -1785,25 +1785,25 @@ function renderSBAForm(marksMap = {}) {
   const sbaDrafts = loadDraftsSBA();
 
   students.forEach(student => {
-    // Pre-fill all SBA components: prefer drafts -> DB components -> 0
-    let individual = 0, group = 0, classTest = 0, project = 0, scaledPrefill = 0, totalPrefill = 0;
+    // Pre-fill all SBA components: prefer drafts -> DB components -> empty
+    let individual = '', group = '', classTest = '', project = '', scaledPrefill = 0, totalPrefill = 0;
     
     // First, load from database (marksMap)
     const mm = marksMap[student.id];
     if (mm && typeof mm === 'object') {
-      if (mm.individual !== null && mm.individual !== undefined) individual = mm.individual;
-      if (mm.group !== null && mm.group !== undefined) group = mm.group;
-      if (mm.class_test !== null && mm.class_test !== undefined) classTest = mm.class_test;
-      if (mm.project !== null && mm.project !== undefined) project = mm.project;
+      if (mm.individual !== null && mm.individual !== undefined) individual = mm.individual || '';
+      if (mm.group !== null && mm.group !== undefined) group = mm.group || '';
+      if (mm.class_test !== null && mm.class_test !== undefined) classTest = mm.class_test || '';
+      if (mm.project !== null && mm.project !== undefined) project = mm.project || '';
     }
     
     // Then, override with drafts if they exist (drafts take precedence)
     const draft = sbaDrafts[student.id];
     if (draft && typeof draft === 'object') {
-      if (draft.individual !== null && draft.individual !== undefined) individual = draft.individual;
-      if (draft.group !== null && draft.group !== undefined) group = draft.group;
-      if (draft.classTest !== null && draft.classTest !== undefined) classTest = draft.classTest;
-      if (draft.project !== null && draft.project !== undefined) project = draft.project;
+      if (draft.individual !== null && draft.individual !== undefined) individual = draft.individual || '';
+      if (draft.group !== null && draft.group !== undefined) group = draft.group || '';
+      if (draft.classTest !== null && draft.classTest !== undefined) classTest = draft.classTest || '';
+      if (draft.project !== null && draft.project !== undefined) project = draft.project || '';
     }
     
     // Calculate total and scaled
@@ -1820,10 +1820,10 @@ function renderSBAForm(marksMap = {}) {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${student.first_name || ''} ${student.surname || ''}</td>
-  <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" value="${individual}" class="sba-component" /></td>
-  <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" value="${group}" class="sba-component" /></td>
-  <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" value="${classTest}" class="sba-component" /></td>
-  <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" value="${project}" class="sba-component" /></td>
+  <td><input type="number" data-type="individual" data-id="${student.id}" max="15" min="0" value="${individual}" class="sba-component" placeholder="0-15" /></td>
+  <td><input type="number" data-type="group" data-id="${student.id}" max="15" min="0" value="${group}" class="sba-component" placeholder="0-15" /></td>
+  <td><input type="number" data-type="classTest" data-id="${student.id}" max="15" min="0" value="${classTest}" class="sba-component" placeholder="0-15" /></td>
+  <td><input type="number" data-type="project" data-id="${student.id}" max="15" min="0" value="${project}" class="sba-component" placeholder="0-15" /></td>
       <td><span id="total-${student.id}">${totalPrefill}</span></td>
       <td><span id="scaled-${student.id}">${scaledPrefill}</span></td>
       <td style="display:flex;gap:6px"><button class="sba-save-btn" data-id="${student.id}" type="button">Save</button><button class="sba-edit-btn hidden" data-id="${student.id}" type="button">Edit</button></td>
@@ -1953,7 +1953,7 @@ async function submitExams() {
     }
   } else {
     for (const student of students) {
-        // Read raw exam input value (0-100)
+        // Read raw exam input value (0-100), treat empty as 0
         const examInput = document.querySelector(`#examTableBody input[data-type="exam"][data-id="${student.id}"]`);
         const examRaw = examInput ? (parseInt(examInput.value, 10) || 0) : 0;
         if (isNaN(examRaw) || examRaw < 0 || examRaw > 100) {
