@@ -1332,7 +1332,8 @@ async function loadStudents(section = 'sba') {
           const studentIds = new Set(students.map(s => s.id));
           marksData.forEach(m => {
             if (studentIds.has(m.student_id)) {
-              marksMap[m.student_id] = m.exam_score;
+              // Convert stored 0-50 scaled value back to 0-100 for display
+              marksMap[m.student_id] = Math.round((m.exam_score / 50) * 100);
             }
           });
           console.debug('Exam marks loaded:', Object.keys(marksMap).length, 'records for', students.length, 'students');
@@ -1944,7 +1945,9 @@ async function submitExams() {
   if (drafts && Object.keys(drafts).length > 0) {
     for (const student of students) {
       if (drafts[student.id] === undefined) continue;
-      const rec = { student_id: student.id, subject, term, year, exam_score: drafts[student.id], class_score: 0 };
+      // Scale draft exam score from 0-100 to 0-50 for database storage
+      const scaledExamScore = Math.round((drafts[student.id] / 100) * 50);
+      const rec = { student_id: student.id, subject, term, year, exam_score: scaledExamScore, class_score: 0 };
       if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
       submissions.push(rec);
     }
@@ -1978,7 +1981,7 @@ async function submitExams() {
             if (typeof existing.project === 'number') project = existing.project;
           }
         } catch (e) {}
-        const rec = { student_id: student.id, subject, term, year, class_score, exam_score: examRaw, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) };
+        const rec = { student_id: student.id, subject, term, year, class_score, exam_score: scaled, individual: Number(individual||0), "group": Number(groupVal||0), class_test: Number(class_test||0), project: Number(project||0) };
         if (subject === 'Career Tech' && areaVal) rec.area = areaVal;
         submissions.push(rec);
     }
@@ -2518,8 +2521,10 @@ function openEditMarksModal(studentId, section) {
       } else if (subject && term && year) {
         supabaseClient.from('results').select('exam_score').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single().then(({ data, error }) => {
           if (!error && data && typeof data.exam_score === 'number') {
-            document.getElementById('edit_examScore').value = data.exam_score;
-            document.getElementById('edit_examScaled').textContent = Math.round((data.exam_score/100)*50);
+            // exam_score is now stored as 0-50, convert back to 0-100 for display
+            const originalScore = Math.round((data.exam_score / 50) * 100);
+            document.getElementById('edit_examScore').value = originalScore;
+            document.getElementById('edit_examScaled').textContent = data.exam_score;
           }
         }).catch(e => { /* ignore */ });
       }
@@ -2605,10 +2610,12 @@ document.addEventListener('DOMContentLoaded', () => {
         notify('SBA marks updated.', 'info');
       } else {
     const examScore = Math.min(Math.max(parseInt(document.getElementById('edit_examScore').value) || 0, 0), 100);
+    // Scale exam score from 0-100 to 0-50 for database storage
+    const scaledExamScore = Math.round((examScore / 100) * 50);
     // Fetch existing class_score and component breakdown to preserve them
     const { data: existing } = await supabaseClient.from('results').select('class_score, individual, "group", class_test, project').eq('student_id', studentId).eq('subject', subject).eq('term', term).eq('year', year).single();
     // Ensure class_score is present to satisfy NOT NULL constraints if any - default to 0 when missing
-    const payload = { student_id: studentId, subject, term, year, exam_score: examScore };
+    const payload = { student_id: studentId, subject, term, year, exam_score: scaledExamScore };
     payload.class_score = (existing && typeof existing.class_score === 'number') ? existing.class_score : 0;
     // Preserve component breakdown if present
     payload.individual = (existing && typeof existing.individual === 'number') ? existing.individual : 0;
@@ -2909,7 +2916,14 @@ async function importExamsFromFile(file) {
       }
       
       const exam_score = Number(r['exam_score'] || r['score'] || r['exam'] || 0) || 0;
-      payloads.push({ student_id: student.id, subject, term, year, exam_score, area: importArea });
+      // Validate exam score range (0-100 for input)
+      if (exam_score < 0 || exam_score > 100) {
+        errors.push(`Row ${idx+2}: exam score must be between 0 and 100, got ${exam_score}`);
+        return;
+      }
+      // Scale exam score from 0-100 to 0-50 for database storage
+      const scaledExamScore = Math.round((exam_score / 100) * 50);
+      payloads.push({ student_id: student.id, subject, term, year, exam_score: scaledExamScore, area: importArea });
     });
     if (errors.length) { notify('Import completed with some errors; check console for details.', 'warning'); console.warn('Exam import errors:', errors); }
     if (payloads.length === 0) { notify('No valid rows to import.', 'warning'); return; }

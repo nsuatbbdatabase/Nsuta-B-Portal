@@ -423,13 +423,14 @@ async function loadReportForStudent() {
     if (subject === "Career Tech") {
       // Find all Career Tech results for this student (multiple teachers/areas: Pre-Tech, Home Economics, etc.)
       const careerTechEntries = results_final.filter(r => r.subject === "Career Tech");
-      // For Career Tech with multiple areas: each area's total marks are divided by 2 (rounded to nearest whole number)
-      // Then all area contributions are summed: (PreTech_total/2) + (HomeEcon_total/2) + ...
-      // This ensures each area contributes proportionally while maintaining a max of 100 total marks
+      // For Career Tech with multiple areas: each area's SBA and exam marks are divided by 2 (rounded to nearest whole number)
+      // Then all area contributions are summed: (PreTech_SBA/2 + PreTech_Exam/2) + (HomeEcon_SBA/2 + HomeEcon_Exam/2) + ...
+      // This ensures each area contributes proportionally while maintaining a max of 100 total marks (50 SBA + 50 exam)
       let sbaAdjusted = 0;
       let examAdjusted = 0;
       careerTechEntries.forEach(entry => {
         const s = Math.round((entry?.class_score || 0) / 2);
+        // exam_score should also be divided by 2 to prevent multiple areas from exceeding 50 total exam marks
         const e = Math.round((entry?.exam_score || 0) / 2);
         sbaAdjusted += s;
         examAdjusted += e;
