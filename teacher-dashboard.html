@@ -148,6 +148,8 @@
             </select>
             <label for="yearInput">Academic Year:</label>
             <input id="yearInput" title="Enter academic year, e.g. 2025/2026" aria-label="Academic year" placeholder="Academic Year (e.g. 2025/2026)" oninput="loadStudents()">
+            <label for="studentSearchSBA">Search Student:</label>
+            <input id="studentSearchSBA" type="text" placeholder="Type student name..." oninput="filterStudents('sba')" title="Search for specific students" aria-label="Search students for SBA entry">
           </div>
           <table>
             <thead>
@@ -207,6 +209,8 @@
             </select>
             <label for="yearInputExam">Academic Year:</label>
             <input id="yearInputExam" title="Enter academic year for exams, e.g. 2025/2026" aria-label="Academic year for exams" placeholder="Academic Year (e.g. 2025/2026)" oninput="loadStudents('exam')">
+            <label for="studentSearchExam">Search Student:</label>
+            <input id="studentSearchExam" type="text" placeholder="Type student name..." oninput="filterStudents('exam')" title="Search for specific students" aria-label="Search students for exam entry">
           </div>
           <table>
             <thead>

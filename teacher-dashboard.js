@@ -1202,8 +1202,15 @@ async function loadStudents(section = 'sba') {
   // filtered by their teaching assignment, so access control is implicit.
   if (!teacher) {
     students = [];
-    if (section === 'sba') renderSBAForm({});
-    else if (section === 'exam') renderExamForm({});
+    if (section === 'sba') {
+      renderSBAForm({});
+      const sbaSearch = document.getElementById('studentSearchSBA');
+      if (sbaSearch) sbaSearch.value = '';
+    } else if (section === 'exam') {
+      renderExamForm({});
+      const examSearch = document.getElementById('studentSearchExam');
+      if (examSearch) examSearch.value = '';
+    }
     return;
   }
   let selectedClass, selectedSubject;
@@ -1294,6 +1301,9 @@ async function loadStudents(section = 'sba') {
       }
     }
     renderSBAForm(marksMap);
+    // Clear search input when new data is loaded
+    const sbaSearch = document.getElementById('studentSearchSBA');
+    if (sbaSearch) sbaSearch.value = '';
   } else if (section === 'exam') {
     const term = document.getElementById('termInputExam')?.value || '';
     const year = document.getElementById('yearInputExam')?.value || '';
@@ -1344,6 +1354,9 @@ async function loadStudents(section = 'sba') {
       }
     }
     renderExamForm(marksMap);
+    // Clear search input when new data is loaded
+    const examSearch = document.getElementById('studentSearchExam');
+    if (examSearch) examSearch.value = '';
   }
 }
 
@@ -2998,3 +3011,33 @@ window.exportSBAToCSV = exportSBAToCSV;
 window.exportExamsToCSV = exportExamsToCSV;
 window.importSBAFromFile = importSBAFromFile;
 window.importExamsFromFile = importExamsFromFile;
+window.filterStudents = filterStudents;
+
+// Student filtering function for SBA and Exam tables
+function filterStudents(section) {
+  const searchInput = section === 'sba' ? document.getElementById('studentSearchSBA') : document.getElementById('studentSearchExam');
+  const tbody = section === 'sba' ? document.getElementById('sbaTableBody') : document.getElementById('examTableBody');
+  
+  if (!searchInput || !tbody) return;
+  
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  const rows = tbody.querySelectorAll('tr');
+  
+  if (!searchTerm) {
+    // Show all rows if search is empty
+    rows.forEach(row => row.style.display = '');
+    return;
+  }
+  
+  rows.forEach(row => {
+    const studentName = row.cells[0]?.textContent?.toLowerCase() || '';
+    const studentId = row.cells[0]?.textContent?.toLowerCase() || '';
+    
+    // Check if student name or ID contains the search term
+    if (studentName.includes(searchTerm) || studentId.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
+}

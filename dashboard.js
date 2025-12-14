@@ -2431,16 +2431,60 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
   // ------------------
   async function populateRankingClassSelect() {
     try {
+      console.log('Populating ranking class select...');
+      
+      // First, check if we can connect to the database
+      const { data: testData, error: testError } = await supabaseClient.from('students').select('count').limit(1);
+      console.log('Database connection test:', { testData, testError });
+      
       // Get distinct classes from students table
       const { data: classes, error } = await supabaseClient.from('students').select('class').neq('class', null);
+      console.log('Classes query result:', { classes, error, count: classes?.length });
+      
       const sel = document.getElementById('rankingClassSelect');
-      if (!sel) return;
+      if (!sel) {
+        console.error('rankingClassSelect element not found');
+        notify('UI Error: Class selection element not found', 'error');
+        return;
+      }
+      
       sel.innerHTML = '<option value="">-- Select Class --</option>';
-      if (error || !classes) return;
+      
+      if (error) {
+        console.error('Error fetching classes:', error);
+        notify('Failed to load classes: ' + error.message, 'error');
+        return;
+      }
+      
+      if (!classes || classes.length === 0) {
+        console.warn('No classes found in students table');
+        // Try to get all students to see if table is empty
+        const { data: allStudents, error: allError } = await supabaseClient.from('students').select('id, first_name, class').limit(5);
+        console.log('Sample students:', { allStudents, allError });
+        
+        if (allStudents && allStudents.length > 0) {
+          notify('No classes assigned to students. Please assign classes to students first.', 'warning');
+        } else {
+          notify('No students found in database. Please add students first.', 'warning');
+        }
+        return;
+      }
+      
       const uniq = [...new Set(classes.map(c => c.class))].filter(Boolean).sort();
+      console.log('Unique classes found:', uniq);
+      
+      if (uniq.length === 0) {
+        notify('All students have null/empty class values. Please assign classes to students.', 'warning');
+        return;
+      }
+      
       uniq.forEach(c => {
-        const opt = document.createElement('option'); opt.value = c; opt.textContent = c; sel.appendChild(opt);
+        const opt = document.createElement('option'); 
+        opt.value = c; 
+        opt.textContent = c; 
+        sel.appendChild(opt);
       });
+      
       // If there's a subclass select, clear it
       const subSel = document.getElementById('rankingSubclassSelect');
       const subWrap = document.getElementById('rankingSubclassWrapper');
@@ -2449,7 +2493,10 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
         subSel.disabled = true;
       }
       if (subWrap) subWrap.classList.add('hidden-select');
-    } catch (e) { console.warn('populateRankingClassSelect failed', e); }
+    } catch (e) { 
+      console.error('populateRankingClassSelect failed:', e);
+      notify('Failed to load classes. Please check your internet connection and try again.', 'error');
+    }
   }
 
   // Populate subclass select when a class is chosen
@@ -2508,17 +2555,42 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
     if (term) parts.push(term);
     if (year) parts.push(year);
     const title = `Class Ranking — ${parts.join(' / ')}`.trim();
-    const header = `<div style="text-align:center;margin-bottom:12px;"><h2>${title}</h2></div>`;
-    // Render columns: Student Name | Total Marks | Position in Class
-    const tableRows = ranking.map(r => `<tr><td style="border:1px solid #ddd;padding:6px">${escapeHtml(r.name)}</td><td style="border:1px solid #ddd;padding:6px;text-align:right">${Number(r.score).toFixed(0)}</td><td style="border:1px solid #ddd;padding:6px;text-align:center">${r.position}</td></tr>`).join('');
+    const header = `<div style="text-align:center;margin-bottom:6px;"><h2>${title}</h2></div>`;
+    
+    // Split ranking into chunks of 42 students per page for optimal page filling
+    const studentsPerPage = 42;
+    const pages = [];
+    for (let i = 0; i < ranking.length; i += studentsPerPage) {
+      const pageRanking = ranking.slice(i, i + studentsPerPage);
+      const startPos = i + 1;
+      const endPos = Math.min(i + studentsPerPage, ranking.length);
+      const pageTitle = i === 0 ? title : `${title} (Positions ${startPos}-${endPos})`;
+      
+      const pageHeader = `<div style="text-align:center;margin-bottom:6px;"><h2>${pageTitle}</h2></div>`;
+      
+      // Create optimized list format with better spacing
+      const studentList = pageRanking.map(r => `
+        <div class="ranking-item" style="display: flex; justify-content: space-between; align-items: center; padding: 1px 0; line-height: 1.2; border-bottom: 1px solid #e0e0e0;">
+          <span class="student-name" style="flex: 1; font-weight: 500;">${r.position}. ${escapeHtml(r.name)}</span>
+          <span class="student-marks" style="width: 80px; text-align: right; font-weight: 600;">${Number(r.score).toFixed(0)}</span>
+        </div>
+      `).join('');
+      
+      const pageHtml = `
+        <div class="ranking-page" style="page-break-after: ${i + studentsPerPage < ranking.length ? 'always' : 'auto'}; margin-bottom: 10px;">
+          ${pageHeader}
+          <div class="ranking-list" style="margin-bottom: 6px;">
+            ${studentList}
+          </div>
+          ${i + studentsPerPage >= ranking.length ? `<div style="font-size:11px;color:#666;margin-top:6px;">Generated: ${new Date().toLocaleString()}</div>` : ''}
+        </div>
+      `;
+      pages.push(pageHtml);
+    }
+    
     const html = `
       <div id="classRankingPrintContainer">
-        ${header}
-        <table style="width:100%;border-collapse:collapse;border:1px solid #ddd;margin-bottom:12px;">
-          <thead><tr><th style="border:1px solid #ddd;padding:6px;text-align:left">Student</th><th style="border:1px solid #ddd;padding:6px;text-align:right">Total Marks</th><th style="border:1px solid #ddd;padding:6px;text-align:center">Position in Class</th></tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-        <div style="font-size:12px;color:#666;">Generated: ${new Date().toLocaleString()}</div>
+        ${pages.join('')}
       </div>
     `;
     return html;
@@ -2555,15 +2627,18 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
     if (ps) ps.remove();
     ps = document.createElement('style'); ps.id = styleId;
     ps.textContent = `@media print { 
-      @page { margin: 10mm; }
-      html, body { height: auto !important; }
+      @page { margin: 12mm; size: A4; }
+      html, body { height: auto !important; font-size: 12px; line-height: 1.2; }
       body * { visibility: hidden !important; }
       #classRankingPrintOutput, #classRankingPrintOutput * { visibility: visible !important; }
-      #classRankingPrintOutput { position: absolute; left: 0; top: 0; width: 100%; padding: 6mm; box-sizing: border-box; }
-      #classRankingPrintOutput table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; font-size: 12px; }
-      #classRankingPrintOutput th, #classRankingPrintOutput td { white-space: nowrap !important; overflow: visible !important; padding: 6px !important; border:1px solid #ddd !important; }
-      /* Keep the three main columns on the same row when possible */
-      #classRankingPrintOutput thead th { font-weight: 700; }
+      #classRankingPrintOutput { position: absolute; left: 0; top: 0; width: 100%; padding: 8mm; box-sizing: border-box; }
+      #classRankingPrintOutput .ranking-page { page-break-inside: avoid; margin-bottom: 8px; }
+      #classRankingPrintOutput .ranking-page h2 { font-size: 16px; margin-bottom: 8px; line-height: 1.2; font-weight: 600; }
+      #classRankingPrintOutput .ranking-list { margin-bottom: 8px; }
+      #classRankingPrintOutput .ranking-item { display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 2px 0 !important; line-height: 1.2 !important; border-bottom: 1px solid #e0e0e0 !important; margin-bottom: 0 !important; }
+      #classRankingPrintOutput .student-name { flex: 1 !important; font-weight: 500 !important; font-size: 12px !important; line-height: 1.2 !important; }
+      #classRankingPrintOutput .student-marks { width: 80px !important; text-align: right !important; font-weight: 600 !important; font-size: 12px !important; line-height: 1.2 !important; }
+      .page-break { page-break-before: always; }
     }`;
     document.head.appendChild(ps);
     // Show container then print
@@ -2577,9 +2652,18 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
   document.addEventListener('click', function(e){
     const el = e.target.closest('[data-action="modal:classRankingModal"]');
     if (!el) return;
+    console.log('Class ranking modal opened, populating class select...');
     // populate select
     populateRankingClassSelect();
-    const preview = document.getElementById('classRankingPreview'); if (preview) preview.textContent = 'Select class, term and year then click Generate.';
+    // Open the modal
+    try { 
+      openModal('classRankingModal'); 
+    } catch (e) { 
+      const m = document.getElementById('classRankingModal'); 
+      if (m) m.classList.remove('hidden'); 
+    }
+    const preview = document.getElementById('classRankingPreview'); 
+    if (preview) preview.textContent = 'Select class, term and year then click Generate.';
   });
 
   // When class select changes, populate subclass select (if present)
