@@ -1680,14 +1680,30 @@ async function submitSBA() {
       // Fetch existing exam score for this student/subject/term/year
       let exam_score = 0;
       try {
-        const { data: existing } = await supabaseClient
-          .from('results')
-          .select('exam_score')
-          .eq('student_id', student.id)
-          .eq('subject', subject)
-          .eq('term', term)
-          .eq('year', year)
-          .single();
+        let existing = null;
+        if (subject === 'Career Tech' && areaVal) {
+          // For Career Tech, fetch from career_tech_results table in Career Tech Supabase
+          const { data } = await supabaseCareerTech
+            .from('career_tech_results')
+            .select('exam_score')
+            .eq('student_id', student.id)
+            .eq('area', areaVal)
+            .eq('term', term)
+            .eq('year', year)
+            .single();
+          existing = data;
+        } else {
+          // For regular subjects, fetch from results table
+          const { data } = await supabaseClient
+            .from('results')
+            .select('exam_score')
+            .eq('student_id', student.id)
+            .eq('subject', subject)
+            .eq('term', term)
+            .eq('year', year)
+            .single();
+          existing = data;
+        }
         if (existing && typeof existing.exam_score === 'number') exam_score = existing.exam_score;
       } catch (e) {}
       const rec = {
@@ -1978,14 +1994,30 @@ async function submitExams() {
         // Fetch existing SBA component/class_score if present
         let class_score = 0, individual = 0, groupVal = 0, class_test = 0, project = 0;
         try {
-          const { data: existing } = await supabaseClient
-            .from('results')
-            .select('class_score, individual, "group", class_test, project')
-            .eq('student_id', student.id)
-            .eq('subject', subject)
-            .eq('term', term)
-            .eq('year', year)
-            .single();
+          let existing = null;
+          if (subject === 'Career Tech' && areaVal) {
+            // For Career Tech, fetch from career_tech_results table in Career Tech Supabase
+            const { data } = await supabaseCareerTech
+              .from('career_tech_results')
+              .select('class_score, individual, "group", class_test, project')
+              .eq('student_id', student.id)
+              .eq('area', areaVal)
+              .eq('term', term)
+              .eq('year', year)
+              .single();
+            existing = data;
+          } else {
+            // For regular subjects, fetch from results table
+            const { data } = await supabaseClient
+              .from('results')
+              .select('class_score, individual, "group", class_test, project')
+              .eq('student_id', student.id)
+              .eq('subject', subject)
+              .eq('term', term)
+              .eq('year', year)
+              .single();
+            existing = data;
+          }
           if (existing) {
             if (typeof existing.class_score === 'number') class_score = existing.class_score;
             if (typeof existing.individual === 'number') individual = existing.individual;
