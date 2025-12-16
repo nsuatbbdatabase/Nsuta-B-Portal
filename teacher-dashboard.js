@@ -2984,7 +2984,14 @@ async function importExamsFromFile(file) {
       } else {
         query = query.eq('subject', p.subject);
       }
-      const { data: existing } = await query.single().catch(() => ({ data: null }));
+      let existing = null;
+      try {
+        const result = await query.single();
+        existing = result.data;
+      } catch (e) {
+        // No existing record found, which is fine
+        existing = null;
+      }
       const payload = { student_id: p.student_id, term: p.term, year: p.year, exam_score: p.exam_score, class_score: (existing && typeof existing.class_score === 'number') ? existing.class_score : 0, individual: (existing && typeof existing.individual === 'number') ? existing.individual : 0, "group": (existing && typeof existing['group'] === 'number') ? existing['group'] : 0, class_test: (existing && typeof existing.class_test === 'number') ? existing.class_test : 0, project: (existing && typeof existing.project === 'number') ? existing.project : 0 };
       if (p.subject === 'Career Tech') {
         payload.area = p.area;
