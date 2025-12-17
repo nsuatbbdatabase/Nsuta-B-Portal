@@ -310,6 +310,13 @@ const supabaseClient = createClient(
   'https://omhmahhfeduejykrxflx.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
 );
+
+// ✅ Supabase client setup - Career Tech project (career_tech_results table only)
+const supabaseCareerTech = createClient(
+  'https://tivkbqpoqshdgyjgdwbu.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdmticXBvcXNoZGd5amdkd2J1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjA3NTksImV4cCI6MjA4MDg5Njc1OX0.CFAE66k6Q75yAIBQr6PByeY-0os8sBrV2r2WERJKGbI'
+);
+
 window.supabaseClient = supabaseClient;
 
 // When attendance is updated by any teacher, compute which Class Teachers did NOT mark
@@ -1909,12 +1916,14 @@ function headerPrev() {
   } catch (e) { /* ignore read errors */ }
 })();
 
+// Lightweight KPI helper function
+function setKPI(selector, value) {
+  const el = document.getElementById(selector);
+  if (el) el.textContent = String(value);
+}
+
 // Lightweight helpers: fill KPIs and recent activity
 (function(){
-  function setKPI(selector, value) {
-    const el = document.getElementById(selector);
-    if (el) el.textContent = String(value);
-  }
   async function populateKPIs() {
     try {
       const [{ data: students }, { data: teachers }, { data: admins }] = await Promise.all([
@@ -2680,3 +2689,446 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
     e.preventDefault();
     generateClassRankingPDF();
   });
+
+// -------------------------------
+// Missing Marks: Check students with incomplete SBA or exam marks
+// -------------------------------
+async function checkMissingMarks(classFilter = '', term = '', year = '') {
+  try {
+    // Get students for the selected class
+    let studentQuery = supabaseClient.from('students').select('id, first_name, surname, register_id, class');
+    if (classFilter) {
+      studentQuery = studentQuery.eq('class', classFilter);
+    }
+    const { data: students, error: studentError } = await studentQuery;
+    if (studentError) throw studentError;
+    if (!students || students.length === 0) {
+      return { count: 0, details: [] };
+    }
+
+    const studentIds = students.map(s => s.id);
+    const missingDetails = [];
+
+    // Define subjects to check
+    const subjects = ["English", "Maths", "Science", "RME", "Social Studies", "Computing", "Career Tech", "Creative Arts", "Twi"];
+
+    // Check regular subjects
+    const { data: regularResults, error: regularError } = await supabaseClient
+      .from('results')
+      .select('student_id, subject, class_score, exam_score, individual, "group", class_test, project')
+      .in('student_id', studentIds)
+      .eq('term', term)
+      .eq('year', parseInt(year));
+
+    // Check Career Tech results
+    const { data: careerTechResults, error: careerTechError } = await supabaseCareerTech
+      .from('career_tech_results')
+      .select('student_id, area, class_score, exam_score, individual, "group", class_test, project')
+      .in('student_id', studentIds)
+      .eq('term', term)
+      .eq('year', parseInt(year));
+
+    // Process each student
+    for (const student of students) {
+      const studentMissing = {
+        student: student,
+        subjects: []
+      };
+
+      // Check each subject
+      for (const subject of subjects) {
+        let hasResult = false;
+        let missingComponents = [];
+
+        if (subject === 'Career Tech') {
+          // Check Career Tech results
+          const ctResults = (careerTechResults || []).filter(r => r.student_id === student.id);
+          if (ctResults.length > 0) {
+            // Check each area for missing components
+            for (const result of ctResults) {
+              const components = [
+                { name: 'Individual', value: result.individual },
+                { name: 'Group', value: result['group'] },
+                { name: 'Class Test', value: result.class_test },
+                { name: 'Project', value: result.project },
+                { name: 'Exam', value: result.exam_score }
+              ];
+
+              const areaMissing = components.filter(c => c.value === null || c.value === undefined || c.value === 0);
+              if (areaMissing.length > 0) {
+                missingComponents.push({
+                  area: result.area,
+                  components: areaMissing.map(c => c.name)
+                });
+              } else {
+                hasResult = true; // At least one area is complete
+              }
+            }
+          }
+        } else {
+          // Check regular subject results
+          const result = (regularResults || []).find(r => r.student_id === student.id && r.subject === subject);
+          if (result) {
+            const components = [
+              { name: 'Individual', value: result.individual },
+              { name: 'Group', value: result['group'] },
+              { name: 'Class Test', value: result.class_test },
+              { name: 'Project', value: result.project },
+              { name: 'Exam', value: result.exam_score }
+            ];
+
+            const missing = components.filter(c => c.value === null || c.value === undefined || c.value === 0);
+            if (missing.length > 0) {
+              missingComponents = missing.map(c => c.name);
+            } else {
+              hasResult = true;
+            }
+          }
+        }
+
+        // If subject has missing components, add to student's missing list
+        if (missingComponents.length > 0 || (subject === 'Career Tech' && !hasResult)) {
+          studentMissing.subjects.push({
+            subject: subject,
+            missingComponents: missingComponents
+          });
+        }
+      }
+
+      // If student has any missing marks, add to results
+      if (studentMissing.subjects.length > 0) {
+        missingDetails.push(studentMissing);
+      }
+    }
+
+    return {
+      count: missingDetails.length,
+      details: missingDetails
+    };
+
+  } catch (error) {
+    console.error('Error checking missing marks:', error);
+    throw error;
+  }
+}
+
+function wireMissingMarksUI() {
+  const tile = document.getElementById('tileMissingMarks');
+  if (!tile) return;
+
+  try {
+    tile.addEventListener('click', function() {
+      // Open modal
+      try {
+        openModal('missingMarksModal');
+      } catch (e) {
+        const m = document.getElementById('missingMarksModal');
+        if (m) m.classList.remove('hidden');
+      }
+    });
+  } catch (e) {
+    console.warn('wireMissingMarksUI failed', e);
+  }
+
+  // Wire the check button
+  const checkBtn = document.getElementById('checkMissingMarksBtn');
+  if (checkBtn) {
+    checkBtn.addEventListener('click', async function() {
+      const classFilter = document.getElementById('missingMarksClass').value;
+      const term = document.getElementById('missingMarksTerm').value;
+      const year = document.getElementById('missingMarksYear').value;
+
+      if (!term || !year) {
+        alert('Please select both term and year.');
+        return;
+      }
+
+      const resultsEl = document.getElementById('missingMarksResults');
+      resultsEl.innerHTML = '<div class="muted-small">Checking for missing marks...</div>';
+
+      try {
+        const result = await checkMissingMarks(classFilter, term, year);
+
+        if (result.count === 0) {
+          resultsEl.innerHTML = '<div class="muted-small" style="color: green;">✅ All students have complete marks for the selected criteria.</div>';
+        } else {
+          // Build results table
+          let html = `<h4>Found ${result.count} student(s) with missing marks:</h4>`;
+          html += '<table style="width: 100%; border-collapse: collapse;">';
+          html += '<thead><tr style="background: #f5f5f5;"><th style="padding: 8px; border: 1px solid #ddd;">Student</th><th style="padding: 8px; border: 1px solid #ddd;">Subject</th><th style="padding: 8px; border: 1px solid #ddd;">Missing Components</th></tr></thead>';
+          html += '<tbody>';
+
+          result.details.forEach(studentDetail => {
+            const student = studentDetail.student;
+            const studentName = `${student.first_name} ${student.surname} (${student.register_id}) - ${student.class}`;
+
+            studentDetail.subjects.forEach(subjectDetail => {
+              let missingText = '';
+              if (subjectDetail.subject === 'Career Tech' && subjectDetail.missingComponents.length > 0) {
+                // Handle Career Tech areas
+                missingText = subjectDetail.missingComponents.map(area => {
+                  return `${area.area}: ${area.components.join(', ')}`;
+                }).join('; ');
+              } else {
+                missingText = subjectDetail.missingComponents.join(', ');
+              }
+
+              html += `<tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${studentName}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${subjectDetail.subject}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${missingText}</td>
+              </tr>`;
+            });
+          });
+
+          html += '</tbody></table>';
+          resultsEl.innerHTML = html;
+        }
+      } catch (error) {
+        console.error('Error checking missing marks:', error);
+        resultsEl.innerHTML = '<div class="muted-small" style="color: red;">Error checking missing marks. Please try again.</div>';
+      }
+    });
+  }
+}
+
+// Initialize missing marks UI when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wireMissingMarksUI);
+} else {
+  wireMissingMarksUI();
+}
+
+// Update missing marks KPI (call this periodically or on page load)
+async function updateMissingMarksKPI() {
+  try {
+    // Get current term and year (you might want to make this configurable)
+    const currentTerm = '1st Term'; // Default, could be made dynamic
+    const currentYear = new Date().getFullYear();
+
+    const result = await checkMissingMarks('', currentTerm, currentYear);
+    setKPI('kpiMissingMarks', result.count);
+    setKPI('kpiMissingMarksDesc', `Students with incomplete marks`);
+  } catch (error) {
+    console.warn('Failed to update missing marks KPI:', error);
+    setKPI('kpiMissingMarks', '—');
+  }
+}
+
+// Call this to update the KPI initially
+updateMissingMarksKPI();
+
+// -------------------------------
+// Teacher Submissions: Check teachers who have submitted exam and SBA marks
+// -------------------------------
+async function checkTeacherSubmissions(classFilter = '', term = '', year = '') {
+  try {
+    // Get all teachers
+    const { data: teachers, error: teacherError } = await supabaseClient
+      .from('teachers')
+      .select('id, name, subject, assigned_class');
+    if (teacherError) throw teacherError;
+    if (!teachers || teachers.length === 0) {
+      return { count: 0, details: [] };
+    }
+
+    const submissions = [];
+    const subjects = ["English", "Maths", "Science", "RME", "Social Studies", "Computing", "Career Tech", "Creative Arts", "Twi"];
+
+    // Check each teacher
+    for (const teacher of teachers) {
+      const teacherSubmissions = {
+        teacher: teacher,
+        subjects: [],
+        lastSubmission: null
+      };
+
+      let hasAnySubmission = false;
+
+      // Check each subject the teacher might teach
+      for (const subject of subjects) {
+        let hasSubmitted = false;
+        let submissionCount = 0;
+
+        if (subject === 'Career Tech') {
+          // Check Career Tech submissions
+          const { data: ctResults, error: ctError } = await supabaseCareerTech
+            .from('career_tech_results')
+            .select('id, created_at, updated_at')
+            .eq('term', term)
+            .eq('year', parseInt(year));
+
+          if (!ctError && ctResults && ctResults.length > 0) {
+            hasSubmitted = true;
+            submissionCount = ctResults.length;
+            // Track the most recent submission
+            const latest = ctResults.reduce((latest, current) =>
+              new Date(current.updated_at || current.created_at) > new Date(latest.updated_at || latest.created_at) ? current : latest
+            );
+            if (!teacherSubmissions.lastSubmission ||
+                new Date(latest.updated_at || latest.created_at) > new Date(teacherSubmissions.lastSubmission)) {
+              teacherSubmissions.lastSubmission = latest.updated_at || latest.created_at;
+            }
+          }
+        } else {
+          // Check regular subject submissions
+          const query = supabaseClient
+            .from('results')
+            .select('id, created_at, updated_at')
+            .eq('subject', subject)
+            .eq('term', term)
+            .eq('year', parseInt(year));
+
+          // Filter by class if specified
+          if (classFilter) {
+            // Get students in the specified class
+            const { data: classStudents } = await supabaseClient
+              .from('students')
+              .select('id')
+              .eq('class', classFilter);
+            if (classStudents && classStudents.length > 0) {
+              const studentIds = classStudents.map(s => s.id);
+              query.in('student_id', studentIds);
+            }
+          }
+
+          const { data: results, error: resultsError } = await query;
+          if (!resultsError && results && results.length > 0) {
+            hasSubmitted = true;
+            submissionCount = results.length;
+            // Track the most recent submission
+            const latest = results.reduce((latest, current) =>
+              new Date(current.updated_at || current.created_at) > new Date(latest.updated_at || latest.created_at) ? current : latest
+            );
+            if (!teacherSubmissions.lastSubmission ||
+                new Date(latest.updated_at || latest.created_at) > new Date(teacherSubmissions.lastSubmission)) {
+              teacherSubmissions.lastSubmission = latest.updated_at || latest.created_at;
+            }
+          }
+        }
+
+        if (hasSubmitted) {
+          teacherSubmissions.subjects.push({
+            subject: subject,
+            submissionCount: submissionCount
+          });
+          hasAnySubmission = true;
+        }
+      }
+
+      // Only include teachers who have made submissions
+      if (hasAnySubmission) {
+        submissions.push(teacherSubmissions);
+      }
+    }
+
+    return {
+      count: submissions.length,
+      details: submissions
+    };
+
+  } catch (error) {
+    console.error('Error checking teacher submissions:', error);
+    throw error;
+  }
+}
+
+function wireTeacherSubmissionsUI() {
+  const tile = document.getElementById('tileTeacherSubmissions');
+  if (!tile) return;
+
+  try {
+    tile.addEventListener('click', function() {
+      // Open modal
+      try {
+        openModal('teacherSubmissionsModal');
+      } catch (e) {
+        const m = document.getElementById('teacherSubmissionsModal');
+        if (m) m.classList.remove('hidden');
+      }
+    });
+  } catch (e) {
+    console.warn('wireTeacherSubmissionsUI failed', e);
+  }
+
+  // Wire the check button
+  const checkBtn = document.getElementById('checkTeacherSubmissionsBtn');
+  if (checkBtn) {
+    checkBtn.addEventListener('click', async function() {
+      const classFilter = document.getElementById('teacherSubmissionsClass').value;
+      const term = document.getElementById('teacherSubmissionsTerm').value;
+      const year = document.getElementById('teacherSubmissionsYear').value;
+
+      if (!term || !year) {
+        alert('Please select both term and year.');
+        return;
+      }
+
+      const resultsEl = document.getElementById('teacherSubmissionsResults');
+      resultsEl.innerHTML = '<div class="muted-small">Checking teacher submissions...</div>';
+
+      try {
+        const result = await checkTeacherSubmissions(classFilter, term, year);
+
+        if (result.count === 0) {
+          resultsEl.innerHTML = '<div class="muted-small">No teacher submissions found for the selected criteria.</div>';
+        } else {
+          // Build results table
+          let html = `<h4>Found ${result.count} teacher(s) with submissions:</h4>`;
+          html += '<table style="width: 100%; border-collapse: collapse;">';
+          html += '<thead><tr style="background: #f5f5f5;"><th style="padding: 8px; border: 1px solid #ddd;">Teacher</th><th style="padding: 8px; border: 1px solid #ddd;">Subject</th><th style="padding: 8px; border: 1px solid #ddd;">Submissions</th><th style="padding: 8px; border: 1px solid #ddd;">Last Updated</th></tr></thead>';
+          html += '<tbody>';
+
+          result.details.forEach(teacherDetail => {
+            const teacher = teacherDetail.teacher;
+            const teacherName = teacher.name;
+
+            teacherDetail.subjects.forEach(subjectDetail => {
+              const lastUpdate = teacherDetail.lastSubmission ?
+                new Date(teacherDetail.lastSubmission).toLocaleDateString() : 'Unknown';
+
+              html += `<tr>
+                <td style="padding: 8px; border: 1px solid #ddd;">${teacherName}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${subjectDetail.subject}</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${subjectDetail.submissionCount} records</td>
+                <td style="padding: 8px; border: 1px solid #ddd;">${lastUpdate}</td>
+              </tr>`;
+            });
+          });
+
+          html += '</tbody></table>';
+          resultsEl.innerHTML = html;
+        }
+      } catch (error) {
+        console.error('Error checking teacher submissions:', error);
+        resultsEl.innerHTML = '<div class="muted-small" style="color: red;">Error checking teacher submissions. Please try again.</div>';
+      }
+    });
+  }
+}
+
+// Initialize teacher submissions UI when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', wireTeacherSubmissionsUI);
+} else {
+  wireTeacherSubmissionsUI();
+}
+
+// Update teacher submissions KPI (call this periodically or on page load)
+async function updateTeacherSubmissionsKPI() {
+  try {
+    // Get current term and year
+    const currentTerm = '1st Term'; // Default, could be made dynamic
+    const currentYear = new Date().getFullYear();
+
+    const result = await checkTeacherSubmissions('', currentTerm, currentYear);
+    setKPI('kpiTeacherSubmissions', result.count);
+    setKPI('kpiTeacherSubmissionsDesc', `Teachers who submitted marks`);
+  } catch (error) {
+    console.warn('Failed to update teacher submissions KPI:', error);
+    setKPI('kpiTeacherSubmissions', '—');
+  }
+}
+
+// Call this to update the KPI initially
+updateTeacherSubmissionsKPI();

@@ -558,6 +558,38 @@
 			  </div>
 			</div>
 
+			<!-- Missing Marks Tile -->
+			<div class="flip-card" id="tileMissingMarks">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="missingMarksModal">
+			      <div class="card-icon">⚠️</div>
+			      <div class="card-body"><div class="card-title">Missing Marks</div>
+			        <div id="kpiMissingMarks" class="value">—</div>
+			        <div id="kpiMissingMarksDesc" class="muted-small">Students with incomplete marks</div>
+			      </div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:missingMarksModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Missing Marks</div><div class="back-desc">Check students with missing SBA or exam marks</div></div>
+			    </div>
+			  </div>
+			</div>
+
+			<!-- Teacher Submissions Tile -->
+			<div class="flip-card" id="tileTeacherSubmissions">
+			  <div class="flip-card-inner">
+			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="teacherSubmissionsModal">
+			      <div class="card-icon">✅</div>
+			      <div class="card-body"><div class="card-title">Teacher Submissions</div>
+			        <div id="kpiTeacherSubmissions" class="value">—</div>
+			        <div id="kpiTeacherSubmissionsDesc" class="muted-small">Teachers who submitted marks</div>
+			      </div>
+			    </div>
+			    <div class="flip-card-back" data-action="modal:teacherSubmissionsModal" aria-hidden="true">
+			      <div class="body"><div class="back-title">Teacher Submissions</div><div class="back-desc">View teachers who have submitted exam and SBA marks</div></div>
+			    </div>
+			  </div>
+			</div>
+
 			<!-- Gallery Modal -->
 			<div id="galleryModal" class="modal hidden">
 			  <div class="modal-content">
@@ -595,6 +627,85 @@
 			    </div>
 			  </div>
 			</div>
+
+			<!-- Missing Marks Modal -->
+			<div id="missingMarksModal" class="modal hidden">
+			  <div class="modal-content">
+			    <div class="modal-header"><h3>Students with Missing Marks</h3></div>
+			    <div class="modal-body">
+			      <div class="form-group">
+			        <label for="missingMarksClass">Select Class:</label>
+			        <select id="missingMarksClass">
+			          <option value="">-- All Classes --</option>
+			          <option>JHS 1</option>
+			          <option>JHS 2</option>
+			          <option>JHS 3</option>
+			        </select>
+			      </div>
+			      <div class="form-group">
+			        <label for="missingMarksTerm">Select Term:</label>
+			        <select id="missingMarksTerm">
+			          <option value="">-- Select Term --</option>
+			          <option>1st Term</option>
+			          <option>2nd Term</option>
+			          <option>3rd Term</option>
+			        </select>
+			      </div>
+			      <div class="form-group">
+			        <label for="missingMarksYear">Select Year:</label>
+			        <input type="number" id="missingMarksYear" placeholder="2025" min="2020" max="2030" />
+			      </div>
+			      <div class="form-actions">
+			        <button id="checkMissingMarksBtn" class="action-btn">Check Missing Marks</button>
+			        <button type="button" class="modal-close action-btn">Close</button>
+			      </div>
+			      <hr />
+			      <div id="missingMarksResults" class="table-scroll">
+			        <!-- Results will be displayed here -->
+			      </div>
+			    </div>
+			  </div>
+			</div>
+
+			<!-- Teacher Submissions Modal -->
+			<div id="teacherSubmissionsModal" class="modal hidden">
+			  <div class="modal-content">
+			    <div class="modal-header"><h3>Teachers Who Submitted Marks</h3></div>
+			    <div class="modal-body">
+			      <div class="form-group">
+			        <label for="teacherSubmissionsClass">Select Class:</label>
+			        <select id="teacherSubmissionsClass">
+			          <option value="">-- All Classes --</option>
+			          <option>JHS 1</option>
+			          <option>JHS 2</option>
+			          <option>JHS 3</option>
+			        </select>
+			      </div>
+			      <div class="form-group">
+			        <label for="teacherSubmissionsTerm">Select Term:</label>
+			        <select id="teacherSubmissionsTerm">
+			          <option value="">-- Select Term --</option>
+			          <option>1st Term</option>
+			          <option>2nd Term</option>
+			          <option>3rd Term</option>
+			        </select>
+			      </div>
+			      <div class="form-group">
+			        <label for="teacherSubmissionsYear">Select Year:</label>
+			        <input type="number" id="teacherSubmissionsYear" placeholder="2025" min="2020" max="2030" />
+			      </div>
+			      <div class="form-actions">
+			        <button id="checkTeacherSubmissionsBtn" class="action-btn">Check Teacher Submissions</button>
+			        <button type="button" class="modal-close action-btn">Close</button>
+			      </div>
+			      <hr />
+			      <div id="teacherSubmissionsResults" class="table-scroll">
+			        <!-- Results will be displayed here -->
+			      </div>
+			    </div>
+			  </div>
+			</div>
+
 			<div class="flip-card">
 			  <div class="flip-card-inner">
 			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="eventsModal">

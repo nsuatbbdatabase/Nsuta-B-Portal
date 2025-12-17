@@ -340,7 +340,7 @@ async function loadReportForStudent() {
   tbody.innerHTML = "";
   let totalScore = 0;
   const subjects = [
-    "English", "Mathematics", "Science", "RME",
+    "English", "Maths", "Science", "RME",
     "Social Studies", "Computing", "Career Tech",
     "Creative Arts", "Twi"
   ];

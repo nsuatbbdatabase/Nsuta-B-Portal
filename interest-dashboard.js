@@ -384,6 +384,10 @@ function generateConductOptions(selected) {
 async function upsertProfile(studentId) {
   const term = getValueByIds('termFilter','term');
   const year = getValueByIds('yearFilter','year');
+  if (!term) {
+    try { notify('Please select a term before saving.', 'warning'); } catch (e) {}
+    return;
+  }
   const inputs = document.querySelectorAll(`[data-student="${studentId}"]`);
   // Ensure we provide a non-null attendance_total to satisfy DB constraints.
   // Fetch latest attendance total days from school_dates as the canonical source.
@@ -472,7 +476,7 @@ async function upsertProfile(studentId) {
   const { error } = await supabaseClient
     .from('profiles')
     .upsert([payload], {
-      onConflict: ['student_id', 'term', 'year']
+      onConflict: ['student_id', 'term']
     });
 
   if (error) {
@@ -489,6 +493,7 @@ async function saveAllProfiles() {
   const term = getValueByIds('termFilter','term');
   const year = getValueByIds('yearFilter','year');
   if (!term) { try { notify('Please select a term before saving all.', 'warning'); } catch (e) {} return; }
+  if (!year) { try { notify('Please select a year before saving all.', 'warning'); } catch (e) {} return; }
   const tbody = document.querySelector('#profileTable tbody');
   if (!tbody) { try { notify('Profiles table not found.', 'error'); } catch (e) {} return; }
 
@@ -553,7 +558,7 @@ async function saveAllProfiles() {
     if (loader) loader.update(10);
     const { error } = await supabaseClient
       .from('profiles')
-      .upsert(payloads, { onConflict: ['student_id', 'term', 'year'] });
+      .upsert(payloads, { onConflict: ['student_id', 'term'] });
     if (error) {
       try { notify('Failed to save profiles: ' + error.message, 'error'); } catch (e) {}
     } else {

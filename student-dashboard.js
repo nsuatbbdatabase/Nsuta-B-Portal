@@ -554,10 +554,12 @@ async function loadReleasedResults() {
     } else {
       data.forEach(item => {
         const row = document.createElement('tr');
+        // Convert exam_score back from 0-50 to 0-100 for display
+        const displayExamScore = Math.round((item.exam_score / 50) * 100);
         row.innerHTML = `
           <td>${item.subject}</td>
           <td>${item.class_score}</td>
-          <td>${item.exam_score}</td>
+          <td>${displayExamScore}</td>
           <td>${(item.class_score || 0) + (item.exam_score || 0)}</td>
         `;
         table.appendChild(row);
