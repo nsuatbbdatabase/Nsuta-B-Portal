@@ -238,6 +238,21 @@ async function loadReportForStudent() {
   
   const results_final = mergedResults;
 
+  // 📦 Fetch global attendance total days from school_dates for fallback
+  let globalAttendanceTotalDays = null;
+  try {
+    const { data: schoolDatesData, error: schoolDatesError } = await supabaseClient
+      .from('school_dates')
+      .select('attendance_total_days')
+      .order('inserted_at', { ascending: false })
+      .limit(1);
+    if (!schoolDatesError && schoolDatesData && schoolDatesData.length > 0) {
+      globalAttendanceTotalDays = schoolDatesData[0].attendance_total_days;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch global attendance total days:', e);
+  }
+
   // 📦 Fetch interest/conduct/attendance
   const { data: profile, error: profileError } = await supabaseClient
     .from('profiles')
@@ -259,7 +274,8 @@ async function loadReportForStudent() {
   }
   // 📅 Attendance
   document.getElementById("totalAttendance").textContent = String(profile?.attendance_total ?? "—").toUpperCase();
-  document.getElementById("actualAttendance").textContent = String(profile?.attendance_actual ?? "—").toUpperCase();
+  // Always use the global attendance total days set by admin for actual attendance
+  document.getElementById("actualAttendance").textContent = String(globalAttendanceTotalDays ?? "—").toUpperCase();
   // 🎭 Interest & Conduct
   document.getElementById("studentInterest").textContent = String(profile?.interest ?? "—").toUpperCase();
   document.getElementById("studentConduct").textContent = String(profile?.conduct ?? "—").toUpperCase();
