@@ -741,6 +741,8 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
       #bulkPrintContainer { position: absolute; left: 0; top: 0; width: 100%; }
       /* each report should start on a new printed page */
       .print-page { page-break-after: always; }
+      /* ensure watermark is shown */
+      .watermark { display: block !important; }
     }
     /* Ensure page break works for pdf engines as well */
     .print-page { -webkit-print-color-adjust: exact; }
@@ -774,15 +776,26 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
       }
       // Clone the populated report section
       const clone = reportSection.cloneNode(true);
-      // Remove ids inside the clone to avoid duplicate-id collisions in the document
-      clone.querySelectorAll('[id]').forEach(el => {
-        el.removeAttribute('id');
+      // Wrap in a report-container div to match single print styling
+      const container = document.createElement('div');
+      container.className = 'report-container';
+      container.appendChild(clone);
+      // Remove ids inside the clone to avoid duplicate-id collisions in the document, except for spans that need styling
+      container.querySelectorAll('[id]').forEach(el => {
+        if (el.tagName.toLowerCase() !== 'span') {
+          el.removeAttribute('id');
+        }
+      });
+      // Ensure images print in color
+      container.querySelectorAll('img').forEach(img => {
+        img.style.webkitPrintColorAdjust = 'exact';
+        img.style.printColorAdjust = 'exact';
       });
       // Add a marker class for page breaks
-      clone.classList.add('print-page');
-      // Make sure the clone is visible when printed
-      clone.style.display = '';
-      bulkContainer.appendChild(clone);
+      container.classList.add('print-page');
+      // Make sure the container is visible when printed
+      container.style.display = '';
+      bulkContainer.appendChild(container);
       // Update progress text
       const progressText = document.getElementById('bulkPrintProgressText');
       if (progressText) progressText.textContent = `Preparing ${i + 1}/${students.length}`;
