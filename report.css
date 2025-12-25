@@ -20,34 +20,37 @@
   text-align: center;
 }
 #classTeacherName {
-  font-family: 'Cochocib Script Latin Pro', cursive;
-  font-size: 0.95rem;
-  font-weight: normal;
+  font-family: 'Dancing Script', 'Brush Script MT', cursive !important;
+  font-size: 2rem;
+  font-weight: bold;
   font-style: italic;
   text-align: center;
-  letter-spacing: 0.01em;
-  line-height: 0.9rem;
+  letter-spacing: 0.02em;
+  line-height: 1rem;
   margin: 0;
   padding: 0 0 0.15rem 0;
-  min-height: 0.9rem;
+  min-height: 1rem;
+  text-transform: none !important;
 }
 #headteacherName {
-  font-family: 'Cochocib Script Latin Pro', cursive;
-  font-size: 0.95rem;
-  font-weight: normal;
+  font-family: 'Dancing Script', 'Brush Script MT', cursive !important;
+  font-size: 2rem;
+  font-weight: bold;
   font-style: italic;
   text-align: center;
-  letter-spacing: 0.01em;
-  line-height: 0.9rem;
+  letter-spacing: 0.02em;
+  line-height: 1rem;
   margin: 0;
   padding: 0 0 0.15rem 0;
-  min-height: 0.9rem;
+  min-height: 1rem;
+  text-transform: none !important;
 }
 .signature-box {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
+  position: relative;
 }
 .signature-name {
   width: 100%;
@@ -60,11 +63,29 @@
 }
 .signature-line {
   min-width: 180px;
-  height: 2px;
   border-bottom: 2px solid #222;
   margin: 0 auto 0.3rem auto;
   font-size: 1.1rem;
   letter-spacing: 2px;
+  white-space: nowrap;
+}
+
+/* Underline signature text for class teacher and headteacher */
+.signature-label {
+  text-decoration: underline;
+  text-underline-position: under;
+  white-space: nowrap;
+}
+  position: relative;
+}
+#classTeacherName, #headteacherName {
+  position: absolute;
+  top: -0.45rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  padding: 0 0.5rem;
+  z-index: 1;
 }
 .signature-label {
   font-size: 0.85rem;
@@ -79,11 +100,32 @@
 }
 
 @media print {
+          .report-container {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+          }
+        .report-container {
+          margin-top: 10mm !important;
+        }
+      @page { size: A4 portrait; margin: 0; }
+    .report-container {
+      border-top: 2px solid #222 !important;
+      border-right: 2px solid #222 !important;
+      border-bottom: 0px solid #222 !important;
+      border-left: 2px solid #222 !important;
+      box-shadow: none !important;
+    }
   /* Remove default browser header/footer (page number, URL) */
   body {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  /* Hide the signature line (horizontal bar) in print preview */
+  /* Show signature line in print, but prevent wrapping and underline label */
+  .signature-line { display: block !important; border-bottom: 2px solid #222 !important; min-width: 180px !important; white-space: nowrap !important; }
+  .signature-label { text-decoration: underline !important; text-underline-position: under !important; white-space: nowrap !important; }
+  /* Fit the report to the whole sheet for print preview */
+  @page { margin: 0; size: A4 portrait; }
   @bottom-left {
     content: none;
   }
@@ -108,7 +150,7 @@
 }
 /* === Dashboard Overview Styles === */
 .dashboard-overview {
-  background: #f8fafc;
+  background: #fff;
   border-radius: 10px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.07);
   padding: 2rem 1.5rem 1.5rem 1.5rem;
@@ -132,7 +174,7 @@
 }
 .dashboard-card {
   background: #fff;
-  border: 2px solid #ffa500;
+  border: 2px solid #ff6600;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(255,165,0,0.08);
   padding: 2rem 2.5rem;
@@ -150,7 +192,7 @@
 }
 .dashboard-card:hover {
   background: #fff7e6;
-  border-color: #ff8800;
+  border-color: #ff6600;
   box-shadow: 0 4px 16px rgba(255,165,0,0.18);
 }
 .back-btn {
@@ -229,7 +271,7 @@
 }
 
 #bulkPrintBtn {
-  background-color: #ffa500;
+  background-color: #ff6600;
   color: #fff;
   border: none;
   padding: 0.6rem 1.2rem;
@@ -239,7 +281,7 @@
   transition: background-color 0.2s;
 }
 #bulkPrintBtn:hover {
-  background-color: #cc8400;
+  background-color: #ff6600cc;
 }
 /* Responsive Design for Tablets and Phones */
 @media (max-width: 900px) {
@@ -396,14 +438,19 @@ body {
   align-items: center;
 }
 
+/* nudge the photo slightly away from the report border */
+.header-right {
+  margin-right: 12px;
+}
+
 .school-logo {
   display: block;
   width: 140px;
   height: 170px;
   max-width: 140px;
   max-height: 170px;
-  margin-right: 0.7rem;
-  margin-left: 0.2rem;
+  margin-right: 0.6rem;
+  margin-left: 12px; /* move logo slightly inward from report border */
   object-fit: contain;
   background: none;
   border: none;
@@ -424,13 +471,14 @@ body {
   .report-container::before {
     content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5in;
-    height: 6in;
-    transform: translate(-50%, -50%);
+    /* Place badge near top-left of the report header for print */
+    top: 16mm;
+    left: 16mm;
+    width: 520px;
+    height: 520px;
+    transform: none;
     background: url('Badge.png') center center no-repeat;
-    background-size: contain;
+    background-size: cover; /* behave like the student photo (cover) */
     opacity: 0.08;
     pointer-events: none;
     z-index: 0;
@@ -441,8 +489,8 @@ body {
     height: 170px;
     max-width: 140px;
     max-height: 170px;
-    margin-right: 0.7rem;
-    margin-left: 0.2rem;
+    margin-right: 0.6rem !important;
+    margin-left: 12px !important;
     object-fit: contain;
     background: none;
     border: none;
@@ -460,7 +508,7 @@ body {
   transform: translate(-50%, -50%);
   background: url('Badge.png') center center no-repeat;
   background-size: contain;
-  opacity: 0.08;
+  opacity: 0.18;
   pointer-events: none;
   z-index: 0;
 }
@@ -469,13 +517,13 @@ body {
   .report-container::before {
     content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 5in;
-    height: 6in;
-    transform: translate(-50%, -50%);
+    top: 16mm;
+    left: 16mm;
+    width: 520px;
+    height: 520px;
+    transform: none;
     background: url('Badge.png') center center no-repeat;
-    background-size: contain;
+    background-size: cover;
     opacity: 0.08;
     pointer-events: none;
     z-index: 0;
@@ -522,8 +570,9 @@ body {
   height: 180px;
   object-fit: contain;
   border-radius: 8px;
-  border: 2px solid #bbb;
+  border: 2px solid #222; /* thinner border to match report */
   background: #fff;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
 }
 
 .header-center {
@@ -572,6 +621,10 @@ body {
   line-height: 1.6;
   position: relative;
   z-index: 1;
+}
+
+.student-info table {
+  border-collapse: collapse;
 }
 
 .student-info p {
@@ -695,10 +748,10 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  opacity: 0.10;
+  opacity: 0.06;
   width: 70%;
   height: 70%;
-  z-index: 9999;
+  z-index: 0;
   pointer-events: none;
 }
 .watermark img {
@@ -718,6 +771,29 @@ body {
   font-weight: bold;
   letter-spacing: 2px;
   text-align: center;
+    margin-right: 0.5rem;
+    margin-left: 12px;
+  font-size: 0.95rem;
+  color: #444;
+  font-style: normal;
+  margin-top: 0.2rem;
+  margin-bottom: 0.4rem;
+  text-align: center;
+}
+
+/* Override global uppercase rule for the address and make it bold */
+.school-address {
+  text-transform: capitalize !important; /* Capitalize each word */
+  font-weight: bold;
+}
+
+/* More specific selector to override the global uppercase rule on the report container */
+.report-header .school-address {
+  text-transform: capitalize !important;
+}
+
+@media print {
+  .report-header .school-address { text-transform: capitalize !important; font-weight: bold !important; }
 }
 .motto-under-logo {
   font-size: 1em;
@@ -746,6 +822,7 @@ body {
     border: 2px solid #222 !important;
     border-radius: 8px !important;
     box-shadow: none !important;
+    position: relative;
   }
   .report-header, .student-info, .score-table, .remarks, .report-footer {
     margin-bottom: 0.5em;
@@ -771,51 +848,152 @@ body {
   .watermark {
     display: block !important;
   }
+
+  /* Ensure student photo prints at the requested size */
+  .student-photo {
+    width: 120px !important;
+    height: 130px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
+    border-radius: 8px !important;
+    border: 2px solid #222 !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.12) !important;
+    margin-right: 12px !important;
+  }
 }
 
 /* Change all report text to block (uppercase) letters */
 .report-container, .report-container * {
   text-transform: uppercase;
 }
-.school-motto-footer {
+.motto-under-message {
   text-align: center;
-  font-size: 1.1em;
+  font-size: 1.05em;
   font-style: italic;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
+  margin-top: 0.1em;
+  margin-bottom: 0.2em;
+  position: relative;
+  top: -0.2em;
   color: #222;
   letter-spacing: 2px;
 }
 @media print {
-  .school-motto-footer {
+  .motto-under-message {
     display: block !important;
-    position: fixed;
-    bottom: 10mm;
-    left: 0;
+    position: relative;
+    bottom: auto;
+    left: auto;
     width: 100%;
     background: none;
     font-size: 1em !important;
-    margin-top: 0.5em !important;
+    margin-top: 0.2em !important;
     margin-bottom: 0.2em !important;
     color: #222 !important;
     text-align: center;
-    z-index: 9999;
+    z-index: 1;
   }
 }
 
 /* Style for filled text fields except result table */
 span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"] {
-  color: orange;
+  color: #ff6600;
   font-weight: bold;
   position: relative;
   text-align: center;
   display: block;
+  white-space: nowrap;
+  min-width: 180px;
 }
 span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"], span#vacationDate, span#reopenDate {
   display: inline-block;
   min-width: 2.5em;
-  border-bottom: 3px double orange;
+  border-bottom: 3px double #ff6600;
   margin-top: 2px;
   width: 100%;
   text-align: center;
+}
+#encouragementMessage {
+  text-transform: none;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 2px solid rgb(94, 6, 6);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #fff6f6;
+  color: rgb(9, 0, 0);
+  margin-top: 0.4rem;
+  white-space: normal;
+  word-break: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+
+/* Ensure the message prints correctly */
+@media print {
+  #encouragementMessage {
+    border: 2px solid rgb(1, 1, 1) !important;
+    background: transparent !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+
+/* Strong final print override to ensure the badge appears at required size
+   This overrides earlier conflicting rules (including any display: none). */
+/* Use an explicit DOM element for the printed badge to avoid pseudo-element
+   inconsistencies across print engines. Hide the old ::before in print. */
+.print-badge { display: none; }
+
+@media print {
+  /* hide pseudo-element to avoid doubling or conflicting sizing */
+  .report-container::before { display: none !important; }
+
+  .print-badge {
+    display: block !important;
+    position: absolute !important;
+    top: 16mm !important;
+    left: 16mm !important;
+    width: 520px !important;
+    height: 520px !important;
+    /* use an actual img tag for reliable printing */
+    background: none !important;
+    opacity: 0.08 !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    transform: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-badge-img {
+    display: block !important;
+    width: 140px !important;
+    height: 100px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
+    opacity: 0.08 !important;
+    border: none !important;
+  }
+  /* Also provide mm-based sizing to avoid DPI scaling differences */
+  @page { size: A4 portrait; margin: 9mm; }
+  .print-badge, .print-badge-img { width: 140mm !important; height: 140mm !important; }
+}
+/* Final override: ensure header-left school logo prints at full intended size */
+@media print {
+  .report-header .school-logo {
+    display: block !important;
+    width: 140px !important;
+    height: 100px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    margin-right: 0.7rem !important;
+    margin-left: 0.2rem !important;
+    box-shadow: none !important;
+  }
+  /* If some print UIs scale pages, provide an mm fallback sized proportionally */
+  .report-header .school-logo { width: 140px !important; height: 100px !important; }
 }

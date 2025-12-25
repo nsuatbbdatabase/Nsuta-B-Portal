@@ -44,8 +44,10 @@ window.addEventListener('DOMContentLoaded', populateClassDropdown);
 document.addEventListener('DOMContentLoaded', function(){
   const classEl = getElementByIds('classFilter','classSelect');
   const termEl = getElementByIds('termFilter','term');
+  const yearEl = getElementByIds('yearFilter','year');
   if (classEl) classEl.addEventListener('change', loadProfiles);
   if (termEl) termEl.addEventListener('change', loadProfiles);
+  if (yearEl) yearEl.addEventListener('input', loadProfiles);
 });
 
 // Listen for attendance updates written by the teacher dashboard and refresh
@@ -187,12 +189,13 @@ function showFloatingConfirm(message, opts = {}) {
 // 🔍 Load profiles by term/class
 async function loadProfiles() {
   const term = getValueByIds('termFilter','term');
+  const year = getValueByIds('yearFilter','year');
   const className = getValueByIds('classFilter','classSelect');
   const tbody = document.querySelector('#profileTable tbody');
   tbody.innerHTML = '';
 
-  if (!term || !className) {
-  try { notify('Please select both term and class.', 'warning'); } catch (e) { try { safeNotify('Please select both term and class.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
+  if (!term || !year || !className) {
+  try { notify('Please select term, year, and class.', 'warning'); } catch (e) { try { safeNotify('Please select term, year, and class.', 'warning'); } catch (ee) { console.error('safeNotify failed', ee); } }
     return;
   }
 
@@ -284,7 +287,8 @@ async function loadProfiles() {
   const { data: profiles, error: profileError } = await supabaseClient
     .from('profiles')
     .select('student_id, term, interest, conduct, attendance_total, attendance_actual')
-    .eq('term', term);
+    .eq('term', term)
+    .eq('year', year);
   if (profileError) {
     console.error('Failed to load profiles:', profileError.message);
     return;
@@ -388,6 +392,10 @@ async function upsertProfile(studentId) {
     try { notify('Please select a term before saving.', 'warning'); } catch (e) {}
     return;
   }
+  if (!year) {
+    try { notify('Please enter an academic year before saving.', 'warning'); } catch (e) {}
+    return;
+  }
   const inputs = document.querySelectorAll(`[data-student="${studentId}"]`);
   // Ensure we provide a non-null attendance_total to satisfy DB constraints.
   // Fetch latest attendance total days from school_dates as the canonical source.
@@ -476,7 +484,7 @@ async function upsertProfile(studentId) {
   const { error } = await supabaseClient
     .from('profiles')
     .upsert([payload], {
-      onConflict: ['student_id', 'term']
+      onConflict: ['student_id', 'term', 'year']
     });
 
   if (error) {
@@ -558,7 +566,7 @@ async function saveAllProfiles() {
     if (loader) loader.update(10);
     const { error } = await supabaseClient
       .from('profiles')
-      .upsert(payloads, { onConflict: ['student_id', 'term'] });
+      .upsert(payloads, { onConflict: ['student_id', 'term', 'year'] });
     if (error) {
       try { notify('Failed to save profiles: ' + error.message, 'error'); } catch (e) {}
     } else {

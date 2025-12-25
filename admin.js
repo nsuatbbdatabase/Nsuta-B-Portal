@@ -1350,6 +1350,28 @@ document.addEventListener('DOMContentLoaded', () => {
           try { showToast('Failed to save dates', 'error'); } catch (e) {}
           return;
         }
+
+        // Update all existing student attendance_actual values in profiles table for current term
+        // This ensures all students get the updated attendance days, not just new saves
+        try {
+          const currentTerm = '1st Term'; // Match the term used throughout the system
+          const currentYear = new Date().getFullYear();
+
+          const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update({ attendance_actual: attendance_total_days })
+            .eq('term', currentTerm)
+            .eq('year', currentYear);
+
+          if (updateError) {
+            console.warn('Failed to update existing student attendance_actual values:', updateError);
+            // Don't fail the whole operation, just log the warning
+          }
+        } catch (updateErr) {
+          console.warn('Error updating student attendance_actual values:', updateErr);
+          // Don't fail the whole operation
+        }
+
         closeModal('schoolDatesModal');
         fetchAndDisplaySchoolDates();
       } finally {

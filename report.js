@@ -86,19 +86,863 @@ function getSubjectRemark(point) {
   }
 }
 
-// 🧠 Teacher remark logic
+// 🧠 Teacher remark logic - bucketed by 100 with enriched encouragement
 function getTeacherRemark(totalScore) {
-  if (totalScore >= 800) return "IMPRESSIVE PERFORMANCE. KEEP IT UP";
-  if (totalScore >= 750) return "EXCELLENT. KEEP WORKING HARD";
-  if (totalScore >= 700) return "VERY GOOD RESULTS. BUT CAPABLE OF MAKING FURTHER PROGRESS";
-  if (totalScore >= 650) return "PROGRESSING SATISFACTORILY. CAN STILL DO BETTER";
-  if (totalScore >= 600) return "GOOD WORK. MORE ROOM FOR IMPROVEMENT";
-  if (totalScore >= 500) return "AVERAGE PERFORMANCE";
-  if (totalScore >= 450) return "MUST WORK HARD";
-  if (totalScore >= 400) return "BELOW AVERAGE. MUST BUCK UP";
-  return "BELOW AVERAGE. MUST PAY ATTENTION IN CLASS";
-}
+  // Normalize score into 100..900 range
+  const score = Math.min(Math.max(Number(totalScore) || 0, 100), 900);
 
+  // Determine the 100-step bucket (100, 200, ..., 900)
+  const bucket = Math.floor((score - 100) / 100) * 100 + 100;
+
+  // Concise teacher remarks for each 100-point bucket
+  const shortRemarks = {
+    900: "UNPARALLELED EXCELLENCE. KEEP DOMINATING",
+    800: "IMPRESSIVE PERFORMANCE. KEEP IT UP",
+    700: "VERY GOOD RESULTS. KEEP PUSHING",
+    600: "GOOD WORK. MORE ROOM FOR IMPROVEMENT",
+    500: "AVERAGE PERFORMANCE. WORK HARDER",
+    400: "BELOW AVERAGE. MUST IMPROVE",
+    300: "POOR. NEEDS CONSISTENT EFFORT",
+    200: "POOR PERFORMANCE. SEEK HELP",
+    100: "VERY POOR. IMMEDIATE ATTENTION REQUIRED",
+  };
+
+  // Return only the concise teacher remark for the bucket.
+  // (Do not append the long encouragement message here — UI expects only the remark.)
+  const short = shortRemarks[bucket] || "PLEASE WORK ON IMPROVEMENT";
+  return short;
+}
+ 
+
+function getEncouragementMessage(totalScore) {
+  // Ensure score is within valid range
+  if (totalScore < 100) totalScore = 100;
+  if (totalScore > 900) totalScore = 900;
+
+  // Array of unique personal encouragement messages for each score from 100 to 900
+  const messages = [
+    // 100-199: Personal encouragement for growth and self-discovery
+    "You are a unique individual with incredible potential. Keep discovering your strengths!", // 100
+    "Your kindness and determination make you special. Believe in your journey.", // 101
+    "You have a beautiful spirit that lights up any room. Keep shining!", // 102
+    "Your creativity and imagination are truly remarkable. Never stop dreaming.", // 103
+    "You bring joy to those around you. Your presence makes the world better.", // 104
+    "You have a heart full of compassion. Keep sharing your warmth with others.", // 105
+    "Your smile can brighten someone's day. You have that special gift.", // 106
+    "You are brave and courageous in your own way. Trust your inner strength.", // 107
+    "Your curiosity about the world shows your wonderful mind. Keep exploring!", // 108
+    "You have the power to make positive changes. Your voice matters.", // 109
+    "Your friendship and loyalty are treasures. You are truly valued.", // 110
+    "You have a gentle soul that brings peace to others. Cherish that quality.", // 111
+    "Your enthusiasm for life is contagious. Keep that spark alive!", // 112
+    "You are thoughtful and considerate. Those qualities make you special.", // 113
+    "Your ability to listen and understand others is a rare gift.", // 114
+    "You have an amazing capacity for love and care. Share it freely.", // 115
+    "Your sense of humor brings laughter to those around you. What a blessing!", // 116
+    "You are resilient and adaptable. These qualities will serve you well.", // 117
+    "Your honesty and integrity shine through. You are trustworthy.", // 118
+    "You have a beautiful mind full of wonderful ideas. Keep creating!", // 119
+    "Your patience and understanding help others feel safe. What a gift!", // 120
+    "You are kind-hearted and generous. The world needs more people like you.", // 121
+    "Your optimism and hope inspire those around you. Keep believing!", // 122
+    "You have a unique perspective that brings fresh ideas. Value your viewpoint.", // 123
+    "Your empathy for others shows your compassionate nature.", // 124
+    "You are creative and imaginative. Your ideas can change the world.", // 125
+    "Your determination to be yourself is truly admirable.", // 126
+    "Your imagination takes you to wonderful places. Keep dreaming big!", // 127
+    "Your ability to forgive and move forward shows great character.", // 128
+    "You bring comfort and peace to those who need it most.", // 129
+    "Your curiosity drives you to learn and grow. What a beautiful trait!", // 130
+    "You have a gentle strength that inspires confidence in others.", // 131
+    "Your passion for helping others makes you truly special.", // 132
+    "You are authentic and genuine. People appreciate your realness.", // 133
+    "Your ability to see beauty in small things is a precious gift.", // 134
+    "You have a heart that loves deeply and cares profoundly.", // 135
+    "Your sense of justice and fairness makes you a wonderful person.", // 136
+    "You are brave enough to be vulnerable. That's true strength.", // 137
+    "Your creativity knows no bounds. Keep expressing yourself!", // 138
+    "You have an amazing wisdom beyond your years. Trust your intuition.", // 139
+    "Your kindness creates ripples of positivity everywhere you go.", // 140
+    "You are thoughtful and reflective. These qualities enrich your life.", // 141
+    "Your enthusiasm for learning shows your love for growth.", // 142
+    "You have a beautiful soul that radiates warmth and light.", // 143
+    "Your ability to find joy in simple things is truly special.", // 144
+    "You are compassionate and understanding. You make others feel heard.", // 145
+    "Your imagination creates worlds of possibility.", // 146
+    "You have a gentle spirit that brings calm to chaotic moments.", // 147
+    "Your loyalty and faithfulness make you a true friend.", // 148
+    "You are brave in facing your fears. That's incredibly courageous.", // 149
+    "Your optimism lights the way for others. Keep shining brightly!", // 150
+    "You are building a strong foundation for your future.", // 143
+    "Each day is a chance to become better than yesterday.", // 144
+    "Your persistence will lead to extraordinary results.", // 145
+    "Believe in yourself and your unique abilities.", // 146
+    "Consistent action creates unstoppable momentum.", // 147
+    "You are developing the mindset of a champion.", // 148
+    "Challenges are opportunities in disguise.", // 149
+    "Your future holds unlimited possibilities.", // 150
+    "Success is a journey, not just a destination.", // 151
+    "You have the courage to pursue your passions.", // 152
+    "Learning builds confidence and self-esteem.", // 153
+    "Your efforts are creating positive change.", // 154
+    "Believe in the transformative power of education.", // 155
+    "You are becoming more capable with each passing day.", // 156
+    "Embrace challenges as stepping stones to success.", // 157
+    "Your dedication will inspire others around you.", // 158
+    "You have unlimited potential waiting to be unlocked.", // 159
+    "Learning is the key to personal and professional growth.", // 160
+    "Your efforts today shape your tomorrow.", // 161
+    "Stay strong and keep pushing through difficulties.", // 162
+    "You are developing valuable life skills.", // 163
+    "Believe in progress over perfection.", // 164
+    "You are creating your own path to success.", // 165
+    "Each challenge makes you stronger and wiser.", // 166
+    "Your commitment will lead to fulfilling achievements.", // 167
+    "Learning is a gift that keeps on giving.", // 168
+    "You have the power to achieve your dreams.", // 169
+    "Stay focused on your goals and aspirations.", // 170
+    "Your efforts are building a better future.", // 171
+    "Believe in your ability to create positive change.", // 172
+    "You are growing more confident every day.", // 173
+    "Challenges help you discover your inner strength.", // 174
+    "Your future self will be proud of your dedication.", // 175
+    "Learning turns ordinary moments into extraordinary opportunities.", // 176
+    "You have the resilience to overcome any setback.", // 177
+    "Develop your skills and watch your confidence soar.", // 178
+    "Each step forward brings you closer to your goals.", // 179
+    "Your persistence will be your greatest strength.", // 180
+    "Believe in the beauty of your personal journey.", // 181
+    "You are building habits that lead to success.", // 182
+    "Embrace learning as a lifelong adventure.", // 183
+    "Your efforts are creating lasting positive impact.", // 184
+    "Stay determined and keep your eyes on the prize.", // 185
+    "You have unique gifts that the world needs.", // 186
+    "Learning builds bridges to new opportunities.", // 187
+    "Your commitment will open unexpected doors.", // 188
+    "Believe in your power to shape your destiny.", // 189
+    "You are becoming the best version of yourself.", // 190
+    "Challenges are fuel for your personal growth.", // 191
+    "Your future is filled with exciting possibilities.", // 192
+    "Stay positive and trust in your abilities.", // 193
+    "You are developing the courage to face any challenge.", // 194
+    "Learning is an investment in your future happiness.", // 195
+    "Your efforts are creating waves of positive change.", // 196
+    "Believe in your unique path to success.", // 197
+    "You have the strength to achieve anything.", // 198
+    "Your dedication will lead to remarkable achievements.", // 199
+    // 200-299: Building confidence and momentum
+    "You are showing real improvement. Keep building!", // 200
+    "Believe in your growing abilities and potential.", // 201
+    "Stay encouraged as you continue your journey.", // 202
+    "Small improvements are leading to big results.", // 203
+    "You have the power to turn things around.", // 204
+    "Consistent effort creates lasting change.", // 205
+    "Your dedication is creating positive momentum.", // 206
+    "Challenges are helping you grow stronger.", // 207
+    "You are developing skills for lifelong success.", // 208
+    "Believe in your capacity for continuous growth.", // 209
+    "Each step forward builds your confidence.", // 210
+    "Your future is getting brighter every day.", // 211
+    "Success is within your reach through persistence.", // 212
+    "You are building habits of successful people.", // 213
+    "Small improvements create major breakthroughs.", // 214
+    "Your efforts are creating positive change.", // 215
+    "Believe in your vast and powerful potential.", // 216
+    "Challenges demonstrate your growing strength.", // 217
+    "You are developing exceptional skills.", // 218
+    "Consistent progress leads to extraordinary results.", // 219
+    "Your dedication opens doors to opportunities.", // 220
+    "Believe in your ability for remarkable improvement.", // 221
+    "Each day offers new chances to excel.", // 222
+    "You have the resilience to achieve anything.", // 223
+    "Your efforts are investments in success.", // 224
+    "Success builds upon itself through consistency.", // 225
+    "You are building character that lasts.", // 226
+    "Believe in the power of your consistent efforts.", // 227
+    "Challenges are fuel for your growth.", // 228
+    "Your future self will be proud of your work.", // 229
+    "Learning is transforming you positively.", // 230
+    "Your persistence will lead to great achievements.", // 231
+    "Believe in your unique journey to excellence.", // 232
+    "Each challenge is making you more capable.", // 233
+    "You are developing life-changing skills.", // 234
+    "Consistent action creates unstoppable progress.", // 235
+    "Your future holds endless possibilities.", // 236
+    "Success follows those who work steadily.", // 237
+    "You have the strength to achieve your desires.", // 238
+    "Believe in your power to create positive change.", // 239
+    "Learning builds the foundation for greatness.", // 240
+    "Your efforts are creating a legacy.", // 241
+    "Challenges help you discover your potential.", // 242
+    "You are building resilience that lasts.", // 243
+    "Believe in the beauty of your growth journey.", // 244
+    "Consistent progress leads to extraordinary achievements.", // 245
+    "Your dedication will inspire others.", // 246
+    "Success is the result of unwavering commitment.", // 247
+    "You have the courage to face any challenge.", // 248
+    "Learning is the key to unlocking potential.", // 249
+    "Your future holds unimaginable achievements.", // 250
+    "Believe in your ability to create remarkable things.", // 251
+    "Each day is an opportunity to become exceptional.", // 252
+    "You are developing the mindset of a champion.", // 253
+    "Challenges are stepping stones to greatness.", // 254
+    "Your efforts are building a bridge to success.", // 255
+    "Success comes to those who dare to dream.", // 256
+    "You have the power to shape your destiny.", // 257
+    "Believe in your unique strengths and talents.", // 258
+    "Learning turns moments into extraordinary experiences.", // 259
+    "Your persistence will be your greatest strength.", // 260
+    "Challenges are opportunities to prove your greatness.", // 261
+    "You are building confidence that lasts a lifetime.", // 262
+    "Believe in the magic of consistent improvement.", // 263
+    "Consistent action creates remarkable transformations.", // 264
+    "Your future is being crafted by your dedication.", // 265
+    "Success is the result of unwavering commitment.", // 266
+    "You have the ability to achieve the impossible.", // 267
+    "Learning is an adventure leading to discovery.", // 268
+    "Your efforts are planting seeds of success.", // 269
+    "Believe in your power to change your world.", // 270
+    "Challenges make you more resilient and strong.", // 271
+    "You are developing skills that serve you forever.", // 272
+    "Consistent progress builds unbreakable confidence.", // 273
+    "Your future holds the promise of great achievements.", // 274
+    "Success follows those who never stop believing.", // 275
+    "You have the courage to conquer any mountain.", // 276
+    "Believe in the transformative power of learning.", // 277
+    "Each effort brings you closer to your dreams.", // 278
+    "You are building character that defines success.", // 279
+    "Challenges are the catalysts for your growth.", // 280
+    "Your dedication will create lasting legacy.", // 281
+    "Believe in your capacity for remarkable achievement.", // 282
+    "Learning opens doors to infinite possibilities.", // 283
+    "Your efforts are creating a masterpiece of success.", // 284
+    "Success is the journey of continuous discovery.", // 285
+    "You have the strength of a thousand warriors.", // 286
+    "Believe in your unique path to greatness.", // 287
+    "Consistent action forges the path to excellence.", // 288
+    "Your future is illuminated by your determination.", // 289
+    "Challenges are opportunities to become unstoppable.", // 290
+    "You are developing the heart of a true champion.", // 291
+    "Believe in your power to create miracles.", // 292
+    "Learning is the spark that ignites greatness.", // 293
+    "Your persistence will move mountains.", // 294
+    "Success comes to those who dare to be different.", // 295
+    "You have the vision to see what others can't.", // 296
+    "Believe in the extraordinary power within you.", // 297
+    "Each challenge is a step towards mastery.", // 298
+    "You are building a legacy that will inspire generations.", // 299
+    // 300-399: Rising above challenges with determination
+    "You are capable of remarkable improvement. Start today!", // 300
+    "Believe in your ability to turn things around.", // 301
+    "Challenges are opportunities to show your strength.", // 302
+    "Your future success depends on your efforts now.", // 303
+    "Consistent work will transform your results.", // 304
+    "You have the power to change your performance.", // 305
+    "Dedication will lead to great achievements.", // 306
+    "Believe in your potential for excellence.", // 307
+    "Each day is a new chance to excel.", // 308
+    "Your efforts will create lasting success.", // 309
+    "Challenges build character and strength.", // 310
+    "You are developing skills for lifelong success.", // 311
+    "Believe in the power of consistent improvement.", // 312
+    "Success comes to those who never give up.", // 313
+    "Your dedication will open doors to opportunities.", // 314
+    "Learning is the key to unlocking your potential.", // 315
+    "You have the courage to face any challenge.", // 316
+    "Believe in your unique journey to greatness.", // 317
+    "Consistent effort leads to exceptional results.", // 318
+    "Your future holds unimaginable possibilities.", // 319
+    "Challenges are stepping stones to success.", // 320
+    "You are building confidence through action.", // 321
+    "Believe in your capacity for continuous growth.", // 322
+    "Each effort brings you closer to your goals.", // 323
+    "Success is the result of persistent work.", // 324
+    "You have the strength to overcome obstacles.", // 325
+    "Learning turns challenges into opportunities.", // 326
+    "Your dedication will create a bright future.", // 327
+    "Believe in the transformative power of effort.", // 328
+    "Consistent progress builds unstoppable momentum.", // 329
+    "Challenges help you discover your true strength.", // 330
+    "You are developing the habits of successful people.", // 331
+    "Believe in your power to create positive change.", // 332
+    "Each day offers new opportunities to excel.", // 333
+    "Your efforts are investments in your future.", // 334
+    "Success follows those who work steadily.", // 335
+    "You have the resilience to achieve anything.", // 336
+    "Learning builds the foundation for greatness.", // 337
+    "Believe in your unique path to excellence.", // 338
+    "Consistent action creates remarkable results.", // 339
+    "Challenges are fuel for your growth and success.", // 340
+    "You are building character that will serve you.", // 341
+    "Believe in the magic of continuous improvement.", // 342
+    "Each effort is a step towards mastery.", // 343
+    "Success is within your grasp through dedication.", // 344
+    "You have the courage to conquer challenges.", // 345
+    "Learning opens doors to endless possibilities.", // 346
+    "Your future self will thank you for your efforts.", // 347
+    "Believe in your power to shape your destiny.", // 348
+    "Consistent progress leads to extraordinary achievements.", // 349
+    "Challenges make you more capable and strong.", // 350
+    "You are developing skills that will serve you forever.", // 351
+    "Believe in the beauty of your growth journey.", // 352
+    "Each day is an opportunity to become exceptional.", // 353
+    "Your efforts are creating waves of positive change.", // 354
+    "Success comes to those who dare to dream big.", // 355
+    "You have the strength of a thousand determinations.", // 356
+    "Learning is an adventure that leads to discovery.", // 357
+    "Believe in your capacity for remarkable achievement.", // 358
+    "Consistent action forges the path to excellence.", // 359
+    "Challenges are opportunities to prove your greatness.", // 360
+    "You are building resilience that will carry you far.", // 361
+    "Believe in the extraordinary power within you.", // 362
+    "Each effort brings you closer to your dreams.", // 363
+    "Success is the journey of continuous discovery.", // 364
+    "You have the vision to see what others can't.", // 365
+    "Learning turns ordinary moments into extraordinary ones.", // 366
+    "Your persistence will move mountains.", // 367
+    "Believe in your unique strengths and talents.", // 368
+    "Consistent progress builds unbreakable confidence.", // 369
+    "Challenges help you become the best version of yourself.", // 370
+    "You are developing the heart of a true champion.", // 371
+    "Believe in your power to create miracles.", // 372
+    "Each day is a new beginning filled with possibilities.", // 373
+    "Success follows those who never stop believing.", // 374
+    "You have the courage to face any obstacle.", // 375
+    "Learning is the spark that ignites greatness.", // 376
+    "Your efforts are planting seeds of future success.", // 377
+    "Believe in the transformative power of dedication.", // 378
+    "Consistent work creates unstoppable momentum.", // 379
+    "Challenges are the catalysts for your growth.", // 380
+    "You are building a legacy of achievement.", // 381
+    "Believe in your ability to create remarkable things.", // 382
+    "Each effort brings you closer to your dreams.", // 383
+    "Success is within your grasp through persistence.", // 384
+    "You have the strength to achieve the impossible.", // 385
+    "Learning builds character and wisdom.", // 386
+    "Your future holds the promise of great things.", // 387
+    "Believe in your unique journey to excellence.", // 388
+    "Consistent progress leads to breakthroughs.", // 389
+    "Challenges are opportunities to become unstoppable.", // 390
+    "You are developing skills that will change your life.", // 391
+    "Believe in the magic of continuous improvement.", // 392
+    "Each day brings new chances to excel.", // 393
+    "Success comes to those who work steadily towards goals.", // 394
+    "You have the resilience to overcome any challenge.", // 395
+    "Learning is the key to unlocking your full potential.", // 396
+    "Your dedication will inspire others to follow.", // 397
+    "Believe in your power to shape your destiny.", // 398
+    "Consistent effort leads to exceptional results.", // 399
+    // 400-499: Building excellence through consistent growth
+    "You are on the path to greatness. Keep building!", // 400
+    "Believe in your ability to reach new heights.", // 401
+    "Consistent effort will lead to exceptional results.", // 402
+    "Your potential is vast and powerful.", // 403
+    "Each day offers new opportunities to excel.", // 404
+    "Dedication will transform your achievements.", // 405
+    "You have the strength to reach new heights.", // 406
+    "Believe in the power of continuous improvement.", // 407
+    "Success comes to those who work steadily.", // 408
+    "Your efforts are creating a bright future.", // 409
+    "Challenges are opportunities to grow stronger.", // 410
+    "You are developing skills for lifelong success.", // 411
+    "Believe in your unique journey to excellence.", // 412
+    "Consistent progress builds unstoppable momentum.", // 413
+    "Your future holds unimaginable possibilities.", // 414
+    "Learning is the key to unlocking your potential.", // 415
+    "You have the courage to face any challenge.", // 416
+    "Believe in your capacity for remarkable achievement.", // 417
+    "Each effort brings you closer to your goals.", // 418
+    "Success is the result of persistent dedication.", // 419
+    "You are building confidence through action.", // 420
+    "Believe in the transformative power of effort.", // 421
+    "Consistent work creates exceptional results.", // 422
+    "Your future self will be proud of your progress.", // 423
+    "Challenges help you discover your true strength.", // 424
+    "You are developing the habits of high achievers.", // 425
+    "Believe in your power to create positive change.", // 426
+    "Each day is an opportunity to become exceptional.", // 427
+    "Success follows those who never give up.", // 428
+    "You have the resilience to overcome obstacles.", // 429
+    "Learning turns ordinary moments into extraordinary ones.", // 430
+    "Your efforts are investments in your future.", // 431
+    "Believe in the magic of continuous improvement.", // 432
+    "Consistent progress leads to breakthroughs.", // 433
+    "Challenges are stepping stones to greatness.", // 434
+    "You are building character that will serve you lifelong.", // 435
+    "Believe in your unique strengths and talents.", // 436
+    "Each effort is a step towards mastery.", // 437
+    "Success is within your grasp through dedication.", // 438
+    "You have the courage to conquer any mountain.", // 439
+    "Learning builds the foundation for excellence.", // 440
+    "Your future holds the promise of great achievements.", // 441
+    "Believe in your ability to create remarkable things.", // 442
+    "Consistent action creates unstoppable momentum.", // 443
+    "Challenges are fuel for your growth and success.", // 444
+    "You are developing skills that will change your life.", // 445
+    "Believe in the beauty of your growth journey.", // 446
+    "Each day brings new chances to excel.", // 447
+    "Success comes to those who work steadily towards goals.", // 448
+    "You have the strength of a thousand determinations.", // 449
+    "Learning is an adventure that leads to discovery.", // 450
+    "Your efforts are creating waves of positive change.", // 451
+    "Believe in your power to shape your destiny.", // 452
+    "Consistent progress builds unbreakable confidence.", // 453
+    "Challenges help you become the best version of yourself.", // 454
+    "You are building resilience that will carry you far.", // 455
+    "Believe in the extraordinary power within you.", // 456
+    "Each challenge is a step towards mastery.", // 457
+    "Success is the journey of continuous discovery.", // 458
+    "You have the vision to see what others can't.", // 459
+    "Learning turns challenges into opportunities.", // 460
+    "Your persistence will move mountains.", // 461
+    "Believe in your unique path to greatness.", // 462
+    "Consistent effort leads to exceptional achievements.", // 463
+    "Challenges are opportunities to prove your greatness.", // 464
+    "You are developing the heart of a true champion.", // 465
+    "Believe in your power to create miracles.", // 466
+    "Each day is a new beginning filled with possibilities.", // 467
+    "Success follows those who never stop believing.", // 468
+    "You have the courage to face any obstacle.", // 469
+    "Learning is the spark that ignites greatness.", // 470
+    "Your efforts are planting seeds of future success.", // 471
+    "Believe in the transformative power of dedication.", // 472
+    "Consistent work creates remarkable transformations.", // 473
+    "Challenges are the catalysts for your growth.", // 474
+    "You are building a legacy of achievement.", // 475
+    "Believe in your ability to create remarkable things.", // 476
+    "Each effort brings you closer to your dreams.", // 477
+    "Success is within your grasp through persistence.", // 478
+    "You have the strength to achieve the impossible.", // 479
+    "Learning builds character and wisdom.", // 480
+    "Your future holds the promise of great things.", // 481
+    "Believe in your unique journey to excellence.", // 482
+    "Consistent progress leads to breakthroughs.", // 483
+    "Challenges are opportunities to become unstoppable.", // 484
+    "You are developing skills that will change your life.", // 485
+    "Believe in the magic of continuous improvement.", // 486
+    "Each day brings new chances to excel.", // 487
+    "Success comes to those who work steadily towards goals.", // 488
+    "You have the resilience to overcome any challenge.", // 489
+    "Learning is the key to unlocking your full potential.", // 490
+    "Your dedication will inspire others to follow.", // 491
+    "Believe in your power to shape your destiny.", // 492
+    "Consistent effort leads to exceptional results.", // 493
+    "Challenges help you discover your true strength.", // 494
+    "You are building confidence that will last a lifetime.", // 495
+    "Believe in the beauty of your growth journey.", // 496
+    "Each effort is a step towards mastery.", // 497
+    "Success is within your grasp through dedication.", // 498
+    "You have the courage to conquer any challenge.", // 499
+    // 500-599: Achieving excellence through dedication
+    "You are showing real promise. Keep excelling!", // 500
+    "Believe in your ability to achieve greatness.", // 501
+    "Consistent effort will lead to remarkable success.", // 502
+    "Your potential is beginning to shine brightly.", // 503
+    "Each day brings new opportunities to excel.", // 504
+    "Dedication will transform your achievements.", // 505
+    "You have the strength to reach new heights.", // 506
+    "Believe in the power of continuous improvement.", // 507
+    "Success comes to those who work steadily.", // 508
+    "Your efforts are creating a bright future.", // 509
+    "Challenges are opportunities to grow stronger.", // 510
+    "You are developing skills for lifelong success.", // 511
+    "Believe in your unique journey to excellence.", // 512
+    "Consistent progress builds unstoppable momentum.", // 513
+    "Your future holds unimaginable possibilities.", // 514
+    "Learning is the key to unlocking your potential.", // 515
+    "You have the courage to face any challenge.", // 516
+    "Believe in your capacity for remarkable achievement.", // 517
+    "Each effort brings you closer to your goals.", // 518
+    "Success is the result of persistent dedication.", // 519
+    "You are building confidence through action.", // 520
+    "Believe in the transformative power of effort.", // 521
+    "Consistent work creates exceptional results.", // 522
+    "Your future self will be proud of your progress.", // 523
+    "Challenges help you discover your true strength.", // 524
+    "You are developing the habits of high achievers.", // 525
+    "Believe in your power to create positive change.", // 526
+    "Each day is an opportunity to become exceptional.", // 527
+    "Success follows those who never give up.", // 528
+    "You have the resilience to overcome obstacles.", // 529
+    "Learning turns ordinary moments into extraordinary ones.", // 530
+    "Your efforts are investments in your future.", // 531
+    "Believe in the magic of continuous improvement.", // 532
+    "Consistent progress leads to breakthroughs.", // 533
+    "Challenges are stepping stones to greatness.", // 534
+    "You are building character that will serve you lifelong.", // 535
+    "Believe in your unique strengths and talents.", // 536
+    "Each effort is a step towards mastery.", // 537
+    "Success is within your grasp through dedication.", // 538
+    "You have the courage to conquer any mountain.", // 539
+    "Learning builds the foundation for excellence.", // 540
+    "Your future holds the promise of great achievements.", // 541
+    "Believe in your ability to create remarkable things.", // 542
+    "Consistent action creates unstoppable momentum.", // 543
+    "Challenges are fuel for your growth and success.", // 544
+    "You are developing skills that will change your life.", // 545
+    "Believe in the beauty of your growth journey.", // 546
+    "Each day brings new chances to excel.", // 547
+    "Success comes to those who work steadily towards goals.", // 548
+    "You have the strength of a thousand determinations.", // 549
+    "Learning is an adventure that leads to discovery.", // 550
+    "Your efforts are creating waves of positive change.", // 551
+    "Believe in your power to shape your destiny.", // 552
+    "Consistent progress builds unbreakable confidence.", // 553
+    "Challenges help you become the best version of yourself.", // 554
+    "You are building resilience that will carry you far.", // 555
+    "Believe in the extraordinary power within you.", // 556
+    "Each challenge is a step towards mastery.", // 557
+    "Success is the journey of continuous discovery.", // 558
+    "You have the vision to see what others can't.", // 559
+    "Learning turns challenges into opportunities.", // 560
+    "Your persistence will move mountains.", // 561
+    "Believe in your unique path to greatness.", // 562
+    "Consistent effort leads to exceptional achievements.", // 563
+    "Challenges are opportunities to prove your greatness.", // 564
+    "You are developing the heart of a true champion.", // 565
+    "Believe in your power to create miracles.", // 566
+    "Each day is a new beginning filled with possibilities.", // 567
+    "Success follows those who never stop believing.", // 568
+    "You have the courage to face any obstacle.", // 569
+    "Learning is the spark that ignites greatness.", // 570
+    "Your efforts are planting seeds of future success.", // 571
+    "Believe in the transformative power of dedication.", // 572
+    "Consistent work creates remarkable transformations.", // 573
+    "Challenges are the catalysts for your growth.", // 574
+    "You are building a legacy of achievement.", // 575
+    "Believe in your ability to create remarkable things.", // 576
+    "Each effort brings you closer to your dreams.", // 577
+    "Success is within your grasp through persistence.", // 578
+    "You have the strength to achieve the impossible.", // 579
+    "Learning builds character and wisdom.", // 580
+    "Your future holds the promise of great things.", // 581
+    "Believe in your unique journey to excellence.", // 582
+    "Consistent progress leads to breakthroughs.", // 583
+    "Challenges are opportunities to become unstoppable.", // 584
+    "You are developing skills that will change your life.", // 585
+    "Believe in the magic of continuous improvement.", // 586
+    "Each day brings new chances to excel.", // 587
+    "Success comes to those who work steadily towards goals.", // 588
+    "You have the resilience to overcome any challenge.", // 589
+    "Learning is the key to unlocking your full potential.", // 590
+    "Your dedication will inspire others to follow.", // 591
+    "Believe in your power to shape your destiny.", // 592
+    "Consistent effort leads to exceptional results.", // 593
+    "Challenges help you discover your true strength.", // 594
+    "You are building confidence that will last a lifetime.", // 595
+    "Believe in the beauty of your growth journey.", // 596
+    "Each effort is a step towards mastery.", // 597
+    "Success is within your grasp through dedication.", // 598
+    "You have the courage to conquer any challenge.", // 599
+    // 600-699: Excelling with distinction and brilliance
+    "You are achieving remarkable success. Keep shining!", // 600
+    "Believe in your exceptional abilities.", // 601
+    "Your excellence is inspiring others.", // 602
+    "You are setting the standard for greatness.", // 603
+    "Your dedication is creating legendary achievements.", // 604
+    "Success follows your exceptional efforts.", // 605
+    "You are a model of excellence and determination.", // 606
+    "Your achievements are truly remarkable.", // 607
+    "Believe in your power to achieve the extraordinary.", // 608
+    "You are building a legacy of exceptional success.", // 609
+    "Your efforts are creating waves of inspiration.", // 610
+    "Excellence is your natural state.", // 611
+    "You are demonstrating exceptional talent.", // 612
+    "Your success is a testament to your greatness.", // 613
+    "Believe in your capacity for remarkable achievement.", // 614
+    "You are achieving levels of excellence that inspire.", // 615
+    "Your dedication will lead to unprecedented success.", // 616
+    "You are a beacon of hope and excellence.", // 617
+    "Success comes naturally to your exceptional abilities.", // 618
+    "You are creating a masterpiece of achievement.", // 619
+    "Believe in your power to change the world.", // 620
+    "Your efforts are building an empire of success.", // 621
+    "Excellence flows from your exceptional character.", // 622
+    "You are achieving what others only dream of.", // 623
+    "Your success is a source of inspiration.", // 624
+    "Believe in your unique brilliance.", // 625
+    "You are setting new standards of excellence.", // 626
+    "Your dedication will be remembered forever.", // 627
+    "Success is your destiny.", // 628
+    "You are a master of your craft.", // 629
+    "Believe in your exceptional potential.", // 630
+    "Your achievements are truly exceptional.", // 631
+    "Excellence is your birthright.", // 632
+    "You are creating history with your success.", // 633
+    "Your efforts inspire greatness in others.", // 634
+    "Believe in your power to achieve the impossible.", // 635
+    "You are a force of nature in your field.", // 636
+    "Success follows your exceptional vision.", // 637
+    "You are building a legacy that will endure.", // 638
+    "Your dedication will change lives.", // 639
+    "Believe in your exceptional strength.", // 640
+    "You are achieving levels of mastery.", // 641
+    "Excellence is your constant companion.", // 642
+    "You are a symbol of what is possible.", // 643
+    "Your success is a gift to the world.", // 644
+    "Believe in your remarkable abilities.", // 645
+    "You are creating exceptional value.", // 646
+    "Success is your natural habitat.", // 647
+    "You are a champion in every sense.", // 648
+    "Your efforts will be legendary.", // 649
+    "Believe in your exceptional talents.", // 650
+    "You are achieving the extraordinary.", // 651
+    "Excellence flows through you.", // 652
+    "You are building an empire of achievement.", // 653
+    "Your success inspires generations.", // 654
+    "Believe in your power to lead.", // 655
+    "You are a master of excellence.", // 656
+    "Success is your constant reality.", // 657
+    "You are creating exceptional results.", // 658
+    "Your dedication will be remembered.", // 659
+    "Believe in your exceptional vision.", // 660
+    "You are achieving remarkable things.", // 661
+    "Excellence is your superpower.", // 662
+    "You are a beacon of success.", // 663
+    "Success follows your exceptional path.", // 664
+    "Believe in your remarkable strength.", // 665
+    "You are building exceptional character.", // 666
+    "Your achievements are inspirational.", // 667
+    "Excellence is your destiny.", // 668
+    "You are creating masterful results.", // 669
+    "Believe in your exceptional potential.", // 670
+    "You are a force for positive change.", // 671
+    "Success is your natural state.", // 672
+    "You are achieving exceptional mastery.", // 673
+    "Your efforts will change the world.", // 674
+    "Believe in your remarkable abilities.", // 675
+    "You are building a legacy of excellence.", // 676
+    "Excellence flows from your exceptional self.", // 677
+    "You are a symbol of exceptional success.", // 678
+    "Success is your constant companion.", // 679
+    "Believe in your exceptional strength.", // 680
+    "You are creating exceptional history.", // 681
+    "Your efforts will be remembered forever.", // 682
+    "Excellence is your superpower.", // 683
+    "You are achieving the remarkable.", // 684
+    "Believe in your power to inspire.", // 685
+    "You are a master of success.", // 686
+    "Success follows your exceptional leadership.", // 687
+    "You are building exceptional results.", // 688
+    "Your efforts will be remembered forever.", // 689
+    "Believe in your exceptional strength.", // 690
+    "You are achieving exceptional things.", // 691
+    "Excellence is your constant reality.", // 692
+    "You are a champion of exceptional achievement.", // 693
+    "Success is your natural habitat.", // 694
+    "Believe in your remarkable vision.", // 695
+    "You are creating exceptional legacy.", // 696
+    "Your dedication will change lives.", // 697
+    "Excellence flows through your exceptional being.", // 698
+    "You are achieving levels of exceptional success.", // 699
+    // 700-799: Achieving legendary excellence and mastery
+    "You are a legend in the making. Continue dominating!", // 700
+    "Believe in your exceptional greatness.", // 701
+    "Your excellence is changing the world.", // 702
+    "You are a master of exceptional achievement.", // 703
+    "Success is your constant reality.", // 704
+    "You are building an empire of excellence.", // 705
+    "Believe in your remarkable power.", // 706
+    "You are a force of nature in excellence.", // 707
+    "Your achievements will be legendary.", // 708
+    "Excellence is your superpower.", // 709
+    "You are creating exceptional history.", // 710
+    "Believe in your exceptional vision.", // 711
+    "You are a champion of remarkable success.", // 712
+    "Success follows your exceptional leadership.", // 713
+    "You are building exceptional legacy.", // 714
+    "Your dedication will be remembered forever.", // 715
+    "Believe in your exceptional strength.", // 716
+    "You are achieving exceptional mastery.", // 717
+    "Excellence flows through your exceptional being.", // 718
+    "You are a symbol of exceptional greatness.", // 719
+    "Success is your natural habitat.", // 720
+    "Believe in your remarkable abilities.", // 721
+    "You are creating exceptional value.", // 722
+    "Your efforts will change the world.", // 723
+    "Excellence is your constant companion.", // 724
+    "You are a master of exceptional success.", // 725
+    "Believe in your exceptional talents.", // 726
+    "You are achieving the remarkable.", // 727
+    "Success is your destiny.", // 728
+    "You are building exceptional character.", // 729
+    "Your achievements are truly exceptional.", // 730
+    "Believe in your power to inspire.", // 731
+    "You are a force for exceptional change.", // 732
+    "Excellence is your birthright.", // 733
+    "You are creating exceptional results.", // 734
+    "Success follows your exceptional path.", // 735
+    "Believe in your exceptional potential.", // 736
+    "You are achieving exceptional things.", // 737
+    "Your dedication will be legendary.", // 738
+    "Excellence is your constant reality.", // 739
+    "You are a champion of exceptional achievement.", // 740
+    "Believe in your remarkable vision.", // 741
+    "You are building exceptional legacy.", // 742
+    "Success is your natural state.", // 743
+    "You are a master of exceptional excellence.", // 744
+    "Believe in your exceptional greatness.", // 745
+    "You are achieving exceptional mastery.", // 746
+    "Excellence flows from your exceptional self.", // 747
+    "You are a symbol of exceptional success.", // 748
+    "Success is your constant companion.", // 749
+    "Believe in your exceptional strength.", // 750
+    "You are creating exceptional history.", // 751
+    "Your efforts will be remembered forever.", // 752
+    "Excellence is your superpower.", // 753
+    "You are a force of nature in exceptional achievement.", // 754
+    "Believe in your remarkable power.", // 755
+    "You are building exceptional empire.", // 756
+    "Success follows your exceptional leadership.", // 757
+    "You are a champion of exceptional success.", // 758
+    "Your dedication will change lives.", // 759
+    "Believe in your exceptional talents.", // 760
+    "You are achieving exceptional things.", // 761
+    "Excellence is your constant reality.", // 762
+    "You are creating exceptional value.", // 763
+    "Success is your natural habitat.", // 764
+    "Believe in your exceptional abilities.", // 765
+    "You are a master of exceptional achievement.", // 766
+    "Your efforts will be legendary.", // 767
+    "Excellence flows through your exceptional being.", // 768
+    "You are building exceptional character.", // 769
+    "Believe in your remarkable vision.", // 770
+    "You are achieving exceptional mastery.", // 771
+    "Success is your destiny.", // 772
+    "You are a symbol of exceptional greatness.", // 773
+    "Your achievements are truly exceptional.", // 774
+    "Believe in your power to inspire.", // 775
+    "You are a force for exceptional change.", // 776
+    "Excellence is your birthright.", // 777
+    "You are creating exceptional results.", // 778
+    "Success follows your exceptional path.", // 779
+    "Believe in your exceptional potential.", // 780
+    "You are achieving exceptional things.", // 781
+    "Your dedication will be legendary.", // 782
+    "Excellence is your constant reality.", // 783
+    "You are a champion of exceptional achievement.", // 784
+    "Believe in your remarkable vision.", // 785
+    "You are building exceptional legacy.", // 786
+    "Success is your natural state.", // 787
+    "You are a master of exceptional excellence.", // 788
+    "Believe in your exceptional greatness.", // 789
+    "You are achieving exceptional mastery.", // 790
+    "Excellence flows from your exceptional self.", // 791
+    "You are a symbol of exceptional success.", // 792
+    "Success is your constant companion.", // 793
+    "Believe in your exceptional strength.", // 794
+    "You are creating exceptional history.", // 795
+    "Your efforts will be remembered forever.", // 796
+    "Excellence is your superpower.", // 797
+    "You are a force of nature in exceptional achievement.", // 798
+    "Believe in your remarkable power.", // 799
+    // 800-900: Achieving legendary status and unparalleled excellence
+    "You are a legendary figure. Continue your dominance!", // 800
+    "Believe in your exceptional greatness.", // 801
+    "Your excellence is changing the world.", // 802
+    "You are a master of exceptional achievement.", // 803
+    "Success is your constant reality.", // 804
+    "You are building an empire of excellence.", // 805
+    "Believe in your remarkable power.", // 806
+    "You are a force of nature in excellence.", // 807
+    "Your achievements will be legendary.", // 808
+    "Excellence is your superpower.", // 809
+    "You are creating exceptional history.", // 810
+    "Believe in your exceptional vision.", // 811
+    "You are a champion of remarkable success.", // 812
+    "Success follows your exceptional leadership.", // 813
+    "You are building exceptional legacy.", // 814
+    "Your dedication will be remembered forever.", // 815
+    "Believe in your exceptional strength.", // 816
+    "You are achieving exceptional mastery.", // 817
+    "Excellence flows through your exceptional being.", // 818
+    "You are a symbol of exceptional greatness.", // 819
+    "Success is your natural habitat.", // 820
+    "Believe in your remarkable abilities.", // 821
+    "You are creating exceptional value.", // 822
+    "Your efforts will change the world.", // 823
+    "Excellence is your constant companion.", // 824
+    "You are a master of exceptional success.", // 825
+    "Believe in your exceptional talents.", // 826
+    "You are achieving the remarkable.", // 827
+    "Success is your destiny.", // 828
+    "You are building exceptional character.", // 829
+    "Your achievements are truly exceptional.", // 830
+    "Believe in your power to inspire.", // 831
+    "You are a force for exceptional change.", // 832
+    "Excellence is your birthright.", // 833
+    "You are creating exceptional results.", // 834
+    "Success follows your exceptional path.", // 835
+    "Believe in your exceptional potential.", // 836
+    "You are achieving exceptional things.", // 837
+    "Your dedication will be legendary.", // 838
+    "Excellence is your constant reality.", // 839
+    "You are a champion of exceptional achievement.", // 840
+    "Believe in your remarkable vision.", // 841
+    "You are building exceptional legacy.", // 842
+    "Success is your natural state.", // 843
+    "You are a master of exceptional excellence.", // 844
+    "Believe in your exceptional greatness.", // 845
+    "You are achieving exceptional mastery.", // 846
+    "Excellence flows from your exceptional self.", // 847
+    "You are a symbol of exceptional success.", // 848
+    "Success is your constant companion.", // 849
+    "Believe in your exceptional strength.", // 850
+    "You are creating exceptional history.", // 851
+    "Your efforts will be remembered forever.", // 852
+    "Excellence is your superpower.", // 853
+    "You are a force of nature in exceptional achievement.", // 854
+    "Believe in your remarkable power.", // 855
+    "You are building exceptional empire.", // 856
+    "Success follows your exceptional leadership.", // 857
+    "You are a champion of exceptional success.", // 858
+    "Your dedication will change lives.", // 859
+    "Believe in your exceptional talents.", // 860
+    "You are achieving exceptional things.", // 861
+    "Excellence is your constant reality.", // 862
+    "You are creating exceptional value.", // 863
+    "Success is your natural habitat.", // 864
+    "Believe in your exceptional abilities.", // 865
+    "You are a master of exceptional achievement.", // 866
+    "Your efforts will be legendary.", // 867
+    "Excellence flows through your exceptional being.", // 868
+    "You are building exceptional character.", // 869
+    "Believe in your remarkable vision.", // 870
+    "You are achieving exceptional mastery.", // 871
+    "Success is your destiny.", // 872
+    "You are a symbol of exceptional greatness.", // 873
+    "Your achievements are truly exceptional.", // 874
+    "Believe in your power to inspire.", // 875
+    "You are a force for exceptional change.", // 876
+    "Excellence is your birthright.", // 877
+    "You are creating exceptional results.", // 878
+    "Success follows your exceptional path.", // 879
+    "Believe in your exceptional potential.", // 880
+    "You are achieving exceptional things.", // 881
+    "Your dedication will be legendary.", // 882
+    "Excellence is your constant reality.", // 883
+    "You are a champion of exceptional achievement.", // 884
+    "Believe in your remarkable vision.", // 885
+    "You are building exceptional legacy.", // 886
+    "Success is your natural state.", // 887
+    "You are a master of exceptional excellence.", // 888
+    "Believe in your exceptional greatness.", // 889
+    "You are achieving exceptional mastery.", // 890
+    "Excellence flows from your exceptional self.", // 891
+    "You are a symbol of exceptional success.", // 892
+    "Success is your constant companion.", // 893
+    "Believe in your exceptional strength.", // 894
+    "You are creating exceptional history.", // 895
+    "Your efforts will be remembered forever.", // 896
+    "Excellence is your superpower.", // 897
+    "You are a force of nature in exceptional achievement.", // 898
+    "Believe in your remarkable power.", // 899
+    "You are achieving unparalleled excellence. Keep dominating!", // 900
+  ];
+
+  // Return the message for the specific score (adjusted for 0-based array indexing)
+  return messages[totalScore - 100] || "Keep believing in yourself and your potential.";
+}
 // 🔽 Populate student dropdown
 // Only use the filtered version below:
 // async function populateStudentDropdown(filterClass) { ... }
@@ -124,6 +968,22 @@ async function loadReportForStudent() {
   let position = '—';
   let totalInClass = '—';
   let subjectPositions = {};
+  // Helper: convert numeric position to ordinal string (1 -> 1st, 2 -> 2nd, 3 -> 3rd, etc.)
+  function toOrdinal(pos) {
+    if (pos === null || pos === undefined) return String(pos ?? '—');
+    if (typeof pos === 'string') {
+      const trimmed = pos.trim();
+      if (trimmed === '—' || trimmed === '') return trimmed || '—';
+    }
+    const n = Number(pos);
+    if (Number.isNaN(n)) return String(pos);
+    const j = n % 10, k = n % 100;
+    if (k >= 11 && k <= 13) return `${n}th`;
+    if (j === 1) return `${n}st`;
+    if (j === 2) return `${n}nd`;
+    if (j === 3) return `${n}rd`;
+    return `${n}th`;
+  }
   const select = document.getElementById('studentSelect');
   const studentId = select.value;
   const studentClass = select.options[select.selectedIndex]?.dataset.class || '';
@@ -259,6 +1119,7 @@ async function loadReportForStudent() {
     .select('interest, conduct, attendance_total, attendance_actual')
     .eq('student_id', studentId)
     .eq('term', term)
+    .eq('year', year)
     .single();
 
   if (profileError || !profile) console.warn('No interest/conduct data found.');
@@ -268,7 +1129,7 @@ async function loadReportForStudent() {
   document.getElementById("studentClass").textContent = studentClass.toUpperCase();
   document.getElementById("term").textContent = term.toUpperCase();
   document.getElementById("year").textContent = year.toUpperCase();
-  document.getElementById("position").textContent = String(position).toUpperCase();
+  document.getElementById("position").textContent = toOrdinal(position).toUpperCase();
   if (document.getElementById("totalInClass")) {
     document.getElementById("totalInClass").textContent = String(totalInClass).toUpperCase();
   }
@@ -293,7 +1154,7 @@ async function loadReportForStudent() {
     
     const { data: teachers, error: teachersError } = await supabaseClient
       .from('teachers')
-      .select('name, responsibility')
+      .select('name, responsibility, gender')
       .eq('class_teacher_class_main', studentClass)
       .eq('class_teacher_subclass', studentSubclass)
       .order('responsibility', { ascending: false })
@@ -301,13 +1162,17 @@ async function loadReportForStudent() {
     console.log('DEBUG: Teacher query result:', { teachers, teachersError, studentClass, studentSubclass });
     if (!teachersError && teachers && teachers.length > 0) {
       const classTeacherName = (teachers[0].name || '').trim();
+      const teacherGender = (teachers[0].gender || 'male').toLowerCase(); // normalize to lowercase
       // Capitalize first letter of each word
       const capitalizedName = classTeacherName.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-      console.log('DEBUG: Setting teacher name:', capitalizedName, 'for class:', studentClass, 'subclass:', studentSubclass);
+      console.log('DEBUG: Setting teacher name:', capitalizedName, 'gender:', teacherGender, 'for class:', studentClass, 'subclass:', studentSubclass);
       document.getElementById("classTeacherName").textContent = capitalizedName;
+      // Store gender for later use
+      window.currentTeacherGender = teacherGender;
     } else {
       console.log('DEBUG: No teacher found or error:', teachersError?.message, 'for class:', studentClass, 'subclass:', studentSubclass);
       document.getElementById("classTeacherName").textContent = "—";
+      window.currentTeacherGender = 'male'; // default
     }
   } catch (e) {
     console.debug('Could not fetch class teacher:', e);
@@ -503,7 +1368,19 @@ async function loadReportForStudent() {
 
   document.getElementById("totalScore").textContent = totalScore;
   document.getElementById("averageScore").textContent = average;
-  document.getElementById("teacherRemark").textContent = teacherRemark;
+  document.getElementById("teacherRemark").textContent = getTeacherRemark(totalScore);
+
+  // Generate encouragement message based on performance
+  const encouragement = getEncouragementMessage(totalScore);
+  const teacherNameFull = document.getElementById("classTeacherName").textContent || '';
+  const title = window.currentTeacherGender === 'male' ? 'Sir.' : 'Mad.';
+  // Use only the first name for the student and teacher in the message
+  const studentFirstName = (studentName || '').trim().split(/\s+/)[0] || '';
+  const studentNameForMessage = studentFirstName.toLowerCase().replace(/^[a-z]/, c => c.toUpperCase());
+  const teacherFirstName = (teacherNameFull || '').trim().split(/\s+/)[0] || '';
+  const teacherNameForMessage = teacherFirstName.replace(/^[a-z]/, c => c.toUpperCase());
+  document.getElementById("encouragementMessage").textContent = `${studentNameForMessage}, ${encouragement} - ${title} ${teacherNameForMessage}`;
+  console.log('DEBUG: Encouragement message set:', document.getElementById("encouragementMessage").textContent);
 
   // Get selected term and year for filtering
   // const term = document.getElementById('termFilter')?.value || '';
@@ -511,7 +1388,9 @@ async function loadReportForStudent() {
 
   // Fetch all results for this class, subject, term, year to calculate position
   // Declare position and totalInClass before use
+  console.log('DEBUG: Position calc - studentClass:', studentClass, 'term:', term, 'year:', year, 'studentId:', studentId);
   if (studentClass && term && year) {
+    console.log('DEBUG: Entering position calculation block');
     // Get all students in the class for class size
     const { data: studentsInClass2, error: studentsError2 } = await supabaseClient
       .from('students')
@@ -525,31 +1404,83 @@ async function loadReportForStudent() {
     let classStudentIds2 = Array.isArray(studentsInClass2) ? studentsInClass2.map(s => s.id) : [];
     const { data: classResults, error: classError } = await supabaseClient
       .from('results')
-      .select('student_id, class_score, exam_score')
+      .select('student_id, subject, class_score, exam_score')
+      .in('student_id', classStudentIds2)
+      .eq('term', term)
+      .eq('year', year)
+      .neq('subject', 'Career Tech'); // exclude Career Tech from main results
+  console.debug('DEBUG: classResults (excluding Career Tech):', classResults, 'Error:', classError);
+    
+    // Also fetch Career Tech results for position calculation
+    const { data: careerTechResultsClass, error: careerTechErrorClass } = await supabaseCareerTech
+      .from('career_tech_results')
+      .select('student_id, area, class_score, exam_score')
       .in('student_id', classStudentIds2)
       .eq('term', term)
       .eq('year', year);
-  console.debug('DEBUG: classResults:', classResults, 'Error:', classError);
-    if (!classError && Array.isArray(classResults)) {
+    
+    if ((!classError || !careerTechErrorClass) && (Array.isArray(classResults) || Array.isArray(careerTechResultsClass))) {
       // Calculate accumulated total score for each student
       const scores = {};
-      classResults.forEach(r => {
-        if (!scores[r.student_id]) scores[r.student_id] = 0;
-        scores[r.student_id] += (r.class_score || 0) + (r.exam_score || 0);
+      
+      // Initialize scores for all students in the class (including those with no results)
+      classStudentIds2.forEach(studentId => {
+        scores[studentId] = 0;
       });
+      
+      // Add regular subject scores
+      if (Array.isArray(classResults)) {
+        classResults.forEach(r => {
+          if (!scores[r.student_id]) scores[r.student_id] = 0;
+          scores[r.student_id] += (r.class_score || 0) + (r.exam_score || 0);
+        });
+      }
+      
+      // Add adjusted Career Tech scores
+      if (Array.isArray(careerTechResultsClass)) {
+        const careerTechScores = {};
+        careerTechResultsClass.forEach(r => {
+          if (!careerTechScores[r.student_id]) careerTechScores[r.student_id] = [];
+          careerTechScores[r.student_id].push((r.class_score || 0) + (r.exam_score || 0));
+        });
+        Object.entries(careerTechScores).forEach(([studentId, marksArray]) => {
+          const adjusted = marksArray.reduce((sum, mark) => sum + Math.round(mark / 2), 0);
+          if (!scores[studentId]) scores[studentId] = 0;
+          scores[studentId] += adjusted;
+        });
+      }
+      
       // Sort scores descending by accumulated total
       const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-      // Find position of current student
-      const found = sorted.findIndex(([id]) => id === studentId);
-      position = found >= 0 ? (found + 1) : '—';
+      console.log('DEBUG: Scores object:', scores);
+      console.log('DEBUG: Sorted scores:', sorted);
+      console.log('DEBUG: Looking for studentId:', studentId, 'in classStudentIds2:', classStudentIds2);
+      // Find position of current student with proper tie handling
+      position = '—';
+      let displayPos = 0;
+      let lastScore = null;
+      for (let i = 0; i < sorted.length; i++) {
+        const [id, score] = sorted[i];
+        if (lastScore === null || score !== lastScore) {
+          displayPos = i + 1;
+        }
+        if (id === studentId) {
+          position = displayPos;
+          console.log('DEBUG: Found student at position:', position);
+          break;
+        }
+        lastScore = score;
+      }
   console.debug('DEBUG: Overall position:', position, 'Sorted:', sorted);
     }
   }
-  document.getElementById("position").textContent = position;
+  console.log('DEBUG: Setting position to DOM:', position);
+  document.getElementById("position").textContent = toOrdinal(position).toUpperCase();
   // Add total number of students in class to report card
   if (document.getElementById("totalInClass")) {
     document.getElementById("totalInClass").textContent = totalInClass;
   }
+  console.log('DEBUG: Final values - position:', position, 'totalInClass:', totalInClass);
 }
 
 // 🚀 Initialize
@@ -661,8 +1592,8 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
     return;
   }
   // Build a hidden print container and append one populated report per student
-  const reportSection = document.getElementById('reportSection');
-  if (!reportSection) {
+  const reportContainer = document.querySelector('.report-container');
+  if (!reportContainer) {
     notify('Report template not found on the page.', 'error');
     return;
   }
@@ -741,8 +1672,28 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
       #bulkPrintContainer { position: absolute; left: 0; top: 0; width: 100%; }
       /* each report should start on a new printed page */
       .print-page { page-break-after: always; }
-      /* ensure watermark is shown */
-      .watermark { display: block !important; }
+
+      /* Print page size and margins to match single print */
+      @page { size: A4 portrait; margin: 9mm; }
+
+      /* Ensure report border is visible and fits page */
+      .report-container {
+        border-top: 2px solid #222 !important;
+        border-right: 2px solid #222 !important;
+        border-bottom: 2px solid #222 !important;
+        border-left: 2px solid #222 !important;
+        box-shadow: none !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+      }
+
+      /* --- ORANGE THEME OVERRIDES FOR BULK PRINT --- */
+      .dashboard-card { border: 2px solid #ff6600 !important; }
+      .dashboard-card:hover { border-color: #ff6600 !important; }
+      #bulkPrintBtn, .back-btn { background-color: #ff6600 !important; }
+      #bulkPrintBtn:hover { background-color: #ff6600cc !important; }
+      span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"] { color: #ff6600 !important; }
+      span[id^="studentName"], span[id^="studentClass"], span[id^="term"], span[id^="year"], span[id^="totalInClass"], span[id^="position"], span[id^="totalAttendance"], span[id^="actualAttendance"], span[id^="promotedTo"], span[id^="studentInterest"], span[id^="studentConduct"], span[id^="teacherRemark"], span#vacationDate, span#reopenDate { border-bottom: 3px double #ff6600 !important; }
     }
     /* Ensure page break works for pdf engines as well */
     .print-page { -webkit-print-color-adjust: exact; }
@@ -753,49 +1704,77 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
   const originalStudentSelectValue = document.getElementById('studentSelect')?.value || '';
 
   // Populate the bulk container: for each student, load their report into the visible template, clone it, sanitize ids, and append to container
+  // Move helpers outside the loop so they're always defined
+  async function waitForImagesLoaded(container, timeout = 8000) {
+    const imgs = Array.from(container.querySelectorAll('img'));
+    if (imgs.length === 0) return;
+    const promises = imgs.map(img => new Promise(res => {
+      if (img.complete && img.naturalWidth !== 0) return res();
+      const onDone = () => { cleanup(); res(); };
+      const onError = () => { cleanup(); res(); };
+      function cleanup() { img.removeEventListener('load', onDone); img.removeEventListener('error', onError); }
+      img.addEventListener('load', onDone);
+      img.addEventListener('error', onError);
+    }));
+    await Promise.race([Promise.all(promises), new Promise(res => setTimeout(res, timeout))]);
+    await new Promise(r => setTimeout(r, 50));
+  }
+  async function waitForReportDataStable(container, timeout = 6000, stableMs = 250) {
+    const keys = [
+      '#studentName', '#studentClass', '#term', '#year', '#position',
+      '#totalScore', '#averageScore', '#teacherRemark', '#classTeacherName', '#encouragementMessage'
+    ];
+    const start = Date.now();
+    let last = '';
+    let lastChange = Date.now();
+    while (Date.now() - start < timeout) {
+      const snapshot = keys.map(sel => {
+        const el = container.querySelector(sel);
+        return el ? (el.textContent || '') : '';
+      }).join('|');
+      if (snapshot !== last) {
+        last = snapshot;
+        lastChange = Date.now();
+      }
+      if (Date.now() - lastChange >= stableMs) return;
+      await new Promise(r => setTimeout(r, 80));
+    }
+  }
+
   for (let i = 0; i < students.length; i++) {
     const student = students[i];
     try {
-      // check for cancellation before starting work for this student
       if (window.__bulkPrintController?.cancelled) {
         const pt = document.getElementById('bulkPrintProgressText');
         if (pt) pt.textContent = `Canceled at ${i}/${students.length}`;
         break;
       }
-      // Set the global student selector so loadReportForStudent() populates the template
       if (document.getElementById('studentSelect')) {
         document.getElementById('studentSelect').value = student.id;
       }
-      // Wait for the template to be populated
       await loadReportForStudent();
+      await waitForImagesLoaded(document.querySelector('.report-container'));
       // check for cancellation after population
       if (window.__bulkPrintController?.cancelled) {
         const pt = document.getElementById('bulkPrintProgressText');
         if (pt) pt.textContent = `Canceled at ${i + 1}/${students.length}`;
         break;
       }
-      // Clone the populated report section
-      const clone = reportSection.cloneNode(true);
-      // Wrap in a report-container div to match single print styling
-      const container = document.createElement('div');
-      container.className = 'report-container';
-      container.appendChild(clone);
-      // Remove ids inside the clone to avoid duplicate-id collisions in the document, except for spans that need styling
-      container.querySelectorAll('[id]').forEach(el => {
-        if (el.tagName.toLowerCase() !== 'span') {
-          el.removeAttribute('id');
-        }
-      });
-      // Ensure images print in color
-      container.querySelectorAll('img').forEach(img => {
-        img.style.webkitPrintColorAdjust = 'exact';
-        img.style.printColorAdjust = 'exact';
-      });
+      // Clone the populated report container
+      const clone = reportContainer.cloneNode(true);
+      // NOTE: Do not append a cloned `.watermark` element here — the report's
+      // CSS uses `::before` and a single `.watermark` element to render a
+      // faded background image. Appending an additional watermark caused a
+      // visible, opaque image to appear on top of the report during bulk
+      // printing. Keep clones clean and rely on CSS for the watermark.
+      // Preserve element ids in the clone so CSS rules that target IDs still apply when printing.
+      // Removing ids caused printed reports to lose styling (appeared black-and-white or missing styles).
+      // If duplicate-id concerns arise later, consider namespacing or removing only problematic IDs.
       // Add a marker class for page breaks
-      container.classList.add('print-page');
-      // Make sure the container is visible when printed
-      container.style.display = '';
-      bulkContainer.appendChild(container);
+      clone.classList.add('print-page');
+      // Make sure the clone is visible when printed
+      clone.style.display = '';
+      bulkContainer.appendChild(clone);
       // Update progress text
       const progressText = document.getElementById('bulkPrintProgressText');
       if (progressText) progressText.textContent = `Preparing ${i + 1}/${students.length}`;
@@ -809,7 +1788,34 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
   // Restore the original student selection in the form
   if (document.getElementById('studentSelect')) {
     document.getElementById('studentSelect').value = originalStudentSelectValue;
-    // Optionally reload the original student's report if needed
+      await waitForImagesLoaded(document.querySelector('.report-container'));
+      // Wait until key report fields stop changing (stable DOM) to ensure DB-driven
+      // details have finished rendering before cloning. This prevents partial
+      // records in the bulk print when some async updates complete slightly later.
+      async function waitForReportDataStable(container, timeout = 6000, stableMs = 250) {
+        const keys = [
+          '#studentName', '#studentClass', '#term', '#year', '#position',
+          '#totalScore', '#averageScore', '#teacherRemark', '#classTeacherName', '#encouragementMessage'
+        ];
+        const start = Date.now();
+        let last = '';
+        let lastChange = Date.now();
+        while (Date.now() - start < timeout) {
+          const snapshot = keys.map(sel => {
+            const el = container.querySelector(sel);
+            return el ? (el.textContent || '') : '';
+          }).join('|');
+          if (snapshot !== last) {
+            last = snapshot;
+            lastChange = Date.now();
+          }
+          if (Date.now() - lastChange >= stableMs) return; // stable
+          // small delay before re-checking
+          await new Promise(r => setTimeout(r, 80));
+        }
+        // timeout reached — proceed anyway
+      }
+      await waitForReportDataStable(document.querySelector('.report-container'));
     if (originalStudentSelectValue) await loadReportForStudent();
   }
 

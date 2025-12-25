@@ -16,6 +16,7 @@
 </head>
 <body>
   <div class="report-container">
+  <div class="print-badge" aria-hidden="true"><img src="Badge.png" alt="badge" class="print-badge-img"/></div>
   <button id="backToReportBtn" class="back-btn" style="display:none;">Back to Report Dashboard</button>
     <!-- 📋 Dashboard Overview Section -->
     <div id="dashboardOverview" class="dashboard-overview">
@@ -66,7 +67,8 @@
         <div class="header-center">
           <div class="ges-header">GHANA EDUCATION SERVICE</div>
           <div class="school-name">Nkawkaw Nsuta M/A 'B' Basic School</div>
-          <h2>End of Term Report</h2>
+            <div class="school-address">Post Office Box 304, Nkawkaw-Nsuta, Nkawkaw, Kwahu- West, Eastern Region Ghana</div>
+            <h2>End of Term Report</h2>
         </div>
         <div class="header-right">
           <img id="studentPhoto" src="" alt="Student Photo" class="student-photo" />
@@ -163,7 +165,7 @@
             <div class="signature-box">
               <div id="classTeacherName" class="signature-name">—</div>
               <div class="signature-line"></div>
-              <div class="signature-label">Signature</div>
+    
             </div>
           </div>
           <div class="approval-col">
@@ -171,15 +173,15 @@
             <div class="signature-box">
               <div id="headteacherName" class="signature-name">Agyepong Augustine</div>
               <div class="signature-line"></div>
-              <div class="signature-label">Signature</div>
             </div>
           </div>
         </div>
+        <p><span id="encouragementMessage">—</span></p>
+        <div id="mottoUnderMessage" class="motto-under-message">KNOWLEDGE IS POWER</div>
       </section>
 
       <!-- 🖨️ Print Button -->
       <footer class="report-footer">
-        <div class="school-motto-footer">"KNOWLEDGE IS POWER"</div>
         <button onclick="window.print()">Print Report</button>
         <button id="sendResultBtn" type="button">Send Result to Student</button>
       </footer>

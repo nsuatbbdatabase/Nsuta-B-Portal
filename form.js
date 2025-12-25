@@ -85,9 +85,10 @@ async function loadStudentProfileForUpdate() {
   await setAttendanceActualFromSchoolDates();
   const studentId = document.getElementById('studentSelect').value;
   const term = document.getElementById('term').value.trim();
-  if (!studentId || !term) return;
+  const year = document.getElementById('year')?.value?.trim() || '';
+  if (!studentId || !term || !year) return;
   // Fetch profile with retry/backoff to handle eventual consistency or transient DB visibility
-  const { profile, error } = await fetchProfileWithRetry(studentId, term, 5);
+  const { profile, error } = await fetchProfileWithRetry(studentId, term, year, 5);
   if (profile) {
     document.getElementById('attendanceTotal').value = profile.attendance_total || '';
     document.getElementById('interest').value = profile.interest || '';
@@ -100,7 +101,7 @@ async function loadStudentProfileForUpdate() {
 }
 
 // Helper: fetch profile with exponential backoff when no result is immediately available
-async function fetchProfileWithRetry(studentId, term, maxAttempts = 5) {
+async function fetchProfileWithRetry(studentId, term, year, maxAttempts = 5) {
   const baseDelay = 200; // ms
   let attempt = 0;
   while (attempt < maxAttempts) {
@@ -111,6 +112,7 @@ async function fetchProfileWithRetry(studentId, term, maxAttempts = 5) {
         .select('interest, conduct, attendance_total, attendance_actual')
         .eq('student_id', studentId)
         .eq('term', term)
+        .eq('year', year)
         .maybeSingle();
       // If we have a profile or a server error, return immediately
       if (error) return { profile: null, error };

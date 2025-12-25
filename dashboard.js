@@ -2532,18 +2532,43 @@ function initLiveBreakdowns(mode = 'slideshow', intervalMs = 8000) {
     const { data: students, error: studErr } = await q;
     if (studErr || !Array.isArray(students) || students.length === 0) return { error: 'No students in class' };
     const ids = students.map(s => s.id);
-    // Fetch results for these students for given term/year
-  let query = supabaseClient.from('results').select('student_id,class_score,exam_score').in('student_id', ids);
+    // Fetch results for these students for given term/year (excluding Career Tech from main results)
+    let query = supabaseClient.from('results').select('student_id,class_score,exam_score').in('student_id', ids);
     if (term) query = query.eq('term', term);
     if (year) query = query.eq('year', year);
+    query = query.neq('subject', 'Career Tech'); // Exclude Career Tech from main results
     const { data: rows, error: resErr } = await query;
     if (resErr) return { error: resErr.message || String(resErr) };
+
+    // Fetch Career Tech results separately
+    const { data: careerTechRows, error: ctErr } = await supabaseCareerTech
+      .from('career_tech_results')
+      .select('student_id,area,class_score,exam_score')
+      .in('student_id', ids)
+      .eq('term', term)
+      .eq('year', year);
+
     // Sum totals per student
     const totals = {};
+    // Add regular subject scores
     rows.forEach(r => {
       if (!r || !r.student_id) return;
       totals[r.student_id] = (totals[r.student_id] || 0) + (Number(r.class_score) || 0) + (Number(r.exam_score) || 0);
     });
+
+    // Add adjusted Career Tech scores (each area contributes half of its total marks, rounded)
+    if (!ctErr && Array.isArray(careerTechRows)) {
+      const careerTechScores = {};
+      careerTechRows.forEach(r => {
+        if (!careerTechScores[r.student_id]) careerTechScores[r.student_id] = [];
+        careerTechScores[r.student_id].push((r.class_score || 0) + (r.exam_score || 0));
+      });
+      Object.entries(careerTechScores).forEach(([studentId, marksArray]) => {
+        const adjusted = marksArray.reduce((sum, mark) => sum + Math.round(mark / 2), 0);
+        totals[studentId] = (totals[studentId] || 0) + adjusted;
+      });
+    }
+
     // Build ranking array
     const ranking = students.map(s => ({ id: s.id, name: ((s.first_name||'') + ' ' + (s.surname||'')).trim(), register_id: s.register_id || '', score: totals[s.id] || 0 }));
     ranking.sort((a,b)=> b.score - a.score);
