@@ -56,6 +56,7 @@
       </select>
       <input id="yearFilter" placeholder="Academic Year (e.g. 2025/2026)">
       <button id="bulkPrintBtn" type="button">Print Selected Class Reports</button>
+      <button id="bulkDownloadBtn" type="button">Download Selected Class Reports (CSV)</button>
     </div>
 
     <div id="reportSection">
@@ -68,7 +69,8 @@
           <div class="ges-header">GHANA EDUCATION SERVICE</div>
           <div class="school-name">Nkawkaw Nsuta M/A 'B' Basic School</div>
             <div class="school-address">Post Office Box 304, Nkawkaw-Nsuta, Nkawkaw, Kwahu- West, Eastern Region Ghana</div>
-            <h2>End of Term Report</h2>
+              <div class="motto-header-dup">KNOWLEDGE IS POWER</div>
+              <h2>End of Term Report</h2>
         </div>
         <div class="header-right">
           <img id="studentPhoto" src="" alt="Student Photo" class="student-photo" />
@@ -196,6 +198,7 @@
   <!-- Supabase + Logic -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="toasts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
   <script src="report.js"></script>
 </body>
 </html>

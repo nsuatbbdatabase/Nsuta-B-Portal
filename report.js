@@ -1334,6 +1334,13 @@ async function loadReportForStudent() {
         <td>${String(subjectPosition).toUpperCase()}</td>
       `;
       tbody.appendChild(row);
+      // If the subject cell text is 'Social Studies', prevent wrapping
+      try {
+        const firstTd = row.querySelector('td:first-child');
+        if (firstTd && (firstTd.textContent || '').trim().toLowerCase() === 'social studies') {
+          firstTd.classList.add('no-wrap-subject');
+        }
+      } catch (e) { /* ignore */ }
       totalScore += total;
     } else {
       const entry = results_final.find(r => r.subject === subject);
@@ -1355,6 +1362,13 @@ async function loadReportForStudent() {
         <td>${String(subjectPosition).toUpperCase()}</td>
       `;
       tbody.appendChild(row);
+      // Prevent wrapping for Social Studies subject specifically
+      try {
+        const firstTd = row.querySelector('td:first-child');
+        if (firstTd && (firstTd.textContent || '').trim().toLowerCase() === 'social studies') {
+          firstTd.classList.add('no-wrap-subject');
+        }
+      } catch (e) { /* ignore */ }
     }
   });
 
@@ -1846,6 +1860,194 @@ document.getElementById('bulkPrintBtn').onclick = async function() {
     try { printStyle.remove(); } catch (e) { /* ignore */ }
     try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) { /* ignore */ }
     try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) { /* ignore */ }
+    try { delete window.__bulkPrintController; } catch (e) {}
+  }, 1000);
+};
+
+// Bulk download as PDF (one-click export for selected class)
+document.getElementById('bulkDownloadBtn').onclick = async function() {
+  const selectedClass = document.getElementById('classSelect').value;
+  const term = document.getElementById('termFilter')?.value || '';
+  const year = document.getElementById('yearFilter')?.value || '';
+  if (!selectedClass) { try { notify('Please select a class first.', 'warning'); } catch (e) { console.warn(e); } return; }
+  if (!term || !year) { try { notify('Please select term and year first.', 'warning'); } catch (e) { console.warn(e); } return; }
+
+  const { data: students, error } = await supabaseClient.from('students').select('id').eq('class', selectedClass);
+  if (error || !students || students.length === 0) {
+    try { notify('No students found for this class.', 'warning'); } catch (e) { console.warn(e); }
+    return;
+  }
+
+  // Progress overlay (reuse style from bulk print)
+  let progressOverlay = document.getElementById('bulkPrintProgress');
+  if (progressOverlay) progressOverlay.remove();
+  progressOverlay = document.createElement('div');
+  progressOverlay.id = 'bulkPrintProgress';
+  progressOverlay.style.position = 'fixed';
+  progressOverlay.style.left = '0';
+  progressOverlay.style.top = '0';
+  progressOverlay.style.right = '0';
+  progressOverlay.style.bottom = '0';
+  progressOverlay.style.background = 'rgba(0,0,0,0.55)';
+  progressOverlay.style.display = 'flex';
+  progressOverlay.style.alignItems = 'center';
+  progressOverlay.style.justifyContent = 'center';
+  progressOverlay.style.zIndex = '99999';
+  progressOverlay.innerHTML = `
+    <div style="background:#fff;padding:20px 18px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:12px;min-width:300px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="bulk-spinner" style="width:28px;height:28px;border:4px solid #ddd;border-top-color:#2b7cff;border-radius:50%;animation:spin 1s linear infinite"></div>
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;">
+          <div id="bulkPrintProgressText">Preparing 0/${students.length}</div>
+          <div style="font-size:12px;color:#666;margin-top:6px;">Generating PDF — please wait...</div>
+        </div>
+      </div>
+      <div style="width:100%;display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button id="bulkPrintCancelBtn" style="background:#f44336;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
+      </div>
+    </div>
+  `;
+  if (!document.getElementById('bulkPrintProgressStyle')) {
+    const pf = document.createElement('style');
+    pf.id = 'bulkPrintProgressStyle';
+    pf.textContent = `@keyframes spin {from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
+    document.head.appendChild(pf);
+  }
+  document.body.appendChild(progressOverlay);
+  window.__bulkPrintController = { cancelled: false };
+  const cancelBtn = document.getElementById('bulkPrintCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      window.__bulkPrintController.cancelled = true;
+      const pt = document.getElementById('bulkPrintProgressText');
+      if (pt) pt.textContent = `Cancelling...`;
+      cancelBtn.disabled = true;
+      cancelBtn.style.opacity = '0.6';
+    };
+  }
+
+  // Create or reset bulk container
+  let bulkContainer = document.getElementById('bulkPrintContainer');
+  if (bulkContainer) bulkContainer.remove();
+  bulkContainer = document.createElement('div');
+  bulkContainer.id = 'bulkPrintContainer';
+  bulkContainer.style.display = 'none';
+  document.body.appendChild(bulkContainer);
+
+  // Print style to ensure proper page breaks in the PDF
+  const styleId = 'bulk-print-style';
+  let printStyle = document.getElementById(styleId);
+  if (printStyle) printStyle.remove();
+  printStyle = document.createElement('style');
+  printStyle.id = styleId;
+  printStyle.textContent = `
+    @media print {
+      body * { visibility: hidden !important; }
+      #bulkPrintContainer, #bulkPrintContainer * { visibility: visible !important; }
+      #bulkPrintContainer { position: absolute; left: 0; top: 0; width: 100%; }
+      .print-page { page-break-after: always; }
+      @page { size: A4 portrait; margin: 9mm; }
+    }
+    .print-page { -webkit-print-color-adjust: exact; }
+  `;
+  document.head.appendChild(printStyle);
+
+  // Helper to wait for images
+  async function waitForImagesLoaded(container, timeout = 8000) {
+    const imgs = Array.from(container.querySelectorAll('img'));
+    if (imgs.length === 0) return;
+    const promises = imgs.map(img => new Promise(res => {
+      if (img.complete && img.naturalWidth !== 0) return res();
+      const onDone = () => { cleanup(); res(); };
+      const onError = () => { cleanup(); res(); };
+      function cleanup() { img.removeEventListener('load', onDone); img.removeEventListener('error', onError); }
+      img.addEventListener('load', onDone);
+      img.addEventListener('error', onError);
+    }));
+    await Promise.race([Promise.all(promises), new Promise(res => setTimeout(res, timeout))]);
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  // Helper to wait until key report fields stabilize
+  async function waitForReportDataStable(container, timeout = 6000, stableMs = 250) {
+    const keys = ['#studentName', '#studentClass', '#term', '#year', '#position', '#totalScore', '#averageScore', '#teacherRemark', '#classTeacherName', '#encouragementMessage'];
+    const start = Date.now();
+    let last = '';
+    let lastChange = Date.now();
+    while (Date.now() - start < timeout) {
+      const snapshot = keys.map(sel => { const el = container.querySelector(sel); return el ? (el.textContent || '') : ''; }).join('|');
+      if (snapshot !== last) { last = snapshot; lastChange = Date.now(); }
+      if (Date.now() - lastChange >= stableMs) return;
+      await new Promise(r => setTimeout(r, 80));
+    }
+  }
+
+  // Populate clones for each student
+  const reportContainer = document.querySelector('.report-container');
+  if (!reportContainer) { try { notify('Report template not found on the page.', 'error'); } catch (e) { console.warn(e); } return; }
+
+  const originalStudentSelectValue = document.getElementById('studentSelect')?.value || '';
+  for (let i = 0; i < students.length; i++) {
+    const student = students[i];
+    try {
+      if (window.__bulkPrintController?.cancelled) {
+        const pt = document.getElementById('bulkPrintProgressText'); if (pt) pt.textContent = `Canceled at ${i}/${students.length}`; break;
+      }
+      if (document.getElementById('studentSelect')) document.getElementById('studentSelect').value = student.id;
+      await loadReportForStudent();
+      await waitForImagesLoaded(document.querySelector('.report-container'));
+      if (window.__bulkPrintController?.cancelled) { const pt = document.getElementById('bulkPrintProgressText'); if (pt) pt.textContent = `Canceled at ${i + 1}/${students.length}`; break; }
+      const clone = reportContainer.cloneNode(true);
+      clone.classList.add('print-page');
+      clone.style.display = '';
+      bulkContainer.appendChild(clone);
+      const progressText = document.getElementById('bulkPrintProgressText'); if (progressText) progressText.textContent = `Preparing ${i + 1}/${students.length}`;
+    } catch (e) {
+      console.error('Failed to build report for student', student, e);
+      const progressText = document.getElementById('bulkPrintProgressText'); if (progressText) progressText.textContent = `Error at ${i + 1}/${students.length}`;
+    }
+  }
+
+  if (document.getElementById('studentSelect')) {
+    document.getElementById('studentSelect').value = originalStudentSelectValue;
+    await waitForImagesLoaded(document.querySelector('.report-container'));
+    await waitForReportDataStable(document.querySelector('.report-container'));
+    if (originalStudentSelectValue) await loadReportForStudent();
+  }
+
+  // Show container and generate PDF via html2pdf
+  bulkContainer.style.display = 'block';
+  if (window.__bulkPrintController?.cancelled) {
+    try { bulkContainer.remove(); } catch (e) {}
+    try { printStyle.remove(); } catch (e) {}
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) {}
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) {}
+    try { delete window.__bulkPrintController; } catch (e) {}
+    return;
+  }
+
+  const filename = `${selectedClass}_reports_${term.replace(/\s+/g,'_')}_${year.replace(/\//g,'-')}.pdf`;
+  try {
+    await html2pdf().set({
+      margin: [9,9,9,9],
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], before: '.print-page' }
+    }).from(bulkContainer).save();
+    try { notify('PDF downloaded successfully.', 'success'); } catch (e) { console.log('PDF saved'); }
+  } catch (e) {
+    console.error('html2pdf error', e);
+    try { notify('Failed to generate PDF.', 'error'); } catch (ee) { console.warn(ee); }
+  }
+
+  // Cleanup
+  setTimeout(() => {
+    try { bulkContainer.remove(); } catch (e) {}
+    try { printStyle.remove(); } catch (e) {}
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) {}
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) {}
     try { delete window.__bulkPrintController; } catch (e) {}
   }, 1000);
 };
