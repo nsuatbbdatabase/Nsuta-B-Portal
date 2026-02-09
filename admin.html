@@ -302,10 +302,11 @@
 	</style>
 
 	<style>
-	  /* Hide the large in-page management sections since these are now exposed via modal tiles */
-	  .grid-sections > section#students,
-	  .grid-sections > section#teachers,
-	  .grid-sections > section#admins {
+	/* Hide the large in-page management sections since these are now exposed via modal tiles */
+	.grid-sections > section#students,
+	.grid-sections > section#teachers,
+	.grid-sections > section#admins,
+	.grid-sections > section#jhs3MockExams {
 	    display: none !important;
 	    visibility: hidden !important;
 	    height: 0 !important;
@@ -341,6 +342,8 @@
 					<button id="btnAddTeacher" class="action-btn ml-sm">+ Teacher</button>
 									<button id="btnAddAdmin" class="action-btn ml-sm btn-admin">+ Admin</button>
 									<button id="btnCheckRegisters" class="action-btn ml-sm">Check Registers</button>
+							<!-- Rank JHS3 Mock exams -->
+							<button id="btnRankJHS3Mock" class="action-btn ml-sm" title="Rank JHS 3 Mock Exams">Rank JHS 3 (Mock)</button>
 					<!-- Logout control for admin users -->
 					<button id="btnLogout" class="action-btn ml-sm btn-logout">Logout</button>
 				</div>
@@ -384,6 +387,33 @@
 			    </div>
 			  </div>
 			</div>
+
+				<!-- JHS 3 Mock Ranking Modal -->
+				<div id="rankJhs3Modal" class="modal hidden" aria-hidden="true">
+				  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="rankJhs3Title">
+				    <div class="modal-header"><h3 id="rankJhs3Title">JHS 3 Mock Exam Rankings</h3><span class="close" onclick="closeModal('rankJhs3Modal')">&times;</span></div>
+				    <div class="modal-body">
+				      <div class="form-group">
+				        <label for="rankTerm">Term</label>
+				        <select id="rankTerm">
+				          <option value="">-- Select Term --</option>
+				          <option>1st Term</option>
+				          <option>2nd Term</option>
+				          <option>3rd Term</option>
+				        </select>
+				      </div>
+				      <div class="form-group">
+				        <label for="rankYear">Academic Year</label>
+				        <input id="rankYear" type="text" placeholder="e.g., 2025" />
+				      </div>
+				      <div style="margin-top:0.6rem; display:flex; gap:0.6rem; justify-content:flex-start;">
+				        <button id="loadRankingsBtn" class="action-btn">Load Rankings</button>
+				        <button id="printRankingsBtn" class="action-btn">Print</button>
+				      </div>
+				      <div style="margin-top:0.8rem;" id="rankingsContainer">Loading...</div>
+				    </div>
+				  </div>
+				</div>
 		</div>
 
 		<section class="tiles-grid" aria-label="Quick KPI tiles">
@@ -494,10 +524,25 @@
 					</div>
 				</div>
 			</div>
+
+			<!-- JHS 3 Mock Exams flip tile -->
+						<!-- Mock tile relocated to overview cards to declutter dashboard -->
 		</section>
 
 		<!-- Dashboard Overview Cards (live tiles) -->
 		<div id="dashboardOverviewCards" class="dashboard-cards" aria-label="Overview tiles">
+				  <!-- Mock Exams tile (moved here to keep dashboard tidy) -->
+				  <div class="flip-card" id="tileJHS3MockExams">
+					<div class="flip-card-inner">
+						<div class="flip-card-front dashboard-card" tabindex="0" role="button" data-action="link:mock-entry.html">
+							<div class="card-icon">📝</div>
+							<div class="card-body"><div class="card-title">Mock Exams</div><div id="kpiJHS3MockExams" class="value">—</div><div class="card-desc">Manage JHS 3 mock exam marks</div></div>
+						</div>
+						<div class="flip-card-back" data-action="link:mock-entry.html" aria-hidden="true">
+							<div class="body"><div class="back-title">Mock Exams</div><div class="back-desc">Open Mock Exams entry panel</div></div>
+						</div>
+					</div>
+				  </div>
 			<div class="flip-card">
 			  <div class="flip-card-inner">
 			    <div class="flip-card-front dashboard-card" tabindex="0" data-modal="schoolDatesModal">
@@ -879,6 +924,8 @@
 						</div>
 					</div>
 				</section>
+
+				<!-- JHS 3 Mock Exams section consolidated below to avoid duplicate sections -->
 
 			<aside>
 				<div class="section-card">
@@ -1281,9 +1328,69 @@
 		  </div>
 		</div>
 
-		<div id="modalBackdrop" class="modal-backdrop" aria-hidden="true"></div>
+				<section id="jhs3MockExams" class="dashboard-section" style="display:none;" aria-hidden="true">
+					<div class="section-card section-card--spaced">
+						<h2>JHS 3 Mock Exams Entry</h2>
+						<p class="muted-small">Enter mock exam marks for JHS 3 students. These marks are separate from regular term marks and are used for mock exam reports.</p>
+						
+						<div class="filters filters--start">
+							<div class="form-group-inline">
+								<label for="jhs3ExamType">Exam Type:</label>
+								<select id="jhs3ExamType">
+									<option value="">-- Select Type --</option>
+									<option value="Mock">Mock Exam</option>
+									<option value="End of Term">End of Term</option>
+								</select>
+							</div>
+							<div class="form-group-inline">
+								<label for="mockTermSelect">Term:</label>
+								<select id="mockTermSelect">
+									<option value="">-- Select Term --</option>
+									<option value="1st Term">1st Term</option>
+									<option value="2nd Term">2nd Term</option>
+									<option value="3rd Term">3rd Term</option>
+								</select>
+							</div>
+							<div class="form-group-inline">
+								<label for="mockYearInput">Academic Year:</label>
+								<input id="mockYearInput" placeholder="e.g. 2025/2026" />
+							</div>
+							<input type="file" id="jhs3CsvInput" accept=".csv" style="display: none;" />
+							<button id="importJHS3StudentsBtn" class="action-btn action-btn--secondary">Import JHS 3 Students</button>
+							<button id="loadMockStudentsBtn" class="action-btn">Load Students</button>
+							<button id="saveMockMarksBtn" class="action-btn action-btn--primary" disabled>Save All Marks</button>
+						</div>
 
-	</main>
+						<div id="mockExamsContainer" class="table-scroll" style="display: none;">
+							<table id="mockExamsTable" class="list-table" aria-label="JHS 3 Mock Exam Marks">
+								<thead>
+									<tr>
+										<th>Student Name</th>
+										<th>Index Number</th>
+										<th>English</th>
+										<th>Maths</th>
+										<th>Science</th>
+										<th>Social Studies</th>
+										<th>RME</th>
+										<th>Computing</th>
+										<th>Creative Arts</th>
+										<th>Career Tech</th>
+										<th>Twi</th>
+										<th>Total</th>
+										<th>Actions</th>
+									</tr>
+								</thead>
+								<tbody id="mockExamsTableBody">
+									<!-- Dynamic rows will be added here -->
+								</tbody>
+							</table>
+						</div>
+
+						<div id="mockExamsMessage" class="muted-small">
+							Select term and academic year, then click "Load Students" to begin entering mock exam marks.
+						</div>
+					</div>
+				</section>
 
 		<!-- Supabase client (UMD) - required by dashboard.js which expects `supabase` global -->
 		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>

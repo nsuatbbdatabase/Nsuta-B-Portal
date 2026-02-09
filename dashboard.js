@@ -145,7 +145,10 @@ async function loadAdmins() {
   });
 }
 // 📋 Load Teachers
-document.getElementById('adminForm').addEventListener('submit', async (e) => {
+// Attach admin form handler only if the element exists (some pages omit the admin form)
+const _adminFormEl = document.getElementById('adminForm');
+if (_adminFormEl) {
+  _adminFormEl.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
   // Confirm before saving admin
@@ -195,7 +198,8 @@ document.getElementById('adminForm').addEventListener('submit', async (e) => {
     try { if (submitBtn) submitBtn.disabled = false; } catch(e){}
     form._saving = false;
   }
-});
+  });
+}
 async function loadTeachers() {
   let data, error;
   try {
@@ -931,23 +935,31 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   const studentForm = document.getElementById('studentForm');
   if (studentForm) {
-    studentForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      // Delegate to central create/update routine defined in admin.js to avoid duplicate insert/update
-      if (typeof createStudentFromForm === 'function') {
-        try {
-          await createStudentFromForm(form);
-        } catch (err) {
-          console.error('createStudentFromForm error:', err);
-          notify('Failed to save student. See console for details.', 'error');
+    if (!window.location.pathname || window.location.pathname.indexOf('student-list.html') === -1) {
+      studentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        try { notify('Student management moved to Student Directory. Redirecting...', 'info'); } catch (err) {}
+        window.location.href = 'student-list.html';
+      });
+    } else {
+      studentForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        // Delegate to central create/update routine defined in admin.js to avoid duplicate insert/update
+        if (typeof createStudentFromForm === 'function') {
+          try {
+            await createStudentFromForm(form);
+          } catch (err) {
+            console.error('createStudentFromForm error:', err);
+            notify('Failed to save student. See console for details.', 'error');
+          }
+        } else {
+          // Fallback: if createStudentFromForm not available, log and notify
+          console.warn('createStudentFromForm not found; student save skipped.');
+          notify('Student save routine not available. Please reload the page.', 'error');
         }
-      } else {
-        // Fallback: if createStudentFromForm not available, log and notify
-        console.warn('createStudentFromForm not found; student save skipped.');
-        notify('Student save routine not available. Please reload the page.', 'error');
-      }
-    });
+      });
+    }
   }
 });
 
@@ -1334,7 +1346,10 @@ window.showSelectedStudent = function showSelectedStudent() {
 }
 
 // 👨‍🏫 Teacher Registration
-document.getElementById('teacherForm').addEventListener('submit', async (e) => {
+// Attach teacher form handler only if the element exists (some pages omit the teacher form)
+const _teacherFormEl = document.getElementById('teacherForm');
+if (_teacherFormEl) {
+  _teacherFormEl.addEventListener('submit', async (e) => {
   e.preventDefault();
   const form = e.target;
   // NOTE: Supabase schema includes `class_teacher_class_main` and `class_teacher_subclass`.
@@ -1505,7 +1520,8 @@ document.getElementById('teacherForm').addEventListener('submit', async (e) => {
   form.reset();
   document.getElementById('assignmentRowsContainer').innerHTML = '';
   closeModal('teacherModal');
-});
+  });
+}
 
 // 📝 Edit Teacher
 async function editTeacher(id) {
@@ -1701,17 +1717,31 @@ async function editTeacher(id) {
 }
 // 🔄 Initial Load (deferred until DOM is ready)
 function _nsuta_initialLoad() {
-  try { if (typeof loadStudents === 'function') loadStudents(); } catch (e) { console.warn('initialLoad: loadStudents failed', e); }
-  try { if (typeof loadTeachers === 'function') loadTeachers(); } catch (e) { console.warn('initialLoad: loadTeachers failed', e); }
-  try { if (typeof loadAdmins === 'function') loadAdmins(); } catch (e) { console.warn('initialLoad: loadAdmins failed', e); }
-  // Start live breakdowns (default: push)
-  try { initLiveBreakdowns('push', 9000); } catch (e) { /* ignore if init not available */ }
-  // Populate the Last Attendance tile on initial load
-  try { updateLastAttendanceTile().catch(() => {}); } catch (e) {}
-  // Wire the Last Attendance tile click handler
-  try { wireLastAttendanceUI(); } catch (e) {}
-  // Initialize header slideshow (random gallery pictures)
-  try { if (typeof setupHeaderSlideshow === 'function') setupHeaderSlideshow(8); } catch (e) { console.warn('initialLoad: setupHeaderSlideshow failed', e); }
+  const run = async () => {
+    try { if (typeof loadStudents === 'function') loadStudents(); } catch (e) { console.warn('initialLoad: loadStudents failed', e); }
+    try { if (typeof loadTeachers === 'function') loadTeachers(); } catch (e) { console.warn('initialLoad: loadTeachers failed', e); }
+    try { if (typeof loadAdmins === 'function') loadAdmins(); } catch (e) { console.warn('initialLoad: loadAdmins failed', e); }
+    // Start live breakdowns (default: push)
+    try { initLiveBreakdowns('push', 9000); } catch (e) { /* ignore if init not available */ }
+    // Populate the Last Attendance tile on initial load
+    try { updateLastAttendanceTile().catch(() => {}); } catch (e) {}
+    // Wire the Last Attendance tile click handler
+    try { wireLastAttendanceUI(); } catch (e) {}
+    // Initialize header slideshow (random gallery pictures)
+    try { if (typeof setupHeaderSlideshow === 'function') setupHeaderSlideshow(8); } catch (e) { console.warn('initialLoad: setupHeaderSlideshow failed', e); }
+  };
+
+  if (typeof window.waitForSupabase === 'function') {
+    window.waitForSupabase().then(() => run()).catch((err) => {
+      console.warn('dashboard: supabase not ready, proceeding anyway:', err && err.message ? err.message : err);
+      run();
+    });
+  } else if (window.supabaseClient) {
+    run();
+  } else {
+    document.addEventListener('supabase:ready', function(){ run(); }, { once: true });
+    setTimeout(() => { if (!window.supabaseClient) run(); }, 1500);
+  }
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _nsuta_initialLoad);
@@ -2951,7 +2981,7 @@ async function checkTeacherSubmissions(classFilter = '', term = '', year = '') {
     // Get all teachers
     const { data: teachers, error: teacherError } = await supabaseClient
       .from('teachers')
-      .select('id, name, subject, assigned_class');
+      .select('id, name, subjects, class_teacher_class, class_teacher_class_main, class_teacher_subclass');
     if (teacherError) throw teacherError;
     if (!teachers || teachers.length === 0) {
       return { count: 0, details: [] };
@@ -3133,11 +3163,12 @@ function wireTeacherSubmissionsUI() {
 }
 
 // Initialize teacher submissions UI when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', wireTeacherSubmissionsUI);
-} else {
-  wireTeacherSubmissionsUI();
-}
+// DISABLED: Teachers do not submit mock exams - only admin enters scores
+// if (document.readyState === 'loading') {
+//   document.addEventListener('DOMContentLoaded', wireTeacherSubmissionsUI);
+// } else {
+//   wireTeacherSubmissionsUI();
+// }
 
 // Update teacher submissions KPI (call this periodically or on page load)
 async function updateTeacherSubmissionsKPI() {
@@ -3156,4 +3187,5 @@ async function updateTeacherSubmissionsKPI() {
 }
 
 // Call this to update the KPI initially
-updateTeacherSubmissionsKPI();
+// DISABLED: Teachers do not submit mock exams - only admin enters scores
+// updateTeacherSubmissionsKPI();

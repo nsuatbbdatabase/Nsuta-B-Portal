@@ -112,6 +112,47 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ✓ Main Supabase: All original data intact (students, teachers, results, etc.)
 ✓ Career Tech Supabase: Career Tech marks isolated and protected
+✓ JHS 3 Mock Exams: Admin-entered marks separate from teacher marks
 ✓ No more conflicts between area teachers
 ✓ Report cards work correctly
 ✓ Everything backwards compatible
+
+---
+
+## 📝 JHS 3 Mock Exams Setup
+
+### Database Setup
+Run the SQL script in your **Career Tech Supabase project** (not the main project):
+```
+[Paste entire content of create_mock_exam_marks_table.sql]
+Click RUN
+```
+
+Run the JHS 3 students schema script in your **Career Tech Supabase project**:
+```
+[Paste entire content of create_jhs3_students_table.sql]
+Click RUN
+```
+
+Import JHS 3 students from main database (optional - can be done via admin interface):
+```
+[Paste entire content of import_jhs3_students.sql]
+Click RUN
+```
+
+### Features
+- **Admin Entry**: Mock marks entered by admin, not teachers
+- **Separate Storage**: Uses `mock_exam_marks` table, not regular `results` table
+- **Report Integration**: Mock reports use admin-entered marks
+- **Best Six Calculation**: Aggregates grade points from top 6 subjects
+- **Compulsory Fields**: Only student name, class, gender, and index number required for import
+- **CSV Import**: Use "Full Name" field which automatically splits into first_name and surname
+- **Template Download**: Download pre-formatted CSV template for JHS 3 student import
+
+### Usage
+1. Admin clicks "JHS 3 Mock Exams" tile
+2. Select term and academic year
+3. Click "Load Students" to see JHS 3 students
+4. Enter marks for each subject (0-100)
+5. Click "Save All Marks"
+6. Generate reports with "Mock" exam type selected

@@ -35,6 +35,32 @@
 	if (tryCreateClient()) {
 		console.log('supabase-init: supabaseClient initialized');
 		try { document.dispatchEvent(new CustomEvent('supabase:ready', { detail: { client: window.supabaseClient } })); } catch (e) {}
+		// Quick network/DNS smoke-check: attempt to fetch the project root to reveal resolution errors early.
+		(async function networkCheck(){
+			if (!cfg.url) return;
+			try {
+				const controller = new AbortController();
+				const timeout = setTimeout(() => controller.abort(), 3000);
+				// Use no-cors mode so CORS doesn't mask DNS/network failures. The response will be opaque
+				await fetch(cfg.url, { method: 'GET', mode: 'no-cors', signal: controller.signal });
+				clearTimeout(timeout);
+				console.log('supabase-init: network check OK for', cfg.url);
+			} catch (err) {
+				console.error('supabase-init: network check failed for', cfg.url, err && err.message ? err.message : err);
+								try {
+									// If a client was already created, emit a non-fatal warning so pages
+									// that already have a client can proceed. Emit a fatal 'network-failed'
+									// only when no client exists.
+									const detail = { url: cfg.url, error: (err && err.message) || String(err) };
+									if (window.supabaseClient) {
+										console.warn('supabase-init: network warning (client exists)', detail);
+										try { document.dispatchEvent(new CustomEvent('supabase:network-warning', { detail })); } catch(e){}
+									} else {
+										try { document.dispatchEvent(new CustomEvent('supabase:network-failed', { detail })); } catch(e){}
+									}
+								} catch(e){}
+			}
+		})();
 		return;
 	}
 
@@ -54,4 +80,37 @@
 	script.onerror = () => console.error('supabase-init: failed to load supabase JS from CDN');
 	document.head.appendChild(script);
 })();
+
+// Helper: promise-based wait for supabase client readiness
+// Usage: window.waitForSupabase().then(client => { /* safe to use window.supabaseClient */ });
+if (!window.waitForSupabase) {
+	window.waitForSupabase = function waitForSupabase(timeoutMs = 8000) {
+		return new Promise((resolve, reject) => {
+			if (window.supabaseClient) return resolve(window.supabaseClient);
+			const onReady = () => {
+				clear();
+				return resolve(window.supabaseClient);
+			};
+			const onNetworkFailed = (ev) => {
+				// still allow resolution if client exists; otherwise reject
+				if (window.supabaseClient) return onReady();
+				clear();
+				return reject(new Error('supabase network failed: ' + (ev && ev.detail && ev.detail.url ? ev.detail.url : 'unknown')));
+			};
+			const timer = setTimeout(() => {
+				document.removeEventListener('supabase:ready', onReady);
+				document.removeEventListener('supabase:network-failed', onNetworkFailed);
+				reject(new Error('waitForSupabase: timeout after ' + timeoutMs + 'ms'));
+			}, timeoutMs);
+			function clear() { clearTimeout(timer); document.removeEventListener('supabase:ready', onReady); document.removeEventListener('supabase:network-failed', onNetworkFailed); }
+			document.addEventListener('supabase:ready', onReady, { once: true });
+			document.addEventListener('supabase:network-failed', onNetworkFailed, { once: true });
+		});
+	};
+
+	window.onSupabaseReady = function onSupabaseReady(cb) {
+		if (window.supabaseClient) { try { cb(window.supabaseClient); } catch (e) { console.error(e); } return; }
+		document.addEventListener('supabase:ready', function handler(ev) { try { cb(window.supabaseClient); } catch (e) { console.error(e); } }, { once: true });
+	};
+}
 

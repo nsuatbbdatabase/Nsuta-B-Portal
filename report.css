@@ -1,14 +1,17 @@
 .approval-columns {
   display: flex;
   gap: 2.5rem;
-  margin-top: 1.2rem;
-  margin-bottom: 1.2rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  justify-content: center;
+  padding: 0 1rem;
 }
 .approval-col {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  max-width: 300px;
 }
 .approval-col.headteacher {
   align-items: flex-end;
@@ -16,7 +19,7 @@
 .approval-label {
   font-weight: bold;
   font-size: 1.1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
   text-align: center;
 }
 #classTeacherName {
@@ -51,6 +54,7 @@
   align-items: center;
   gap: 0;
   position: relative;
+  width: 100%;
 }
 .signature-name {
   width: 100%;
@@ -62,9 +66,9 @@
   padding-bottom: 0.1rem;
 }
 .signature-line {
-  min-width: 180px;
+  min-width: 160px;
   border-bottom: 2px solid #222;
-  margin: 0 auto 0.3rem auto;
+  margin: 0.5rem auto 0.3rem auto;
   font-size: 1.1rem;
   letter-spacing: 2px;
   white-space: nowrap;
@@ -871,12 +875,20 @@ body {
   text-align: center;
   font-size: 1.05em;
   font-style: italic;
-  margin-top: 0.1em;
-  margin-bottom: 0.2em;
+  margin-top: 0.3em;
+  margin-bottom: 0.5em;
   position: relative;
-  top: -0.2em;
   color: #222;
   letter-spacing: 2px;
+  font-weight: bold;
+}
+
+/* Approval section styling */
+.approval-section {
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-top: 1px solid #ddd;
 }
 @media print {
   .motto-under-message {

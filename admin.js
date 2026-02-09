@@ -1,7 +1,9 @@
 // Filter student dropdown by search box
 window.filterStudentDropdown = function filterStudentDropdown() {
-  const search = document.getElementById('studentSearch').value.trim().toLowerCase();
-  const classValue = document.getElementById('classFilter').value.trim().toUpperCase();
+  const searchEl = document.getElementById('studentSearch');
+  const classFilterEl = document.getElementById('classFilter');
+  const search = (searchEl && typeof searchEl.value === 'string') ? searchEl.value.trim().toLowerCase() : '';
+  const classValue = (classFilterEl && typeof classFilterEl.value === 'string') ? classFilterEl.value.trim().toUpperCase() : '';
   let filtered = classValue
     ? allStudents.filter(s => (s.class || '').trim().toUpperCase() === classValue)
     : allStudents;
@@ -20,7 +22,9 @@ window.filterStudentDropdown = function filterStudentDropdown() {
     });
   }
   const studentSelect = document.getElementById('studentSelect');
-  studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+  if (studentSelect) {
+    studentSelect.innerHTML = '<option value="">-- Select Student --</option>';
+  }
   filtered.forEach(s => {
     const opt = document.createElement('option');
     opt.value = s.id;
@@ -37,9 +41,64 @@ window.filterStudentDropdown = function filterStudentDropdown() {
     opt.textContent = name + (s.class ? ` (${s.class})` : '');
     opt.dataset.class = s.class || '';
     opt.dataset.picture = s.picture_url || '';
-    studentSelect.appendChild(opt);
+    if (studentSelect) studentSelect.appendChild(opt);
   });
 };
+
+// Split full name into first name and surname
+function splitFullName(fullName) {
+  if (!fullName || typeof fullName !== 'string') {
+    return { first_name: '', surname: '' };
+  }
+  
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return { first_name: '', surname: '' };
+  }
+  
+  const parts = trimmed.split(/\s+/);
+  if (parts.length === 1) {
+    // Only one name, treat as first name
+    return { first_name: parts[0], surname: '' };
+  } else {
+    // First part is first name, rest is surname
+    const first_name = parts[0];
+    const surname = parts.slice(1).join(' ');
+    return { first_name, surname };
+  }
+}
+
+// Export JHS 3 student import template
+function exportJHS3Template() {
+  // Create CSV content with JHS 3 specific headers and sample data
+  const headers = ['Full Name', 'Gender', 'Class', 'Index Number'];
+  const sampleData = [
+    ['John Doe', 'Male', 'JHS 3', '1234567890'],
+    ['Jane Smith', 'Female', 'JHS 3', '1234567891'],
+    ['Michael Johnson', 'Male', 'JHS 3', '1234567892']
+  ];
+  
+  let csvContent = '# JHS 3 Student Import Template\n';
+  csvContent += '# Use "Full Name" field - it will be automatically split into First Name and Surname during import\n';
+  csvContent += '# Compulsory fields: Full Name, Gender, Class, Index Number\n';
+  csvContent += '# Class must be "JHS 3" for all students\n';
+  csvContent += headers.join(',') + '\n';
+  
+  sampleData.forEach(row => {
+    csvContent += row.map(val => `"${val}"`).join(',') + '\n';
+  });
+  
+  // Download the CSV file
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'jhs3_student_import_template.csv');
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 // Render student tiles view
 window.renderStudentTiles = function renderStudentTiles() {
@@ -802,7 +861,19 @@ document.addEventListener('submit', function(e) {
   // Intercept student form submission to support full name splitting and proper required field validation
   const studentForm = document.getElementById('studentForm');
   if (studentForm) {
-    studentForm.addEventListener('submit', function(e) {
+    // If we're not on the centralized student management page, disable in-place student management
+    if (!window.location.pathname || window.location.pathname.indexOf('student-list.html') === -1) {
+      studentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        try { notify('Student management has moved to the Student Directory. Redirecting...', 'info'); } catch (err) {}
+        window.location.href = 'student-list.html';
+      });
+      const saveBtn = document.getElementById('studentSaveBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function(e) { e.preventDefault(); window.location.href = 'student-list.html'; });
+      }
+    } else {
+      studentForm.addEventListener('submit', function(e) {
       // Always prevent browser default submit/validation; we manage everything in JS
       e.preventDefault();
   // student form submit handler invoked
@@ -888,6 +959,7 @@ document.addEventListener('submit', function(e) {
           });
         }
       });
+    }
     }
   }
 
@@ -1485,6 +1557,24 @@ window.addEventListener('DOMContentLoaded', async () => {
   } catch (e) {
     console.warn('Failed to attach studentSelect change listener', e);
   }
+
+  // JHS 3 Mock Exams event listeners
+  const loadMockStudentsBtn = document.getElementById('loadMockStudentsBtn');
+  if (loadMockStudentsBtn) {
+    loadMockStudentsBtn.addEventListener('click', loadJHS3MockStudents);
+  }
+  const saveMockMarksBtn = document.getElementById('saveMockMarksBtn');
+  if (saveMockMarksBtn) {
+    saveMockMarksBtn.addEventListener('click', saveJHS3MockMarks);
+  }
+  const importJHS3StudentsBtn = document.getElementById('importJHS3StudentsBtn');
+  if (importJHS3StudentsBtn) {
+    importJHS3StudentsBtn.addEventListener('click', importJHS3Students);
+  }
+  const exportJHS3TemplateBtn = document.getElementById('exportJHS3TemplateBtn');
+  if (exportJHS3TemplateBtn) {
+    exportJHS3TemplateBtn.addEventListener('click', exportJHS3Template);
+  }
 });
 
 async function fetchAndRenderStudents() {
@@ -1505,8 +1595,14 @@ async function fetchAndRenderStudents() {
   });
   console.log('DEBUG: Loaded', allStudents.length, 'students');
   // Populate dropdown and render tiles
-  window.filterStudentDropdown();
-  window.renderStudentTiles();
+  // Only attempt to update student-related UI if relevant elements exist on this page
+  const needsStudentUI = document.getElementById('studentSelect') || document.getElementById('studentSearch') || document.getElementById('studentTilesContainer') || document.querySelector('#studentTable');
+  if (needsStudentUI) {
+    try { window.filterStudentDropdown(); } catch (e) { console.warn('filterStudentDropdown failed', e); }
+    try { window.renderStudentTiles(); } catch (e) { console.warn('renderStudentTiles failed', e); }
+  } else {
+    console.log('Skipping student UI render: no student UI elements on this page');
+  }
   } finally {
     try { loader && loader.close(); } catch (e) {}
   }
@@ -1634,6 +1730,355 @@ function initAdminTableDataLabels() {
   root._adminTableObserver = rootMo;
 }
 
+// JHS 3 Mock Exams functionality
+window.loadJHS3MockStudents = async function loadJHS3MockStudents() {
+  const term = document.getElementById('mockTermSelect') ? document.getElementById('mockTermSelect').value : '';
+  let year = document.getElementById('mockYearInput') ? document.getElementById('mockYearInput').value : '';
+  const subjectKey = document.getElementById('mockSubjectSelect') ? document.getElementById('mockSubjectSelect').value : '';
+  
+  // Extract the year from format like "2025/2026"
+  if (year && year.includes('/')) {
+    year = year.split('/')[0];
+  }
+  
+  console.log('Load JHS3 Mock Data clicked - Subject:', subjectKey, 'Term:', term, 'Year:', year);
+  
+  if (!subjectKey || !term || !year) {
+    showToast('Please select subject, term, and academic year.', 'warning');
+    return;
+  }
+
+  try {
+    showToast('Loading students and marks...', 'info');
+    
+    // Load JHS 3 students from Career Tech Supabase (only source for Mock)
+    const { data: jhs3Students, error: studentsError } = await supabaseCareerTech
+      .from('jhs3_students')
+      .select('id, first_name, surname, class, index_number')
+      .eq('class', 'JHS 3')
+      .order('register_id');
+
+    if (studentsError) throw studentsError;
+
+    // Deduplicate students by index_number if present, otherwise by id
+    const uniqueMap = {};
+    if (jhs3Students && jhs3Students.length) {
+      jhs3Students.forEach(s => {
+        const key = (s.index_number && s.index_number.toString().trim()) || s.id;
+        if (!uniqueMap[key]) uniqueMap[key] = s;
+      });
+    }
+
+    const students = Object.values(uniqueMap);
+
+    console.log('Students loaded from Career Tech:', students.length);
+
+    if (!students || students.length === 0) {
+      showToast('No JHS 3 students found. Please import students first.', 'warning');
+      return;
+    }
+
+    // Load existing mock marks (Career Tech) and map by student id
+    let marksMap = {};
+    const { data: existingMarks, error: marksError } = await supabaseCareerTech
+      .from('mock_exam_marks')
+      .select('*')
+      .eq('term', term)
+      .eq('year', parseInt(year));
+
+    if (marksError && marksError.code !== 'PGRST116') {
+      console.warn('Mock marks table may not exist yet:', marksError);
+    }
+
+    if (existingMarks) {
+      existingMarks.forEach(mark => { marksMap[mark.student_id] = mark; });
+    }
+
+    // Render the table
+    const tbody = document.getElementById('mockExamsTableBody');
+    if (!tbody) {
+      console.error('mockExamsTableBody element not found');
+      showToast('Error: Table body element not found.', 'error');
+      return;
+    }
+    tbody.innerHTML = '';
+
+    // Render a single column for the chosen subject
+    students.forEach(student => {
+      const existingMark = marksMap[student.id];
+      const row = document.createElement('tr');
+      const subjectLabel = (function(k){
+        return { english: 'English', maths: 'Maths', science: 'Science', social_studies: 'Social Studies', rme: 'RME', computing: 'Computing', creative_arts: 'Creative Arts', career_tech: 'Career Tech', twi: 'Twi' }[k] || k;
+      })(subjectKey);
+      const mark = existingMark ? (existingMark[subjectKey] || 0) : 0;
+      row.innerHTML = `
+        <td>${student.first_name || ''} ${student.surname || ''}</td>
+        <td>${student.index_number || ''}</td>
+        <td class="center">${student.gender || ''}</td>
+        <td><input type="number" min="0" max="100" value="${mark}" data-student="${student.id}" data-subject="${subjectKey}" class="mock-mark-input" /></td>
+        <td class="total-cell">${mark}</td>
+        <td><button class="action-btn action-btn--small" onclick="clearStudentMarks('${student.id}')">Clear</button></td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    // Ensure mobile data-labels are set for this table so headers (Student Name, Index Number, Gender, ...) show correctly
+    try {
+      const mockTable = document.getElementById('mockExamsTable');
+      if (mockTable && typeof setTableDataLabels === 'function') setTableDataLabels(mockTable);
+    } catch (e) { /* non-fatal */ }
+
+    // Show the table and enable/disable save button based on exam type
+    const container = document.getElementById('mockExamsContainer');
+    if (container) {
+      container.style.display = 'block';
+    }
+    const saveBtn = document.getElementById('saveMockMarksBtn');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+    }
+    const message = document.getElementById('mockExamsMessage');
+    if (message) {
+      message.textContent = `Loaded ${students.length} JHS 3 students for ${subjectKey.toUpperCase()} ${term} ${year}`;
+      // Update table header to show selected subject
+      try { const sh = document.getElementById('subjectHeader'); if (sh) sh.textContent = subjectLabel; } catch(e){}
+    }
+
+    showToast(`Loaded ${students.length} students successfully!`, 'success');
+
+    // Add input listeners for auto-calculation and keyboard navigation
+    (function(){
+      const inputs = Array.from(document.querySelectorAll('.mock-mark-input'));
+      inputs.forEach(input => {
+        input.addEventListener('input', updateRowTotal);
+        input.addEventListener('keydown', function(e){
+          // Enter moves to next student input; Shift+Enter moves to previous
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const idx = inputs.indexOf(this);
+            const next = inputs[idx + 1];
+            if (next) {
+              try { next.focus(); next.select(); } catch (err) { next.focus(); }
+            } else {
+              // If this was the last input, focus the Save button
+              const saveBtn = document.getElementById('saveMockMarksBtn'); if (saveBtn) saveBtn.focus();
+            }
+            return;
+          }
+          // ArrowDown/ArrowUp for navigation as well
+          if (e.key === 'ArrowDown') {
+            e.preventDefault(); const idx = inputs.indexOf(this); const next = inputs[idx + 1]; if (next) { try { next.focus(); next.select(); } catch(e){ next.focus(); } }
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault(); const idx = inputs.indexOf(this); const prev = inputs[idx - 1]; if (prev) { try { prev.focus(); prev.select(); } catch(e){ prev.focus(); } }
+          }
+        });
+      });
+    })();
+
+  } catch (error) {
+    console.error('Error loading JHS 3 exam data:', error);
+    showToast('Error loading students. Please try again.', 'error');
+  }
+};
+
+window.updateRowTotal = function updateRowTotal() {
+  const row = this.closest('tr');
+  const inputs = row.querySelectorAll('.mock-mark-input');
+  let total = 0;
+  inputs.forEach(input => {
+    total += parseInt(input.value) || 0;
+  });
+  row.querySelector('.total-cell').textContent = total;
+};
+
+window.saveJHS3MockMarks = async function saveJHS3MockMarks() {
+  const term = document.getElementById('mockTermSelect') ? document.getElementById('mockTermSelect').value : '';
+  let year = document.getElementById('mockYearInput') ? document.getElementById('mockYearInput').value : '';
+  const subjectKey = document.getElementById('mockSubjectSelect') ? document.getElementById('mockSubjectSelect').value : '';
+  
+  // Extract the year from format like "2025/2026"
+  if (year && year.includes('/')) {
+    year = year.split('/')[0];
+  }
+  
+  if (!subjectKey || !term || !year) {
+    showToast('Please select subject, term and academic year.', 'warning');
+    return;
+  }
+
+  const marksData = [];
+  const inputs = document.querySelectorAll('.mock-mark-input');
+  
+  // Group inputs by student
+  const studentMarks = {};
+  inputs.forEach(input => {
+    const studentId = input.dataset.student;
+    const subject = input.dataset.subject;
+    const mark = parseInt(input.value) || 0;
+    
+    if (!studentMarks[studentId]) {
+      studentMarks[studentId] = { student_id: studentId, term, year: parseInt(year) };
+    }
+    studentMarks[studentId][subject] = mark;
+  });
+
+  // Convert to array
+  Object.values(studentMarks).forEach(mark => marksData.push(mark));
+
+  try {
+    // Save to mock_exam_marks table in Career Tech Supabase
+    
+      // Upsert marks for the selected subject per student (preserve other subject columns)
+      // Build upsert payload where each object contains student_id, term, year and the subject column
+      const upsertPayload = marksData.map(m => {
+        const obj = { student_id: m.student_id, term: m.term, year: m.year };
+        obj[subjectKey] = m[subjectKey] || 0;
+        return obj;
+      });
+
+      const { error: upsertError } = await supabaseCareerTech
+        .from('mock_exam_marks')
+        .upsert(upsertPayload, { onConflict: 'student_id,term,year' });
+
+      if (upsertError) throw upsertError;
+
+    showToast(`Successfully saved Mock exam marks for ${marksData.length} students.`, 'success');
+    
+  } catch (error) {
+    console.error('Error saving marks:', error);
+    showToast('Error saving marks. Please try again.', 'error');
+  }
+};
+
+window.clearStudentMarks = function clearStudentMarks(studentId) {
+  // Clear only the currently selected subject input for this student
+  const inputs = document.querySelectorAll(`.mock-mark-input[data-student="${studentId}"]`);
+  inputs.forEach(input => {
+    input.value = 0;
+    try { input.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) { input.dispatchEvent(new Event('input')); }
+  });
+};
+
+// Import/sync JHS 3 students from main Supabase to Career Tech Supabase
+// Only compulsory fields are imported: name, class, gender, index_number
+window.importJHS3Students = async function importJHS3Students() {
+  // Open file picker
+  const csvInput = document.getElementById('jhs3CsvInput');
+  
+  // Set up listener for file selection
+  csvInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      showToast('Processing CSV file...', 'info');
+
+      // Read the CSV file
+      const text = await file.text();
+      const rows = text.split('\n')
+        .map(row => row.trim())
+        .filter(row => row.length > 0 && !row.startsWith('#')); // Skip comments and empty lines
+      
+      if (rows.length < 2) {
+        showToast('CSV file must contain a header row and at least one data row.', 'warning');
+        return;
+      }
+
+      // Parse CSV header
+      const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+      const fullNameIdx = headers.indexOf('full name');
+      const genderIdx = headers.indexOf('gender');
+      const classIdx = headers.indexOf('class');
+      const indexNumberIdx = headers.indexOf('index number');
+
+      // Validate required columns
+      if (fullNameIdx < 0 || genderIdx < 0 || classIdx < 0 || indexNumberIdx < 0) {
+        showToast('CSV must contain these columns: Full Name, Gender, Class, Index Number', 'warning');
+        return;
+      }
+
+      // Parse data rows
+      const students = [];
+      for (let i = 1; i < rows.length; i++) {
+        const values = rows[i].split(',').map(v => v.trim().replace(/^"|"$/g, '')); // Remove quotes
+        
+        const fullName = values[fullNameIdx] || '';
+        const gender = values[genderIdx] || '';
+        const classVal = values[classIdx] || 'JHS 3';
+        const indexNumber = values[indexNumberIdx] || '';
+
+        // Validate required fields
+        if (!fullName.trim() || !gender.trim() || !indexNumber.trim()) {
+          console.warn(`Skipping row ${i + 1}: missing required fields`);
+          continue;
+        }
+
+        // Split full name into first name and surname
+        const nameParts = fullName.trim().split(/\s+/);
+        let firstName = '';
+        let surname = '';
+        
+        if (nameParts.length === 1) {
+          firstName = nameParts[0];
+          surname = nameParts[0];
+        } else if (nameParts.length === 2) {
+          firstName = nameParts[0];
+          surname = nameParts[1];
+        } else {
+          // For names with 3+ parts, take first as first name, rest as surname
+          firstName = nameParts[0];
+          surname = nameParts.slice(1).join(' ');
+        }
+
+        const student = {
+          id: indexNumber, // Use index_number as ID
+          first_name: firstName,
+          surname: surname,
+          gender: gender,
+          class: classVal,
+          index_number: indexNumber,
+          // Optional fields set to null
+          other_names: null,
+          date_of_birth: null,
+          subclass: null,
+          register_id: null,
+          username: null,
+          password_hash: null,
+          picture_url: null
+        };
+        
+        students.push(student);
+      }
+
+      if (students.length === 0) {
+        showToast('No valid student records found in CSV.', 'warning');
+        return;
+      }
+
+      // Insert/update students in Career Tech Supabase
+      const { error: insertError } = await supabaseCareerTech
+        .from('jhs3_students')
+        .upsert(students, { onConflict: 'id' });
+
+      if (insertError) throw insertError;
+
+      showToast(`Successfully imported ${students.length} JHS 3 students!`, 'success');
+      
+      // Reset file input
+      csvInput.value = '';
+      
+    } catch (error) {
+      console.error('Error importing JHS 3 students from CSV:', error);
+      showToast('Error importing students. Please check the CSV format.', 'error');
+    }
+  };
+  
+  // Trigger file picker
+  csvInput.click();
+};
+
 // Initialize on DOMContentLoaded so headers exist. Also call once now in case
 // this script executes after DOMContentLoaded.
 if (document.readyState === 'loading') {
@@ -1641,3 +2086,132 @@ if (document.readyState === 'loading') {
 } else {
   setTimeout(initAdminTableDataLabels, 0);
 }
+
+// ------------------ JHS3 Mock Rankings ------------------
+document.addEventListener('DOMContentLoaded', function() {
+  const btn = document.getElementById('btnRankJHS3Mock');
+  if (btn) btn.addEventListener('click', () => {
+    openModal('rankJhs3Modal');
+  });
+
+  const loadBtn = document.getElementById('loadRankingsBtn');
+  if (loadBtn) loadBtn.addEventListener('click', loadJhs3MockRankings);
+
+  const printBtn = document.getElementById('printRankingsBtn');
+  if (printBtn) printBtn.addEventListener('click', printJhs3Rankings);
+});
+
+async function loadJhs3MockRankings() {
+  const container = document.getElementById('rankingsContainer');
+  if (!container) return;
+  container.innerHTML = 'Loading...';
+  if (typeof supabaseCareerTech === 'undefined') {
+    container.innerHTML = '<div class="muted-small">Career Tech Supabase client not available.</div>';
+    return;
+  }
+  const term = (document.getElementById('rankTerm')?.value || '').toString().trim();
+  const year = (document.getElementById('rankYear')?.value || '').toString().trim();
+  if (!term || !year) {
+    container.innerHTML = '<div class="muted-small">Please select Term and enter Academic Year.</div>';
+    return;
+  }
+
+  try {
+    // Load JHS3 students
+    const { data: students, error: stuErr } = await supabaseCareerTech.from('jhs3_students').select('id, first_name, surname, index_number').eq('class', 'JHS 3');
+    if (stuErr) throw stuErr;
+    const ids = Array.isArray(students) ? students.map(s => s.id) : [];
+    if (!ids.length) {
+      container.innerHTML = '<div class="muted-small">No JHS 3 students found in Career Tech DB.</div>';
+      return;
+    }
+
+    // Fetch mock marks for these students for given term/year
+    const keys = ['english','maths','science','rme','social_studies','computing','career_tech','creative_arts','twi'];
+    const selectCols = ['student_id', ...keys].join(',');
+    const { data: marks, error: marksErr } = await supabaseCareerTech
+      .from('mock_exam_marks')
+      .select(selectCols)
+      .in('student_id', ids)
+      .eq('term', term)
+      .eq('year', year);
+    if (marksErr) throw marksErr;
+
+    // Aggregate totals per student (if multiple records, pick max total)
+    const totalsMap = {};
+    (marks || []).forEach(rec => {
+      const sid = rec.student_id;
+      let tot = 0;
+      keys.forEach(k => { tot += Number(rec[k]) || 0; });
+      if (!totalsMap[sid] || tot > totalsMap[sid].total) {
+        totalsMap[sid] = { total: tot, record: rec };
+      }
+    });
+
+    // Build ranking array by merging student info
+    const ranking = (students || []).map(s => {
+      const t = totalsMap[s.id];
+      return {
+        student_id: s.id,
+        name: ((s.first_name || '') + ' ' + (s.surname || '')).trim() || '[No Name]',
+        index_number: s.index_number || '',
+        total: t ? t.total : 0
+      };
+    });
+
+    // Sort descending by total
+    ranking.sort((a,b) => b.total - a.total);
+
+    // Assign ranks (standard competition ranking: equal totals share rank; next rank = position)
+    let lastTotal = null, lastRank = 0;
+    for (let i = 0; i < ranking.length; i++) {
+      const pos = i + 1;
+      if (ranking[i].total === lastTotal) {
+        ranking[i].rank = lastRank;
+      } else {
+        ranking[i].rank = pos;
+        lastRank = pos;
+        lastTotal = ranking[i].total;
+      }
+    }
+
+    // Render table
+    container.innerHTML = renderRankingsTable(ranking, term, year);
+  } catch (e) {
+    console.error('loadJhs3MockRankings error', e);
+    container.innerHTML = '<div class="muted-small">Failed to load rankings. See console for details.</div>';
+  }
+}
+
+function renderRankingsTable(ranking, term, year) {
+  let html = '';
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;">`;
+  html += `<div><strong>JHS 3 Mock Rankings</strong><div class="muted-small">${term} — ${year}</div></div>`;
+  html += `</div>`;
+  html += '<div class="table-scroll"><table class="striped" style="min-width:600px;">';
+  html += '<thead><tr><th class="mono">Rank</th><th>Index</th><th>Student</th><th class="mono">Total</th></tr></thead><tbody>';
+  ranking.forEach(r => {
+    html += `<tr><td class="mono">${r.rank}</td><td class="mono">${escapeHtml(r.index_number || '')}</td><td>${escapeHtml(r.name)}</td><td class="mono">${r.total}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function printJhs3Rankings() {
+  const container = document.getElementById('rankingsContainer');
+  if (!container) return notify('No rankings to print', 'warning');
+  const title = document.getElementById('rankJhs3Title')?.textContent || 'JHS 3 Mock Rankings';
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) return notify('Unable to open print window', 'error');
+  const styles = `
+    body{font-family:Segoe UI, Arial, sans-serif;padding:20px;color:#111}
+    table{border-collapse:collapse;width:100%}
+    th,td{padding:8px;border:1px solid #ddd}
+    th{background:#f3f4f6}
+  `;
+  win.document.write(`<html><head><title>${escapeHtml(title)}</title><style>${styles}</style></head><body><h2>${escapeHtml(title)}</h2>${container.innerHTML}<script>window.onload=function(){setTimeout(()=>{window.print();},200);};</script></body></html>`);
+  win.document.close();
+}
+
+// Small helper used above (already present in other files) to avoid XSS when rendering
+function escapeHtml(s){ if (!s && s !== 0) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }

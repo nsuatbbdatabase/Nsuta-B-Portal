@@ -239,40 +239,132 @@
 			}
 		}
 
-		/* Edit modal styles */
-		.modal-backdrop {
+		/* Modal styles - matches admin.html professional styling */
+		.modal {
 			position: fixed;
 			inset: 0;
-			background: rgba(0,0,0,0.45);
+			background: rgba(0, 0, 0, 0.5);
 			display: flex;
 			align-items: center;
 			justify-content: center;
 			z-index: 9999;
 		}
 
-		.modal-card {
-			background: #fff;
-			border-radius: 10px;
-			width: 720px;
-			max-width: calc(100% - 32px);
-			box-shadow: 0 12px 40px rgba(2,6,23,0.2);
-			padding: 1rem 1.2rem;
+		.modal.hidden {
+			display: none;
 		}
 
-		.modal-row { display:flex; gap:0.8rem; margin-bottom:0.6rem; }
-		.modal-row .field { flex:1; display:flex; flex-direction:column; }
-		.modal-row label { font-weight:600; font-size:0.9rem; margin-bottom:0.2rem; }
-		.modal-row input, .modal-row select { padding:0.5rem; border:1px solid #ddd; border-radius:6px; }
+		.modal .modal-content {
+			background: #fff;
+			border-radius: 8px;
+			width: 90%;
+			max-width: 600px;
+			box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+			max-height: 90vh;
+			overflow-y: auto;
+		}
 
-		.modal-actions { display:flex; gap:0.6rem; justify-content:flex-end; margin-top:0.6rem; }
-		.modal-actions button { padding:0.6rem 0.9rem; border-radius:6px; border:none; cursor:pointer; font-weight:600; }
-		.modal-close { background:#e5e7eb; }
-		.modal-save { background:#0ea5a4; color:#fff; }
+		.modal .modal-header {
+			padding: 1rem 1.25rem;
+			border-bottom: 1px solid #e5e7eb;
+		}
 
-		/* Modal spinner */
-		.modal-spinner { display:flex; align-items:center; gap:0.6rem; padding:0.6rem 0; color:#064e3b; font-weight:600; }
-		.modal-spinner .spinner { width:18px; height:18px; border:3px solid rgba(0,0,0,0.08); border-top-color:#0ea5a4; border-radius:50%; animation:spin 0.9s linear infinite; }
-		@keyframes spin { to { transform: rotate(360deg); } }
+		.modal .modal-header h3 {
+			margin: 0;
+			font-size: 1.25rem;
+			color: #1f2937;
+		}
+
+		.modal .modal-body {
+			padding: 1rem 1.25rem;
+		}
+
+		.modal .modal-body .form-group {
+			margin-bottom: 0.65rem;
+			display: block;
+		}
+
+		.modal .modal-body .form-group label {
+			display: block;
+			margin-bottom: 0.25rem;
+			font-size: 0.95rem;
+			font-weight: 500;
+			color: #374151;
+		}
+
+		.modal .modal-body .form-group input[type="text"],
+		.modal .modal-body .form-group input[type="email"],
+		.modal .modal-body .form-group input[type="tel"],
+		.modal .modal-body .form-group input[type="date"],
+		.modal .modal-body .form-group input[type="number"],
+		.modal .modal-body .form-group input[type="file"],
+		.modal .modal-body .form-group select,
+		.modal .modal-body .form-group textarea {
+			width: 100%;
+			box-sizing: border-box;
+			padding: 0.45rem 0.6rem;
+			border-radius: 6px;
+			border: 1px solid #d1d5db;
+			font-size: 0.95rem;
+		}
+
+		.modal .modal-body .form-group input:focus,
+		.modal .modal-body .form-group select:focus,
+		.modal .modal-body .form-group textarea:focus {
+			outline: none;
+			border-color: #0ea5a4;
+			box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.1);
+		}
+
+		.modal .modal-body .input-readonly {
+			background-color: #f3f4f6;
+			cursor: not-allowed;
+		}
+
+		.modal .modal-body .class-select-row {
+			display: flex;
+			gap: 0.5rem;
+			align-items: center;
+		}
+
+		.hidden-select {
+			display: none !important;
+		}
+
+		.modal .modal-body .form-actions {
+			display: flex;
+			gap: 0.5rem;
+			justify-content: flex-end;
+			margin-top: 0.75rem;
+		}
+
+		.modal .modal-body .form-actions button {
+			padding: 0.6rem 1.2rem;
+			border-radius: 6px;
+			border: none;
+			cursor: pointer;
+			font-weight: 600;
+			font-size: 0.95rem;
+			transition: all 0.2s ease;
+		}
+
+		.modal .modal-body .form-actions button[type="button"]:first-of-type {
+			background: #0ea5a4;
+			color: #fff;
+		}
+
+		.modal .modal-body .form-actions button[type="button"]:first-of-type:hover {
+			background: #0d9997;
+		}
+
+		.modal .modal-body .form-actions button[type="button"]:last-of-type {
+			background: #e5e7eb;
+			color: #374151;
+		}
+
+		.modal .modal-body .form-actions button[type="button"]:last-of-type:hover {
+			background: #d1d5db;
+		}
 	</style>
 </head>
 <body>
@@ -296,7 +388,11 @@
 							<h2>All Students</h2>
 							<p class="muted-small">Complete directory of registered students</p>
 						</div>
-						<div class="student-count" id="studentCountDisplay">Total: 0 students</div>
+						<div style="display:flex; gap:0.6rem; align-items:center;">
+							<button id="addStudentBtn" class="action-btn" style="background:#0ea5a4;color:#fff;">＋ Add Student</button>
+							<button id="dedupeStudentsBtn" class="action-btn" style="background:#f59e0b;color:#fff;">⚠️ Dedupe</button>
+							<div class="student-count" id="studentCountDisplay">Total: 0 students</div>
+						</div>
 					</div>
 
 					<div class="student-list-filters">
@@ -308,6 +404,7 @@
 						</select>
 						<input type="text" id="studentSearchList" placeholder="🔍 Search by name..." />
 						<button onclick="exportStudentsCSV()" class="action-btn">📥 Export to CSV</button>
+						<button onclick="openAddModal()" class="action-btn">＋ Add</button>
 					</div>
 
 					<div class="student-list-container">
@@ -319,6 +416,7 @@
 	</main>
 
 	<!-- Scripts -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 	<script src="supabase-init.js"></script>
 	<script>
 		let allStudents = [];
@@ -338,6 +436,20 @@
 			}
 		}
 
+		// Suppress noisy Chrome extension messaging warning that appears as an unhandledrejection
+		window.addEventListener('unhandledrejection', function (e) {
+			try {
+				const reason = e.reason;
+				const msg = reason && reason.message ? reason.message : String(reason || '');
+				const extMsgFragment = 'A listener indicated an asynchronous response by returning true';
+				if (msg && msg.indexOf(extMsgFragment) !== -1) {
+					try { if (window.showToast) window.showToast('A browser extension produced a messaging warning — it does not affect app functionality.', 'warning', 6000); } catch (t) {}
+					try { e.preventDefault(); } catch (pe) {}
+					return;
+				}
+			} catch (err) { /* ignore */ }
+		});
+
 		// Small utility to escape HTML inserted into template strings
 		function escapeHtml(str) {
 			return String(str || '').replace(/[&<>"'`]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[s]));
@@ -351,22 +463,87 @@
 			});
 		}
 
-		window.addEventListener('DOMContentLoaded', () => {
-			if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-				initPage();
-				return;
-			}
-			// Wait for the supabase-init.js to dispatch 'supabase:ready'
-			document.addEventListener('supabase:ready', function onReady() {
-				initPage();
-			}, { once: true });
-			// Safety timeout: if client still doesn't appear, show helpful message
-			setTimeout(() => {
-				if (typeof supabaseClient === 'undefined' || !supabaseClient) {
-					notify('Supabase client not initialized after delay. Check network or `supabase-init.js`.', 'error');
-					console.error('student-list: supabase client not ready after 3s');
+		// Ensure we have a Supabase client in this page without depending on supabase-init.js
+		function ensureSupabaseClient(timeoutMs = 10000) {
+			return new Promise((resolve, reject) => {
+				if (window.supabaseClient) return resolve(window.supabaseClient);
+				// Prefer explicit config provided before this script
+				const cfg = window.SUPABASE_CONFIG || null;
+				if (!cfg || !cfg.url || !cfg.anonKey) {
+					// No explicit config — fall back to waiting for supabase-init or reject
+					let waited = false;
+					const t = setTimeout(() => {
+						waited = true;
+						reject(new Error('No SUPABASE_CONFIG provided; supabase client not available'));
+					}, timeoutMs);
+					document.addEventListener('supabase:ready', function onReady() {
+						if (waited) return;
+						clearTimeout(t);
+						resolve(window.supabaseClient);
+					}, { once: true });
+					return;
 				}
-			}, 3000);
+
+				function create(cfg) {
+					try {
+						if (typeof createClient === 'function') {
+							window.supabaseClient = createClient(cfg.url, cfg.anonKey);
+							return resolve(window.supabaseClient);
+						}
+						if (typeof supabase !== 'undefined' && supabase && typeof supabase.createClient === 'function') {
+							window.supabaseClient = supabase.createClient(cfg.url, cfg.anonKey);
+							return resolve(window.supabaseClient);
+						}
+					} catch (e) { /* continue to CDN load */ }
+					// load CDN then create
+					const cdn = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js';
+					const s = document.createElement('script');
+					s.src = cdn; s.crossOrigin = 'anonymous';
+					s.onload = () => {
+						try {
+							if (typeof createClient === 'function') {
+								window.supabaseClient = createClient(cfg.url, cfg.anonKey);
+								return resolve(window.supabaseClient);
+							}
+							if (typeof supabase !== 'undefined' && supabase && typeof supabase.createClient === 'function') {
+								window.supabaseClient = supabase.createClient(cfg.url, cfg.anonKey);
+								return resolve(window.supabaseClient);
+							}
+							return reject(new Error('Supabase client creation failed after CDN load'));
+						} catch (e) { return reject(e); }
+					};
+					s.onerror = () => reject(new Error('Failed to load supabase-js CDN'));
+					document.head.appendChild(s);
+				}
+
+				// Try immediate create with provided config
+				try { create(cfg); } catch (e) { create(cfg); }
+			});
+		}
+
+		window.addEventListener('DOMContentLoaded', () => {
+			// Try to ensure a client directly (prefer explicit window.SUPABASE_CONFIG)
+			ensureSupabaseClient(12000).then(() => {
+				initPage();
+			}).catch((err) => {
+				console.warn('ensureSupabaseClient failed:', err);
+				// Fallback: listen for existing init events from supabase-init.js
+				if (typeof window.waitForSupabase === 'function') {
+					window.waitForSupabase(8000).then(() => initPage()).catch(e => {
+						notify('Supabase client not available. Check SUPABASE_CONFIG or supabase-init.js', 'error');
+						console.error('waitForSupabase fallback failed', e);
+					});
+				} else {
+					document.addEventListener('supabase:ready', function onReady() { initPage(); }, { once: true });
+					setTimeout(() => {
+						if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+							notify('Supabase client not initialized. Set window.SUPABASE_CONFIG before this script or include supabase-init.js', 'error');
+							console.error('student-list: supabase client not ready after fallback delay');
+						}
+					}, 3000);
+				}
+			});
+
 		});
 
 		async function fetchAllStudents() {
@@ -411,6 +588,11 @@
 			if (searchInput) {
 				searchInput.addEventListener('input', () => renderStudentTiles());
 			}
+
+			const addBtn = document.getElementById('addStudentBtn');
+			if (addBtn) addBtn.addEventListener('click', openAddModal);
+			const dedupeBtn = document.getElementById('dedupeStudentsBtn');
+			if (dedupeBtn) dedupeBtn.addEventListener('click', openDedupeModal);
 		}
 
 		function getFilteredStudents() {
@@ -522,6 +704,183 @@
             openEditModal(studentId);
 		}
 
+		// ------------------ Add Student ------------------
+
+		function openAddModal() {
+			const existing = document.getElementById('studentAddModal');
+			if (existing) existing.remove();
+			const modal = document.createElement('div');
+			modal.className = 'modal';
+			modal.id = 'studentAddModal';
+			modal.innerHTML = `
+				<div class="modal-content">
+					<div class="modal-header"><h3>Add Student</h3></div>
+					<div class="modal-body">
+						<form id="studentAddForm" enctype="multipart/form-data" novalidate>
+							<div class="form-group">
+								<label for="reg_id">Register ID</label>
+								<input type="text" id="reg_id" name="register_id" placeholder="e.g., JHS3_001" />
+							</div>
+							<div class="form-group">
+								<label for="add_first_name">First Name</label>
+								<input type="text" id="add_first_name" name="first_name" placeholder="First Name" />
+							</div>
+							<div class="form-group">
+								<label for="add_surname">Surname</label>
+								<input type="text" id="add_surname" name="surname" placeholder="Surname" />
+							</div>
+							<div class="form-group">
+								<label for="add_class">Class</label>
+								<select id="add_class" name="class">
+									<option value="">Select Class</option>
+									<option value="JHS 1">JHS 1</option>
+									<option value="JHS 2">JHS 2</option>
+									<option value="JHS 3">JHS 3</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="add_subclass">Subclass</label>
+								<select id="add_subclass" name="subclass">
+									<option value="">None</option>
+									<option value="A">A</option>
+									<option value="B">B</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="add_gender">Gender</label>
+								<select id="add_gender" name="gender">
+									<option value="">Select Gender</option>
+									<option value="Male">Male</option>
+									<option value="Female">Female</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="add_parent_name">Parent/Guardian Name</label>
+								<input type="text" id="add_parent_name" name="parent_name" placeholder="Parent/Guardian Name" />
+							</div>
+							<div class="form-group">
+								<label for="add_parent_contact">Parent/Guardian Contact</label>
+								<input type="tel" id="add_parent_contact" name="parent_contact" placeholder="Parent/Guardian Number" />
+							</div>
+							<div class="form-group">
+								<label for="add_picture">Picture</label>
+								<input type="file" id="add_picture" name="picture" accept="image/*" />
+							</div>
+							<div class="form-actions">
+								<button type="button" onclick="submitAddStudent()">Save</button>
+								<button type="button" onclick="closeAddModal()">Cancel</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			`;
+			document.body.appendChild(modal);
+		}
+
+		function closeAddModal() { const el = document.getElementById('studentAddModal'); if (el) el.remove(); }
+
+		async function submitAddStudent() {
+			const form = document.getElementById('studentAddForm');
+			if (!form) return notify('Add form not found', 'error');
+			const fd = new FormData(form);
+			const payload = {
+				register_id: (fd.get('register_id') || '').toString().trim(),
+				first_name: (fd.get('first_name') || '').toString().trim(),
+				surname: (fd.get('surname') || '').toString().trim(),
+				class: (fd.get('class') || '').toString().trim(),
+				subclass: (fd.get('subclass') || '').toString().trim() || null,
+				gender: (fd.get('gender') || '').toString().trim() || '',
+				parent_name: (fd.get('parent_name') || '').toString().trim() || '',
+				parent_contact: (fd.get('parent_contact') || '').toString().trim() || ''
+			};
+			// Basic validation
+			if (!payload.register_id || !payload.first_name) return notify('Please provide Register ID and First name', 'warning');
+			const loader = showLoadingToast('Saving student...', { color: '#0ea5a4' });
+			try {
+				// If a picture selected, upload first
+				const pictureFile = form.querySelector('[name="picture"]')?.files?.[0] || null;
+				if (pictureFile && supabaseClient) {
+					const fileName = `${payload.register_id}_${Date.now()}_${pictureFile.name}`;
+					const uploadPath = `${payload.register_id}/${fileName}`;
+					const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('student-pictures').upload(uploadPath, pictureFile);
+					if (uploadError) {
+						notify('Picture upload failed: ' + uploadError.message, 'error');
+						return;
+					}
+					const { data: urlData } = supabaseClient.storage.from('student-pictures').getPublicUrl(uploadData.path);
+					payload.picture_url = urlData.publicUrl;
+				}
+				const { data, error } = await supabaseClient.from('students').insert([payload]).select().single();
+				if (error) return notify('Failed to add student: ' + error.message, 'error');
+				allStudents.push(data);
+				updateStudentCount();
+				renderStudentTiles();
+				notify('Student added', 'success');
+				closeAddModal();
+			} catch (e) {
+				console.error('submitAddStudent error', e);
+				notify('Error adding student: ' + (e && e.message ? e.message : String(e)), 'error');
+			} finally {
+				try { loader && loader.close(); } catch (e) {}
+			}
+		}
+
+		// ------------------ Dedupe Helpers ------------------
+
+		function findDuplicates() {
+			const map = new Map();
+			const dupSets = [];
+			allStudents.forEach(s => {
+				const key = (s.register_id || '').toString().trim() || ((s.first_name||'')+ '|' + (s.surname||'') + '|' + (s.dob||''));
+				if (!map.has(key)) map.set(key, []);
+				map.get(key).push(s);
+			});
+			for (const [k, arr] of map.entries()) {
+				if (arr.length > 1) dupSets.push(arr);
+			}
+			return dupSets;
+		}
+
+		function openDedupeModal() {
+			const dupSets = findDuplicates();
+			if (!dupSets.length) return notify('No duplicates found', 'info');
+			const existing = document.getElementById('studentDedupeModal'); if (existing) existing.remove();
+			const backdrop = document.createElement('div'); backdrop.className = 'modal-backdrop'; backdrop.id = 'studentDedupeModal';
+			let inner = `<div class="modal-card"><div class="modal-content"><div class="modal-header"><h3>Duplicate Students</h3></div><div class="modal-body">`;
+			dupSets.forEach((group, i) => {
+				inner += `<div style="border:1px solid #eee;padding:0.6rem;margin-bottom:0.6rem;"><strong>Group ${i+1} (${group.length})</strong><div>`;
+				group.forEach(s => {
+					inner += `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;">`;
+					inner += `<div><small>${escapeHtml(s.register_id||'')}</small> ${escapeHtml((s.first_name||'')+' '+(s.surname||''))} <span style="color:#666">${escapeHtml(s.dob||'')}</span></div>`;
+					inner += `<div><button onclick="removeDuplicate('${s.id}')" style="background:#ef4444;color:#fff;border:none;padding:6px;border-radius:6px;">Remove</button></div>`;
+					inner += `</div>`;
+				});
+				inner += `</div></div>`;
+			});
+			inner += `</div><div class="modal-actions"><button class="action-btn modal-close" onclick="closeDedupeModal()">Close</button></div></div></div>`;
+			backdrop.innerHTML = inner; document.body.appendChild(backdrop);
+		}
+
+		function closeDedupeModal() { const el = document.getElementById('studentDedupeModal'); if (el) el.remove(); }
+
+		async function removeDuplicate(id) {
+			if (!confirm('Remove this duplicate student?')) return;
+			const loader = showLoadingToast('Removing...', { color: '#ef4444' });
+			try {
+				const { error } = await supabaseClient.from('students').delete().eq('id', id);
+				if (error) return notify('Failed to remove: ' + error.message, 'error');
+				allStudents = allStudents.filter(s => s.id !== id);
+				renderStudentTiles(); updateStudentCount();
+				notify('Duplicate removed', 'success');
+				// refresh dedupe modal
+				openDedupeModal();
+			} catch (e) {
+				console.error('removeDuplicate error', e);
+				notify('Error removing duplicate: ' + (e && e.message ? e.message : String(e)), 'error');
+			} finally { try { loader && loader.close(); } catch (e) {} }
+		}
+
+
 		// --- Edit modal functionality ---
 
 		function openEditModal(studentId) {
@@ -551,90 +910,85 @@
 		function renderEditModal(student) {
 			const existing = document.getElementById('studentEditModal');
 			if (existing) existing.remove();
-			const backdrop = document.createElement('div');
-			backdrop.className = 'modal-backdrop';
-			backdrop.id = 'studentEditModal';
-			// Use the same structure and classes as the admin `#studentForm` modal for consistency
-			backdrop.innerHTML = `
-				<div class="modal-card">
-					<div class="modal-content">
-						<div class="modal-header"><h3>Edit Student</h3></div>
-						<div class="modal-body">
-							<form id="studentForm" enctype="multipart/form-data" novalidate>
-								<div class="form-group">
-									<label for="register_id">Student ID</label>
-									<input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly class="input-readonly" value="${escapeHtml(student.register_id || '')}" />
-									<input type="hidden" name="student_id" value="${escapeHtml(student.id || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="student_dob">Date of Birth</label>
-									<input type="date" id="student_dob" name="dob" value="${escapeHtml(student.dob || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="nhis_number">NHIS Number</label>
-									<input type="text" id="nhis_number" name="nhis_number" placeholder="NHIS Number" value="${escapeHtml(student.nhis_number || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="first_name">First Name</label>
-									<input type="text" id="first_name" name="first_name" placeholder="First Name" value="${escapeHtml(student.first_name || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="surname">Surname</label>
-									<input type="text" id="surname" name="surname" placeholder="Surname" value="${escapeHtml(student.surname || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="area">Area</label>
-									<input type="text" id="area" name="area" placeholder="Area" value="${escapeHtml(student.area || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="gender">Gender</label>
-									<select name="gender" id="gender" title="Gender">
-										<option value="">Select Gender</option>
-										<option value="Male" ${student.gender==='Male'?'selected':''}>Male</option>
-										<option value="Female" ${student.gender==='Female'?'selected':''}>Female</option>
+			const modal = document.createElement('div');
+			modal.className = 'modal';
+			modal.id = 'studentEditModal';
+			modal.innerHTML = `
+				<div class="modal-content">
+					<div class="modal-header"><h3>Edit Student</h3></div>
+					<div class="modal-body">
+						<form id="studentForm" enctype="multipart/form-data" novalidate>
+							<div class="form-group">
+								<label for="register_id">Student ID</label>
+								<input type="text" name="register_id" id="register_id" placeholder="Auto-assigned" readonly class="input-readonly" value="${escapeHtml(student.register_id || '')}" />
+								<input type="hidden" name="student_id" value="${escapeHtml(student.id || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="student_dob">Date of Birth</label>
+								<input type="date" id="student_dob" name="dob" value="${escapeHtml(student.dob || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="nhis_number">NHIS Number</label>
+								<input type="text" id="nhis_number" name="nhis_number" placeholder="NHIS Number" value="${escapeHtml(student.nhis_number || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="first_name">First Name</label>
+								<input type="text" id="first_name" name="first_name" placeholder="First Name" value="${escapeHtml(student.first_name || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="surname">Surname</label>
+								<input type="text" id="surname" name="surname" placeholder="Surname" value="${escapeHtml(student.surname || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="area">Area</label>
+								<input type="text" id="area" name="area" placeholder="Area" value="${escapeHtml(student.area || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="gender">Gender</label>
+								<select name="gender" id="gender" title="Gender">
+									<option value="">Select Gender</option>
+									<option value="Male" ${student.gender==='Male'?'selected':''}>Male</option>
+									<option value="Female" ${student.gender==='Female'?'selected':''}>Female</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Class</label>
+								<div class="class-select-row">
+									<select name="main_class_select" id="student_main_class_select" title="Main Class">
+										<option value="">Select Class</option>
+										<option value="JHS 1" ${student.class==='JHS 1'?'selected':''}>JHS 1</option>
+										<option value="JHS 2" ${student.class==='JHS 2'?'selected':''}>JHS 2</option>
+										<option value="JHS 3" ${student.class==='JHS 3'?'selected':''}>JHS 3</option>
 									</select>
+									<select name="sub_class_select" id="student_sub_class_select" class="hidden-select" title="Subclass">
+										<option value="">Select Subclass</option>
+										<option value="A" ${student.subclass==='A'?'selected':''}>A</option>
+										<option value="B" ${student.subclass==='B'?'selected':''}>B</option>
+									</select>
+									<input type="hidden" name="class" id="student_class_hidden" value="${escapeHtml(student.class || '')}" />
 								</div>
-								<div class="form-group">
-									<label>Class</label>
-									<div class="class-select-row">
-										<select name="main_class_select" id="student_main_class_select" title="Main Class">
-											<option value="">Select Class</option>
-											<option value="JHS 1" ${student.class==='JHS 1'?'selected':''}>JHS 1</option>
-											<option value="JHS 2" ${student.class==='JHS 2'?'selected':''}>JHS 2</option>
-											<option value="JHS 3" ${student.class==='JHS 3'?'selected':''}>JHS 3</option>
-										</select>
-										<select name="sub_class_select" id="student_sub_class_select" class="hidden-select" title="Subclass">
-											<option value="">Select Subclass</option>
-											<option value="A" ${student.subclass==='A'?'selected':''}>A</option>
-											<option value="B" ${student.subclass==='B'?'selected':''}>B</option>
-										</select>
-										<input type="hidden" name="class" id="student_class_hidden" value="${escapeHtml(student.class || '')}" />
-									</div>
-								</div>
-								<div class="form-group">
-									<label for="parent_name">Parent/Guardian Name</label>
-									<input type="text" id="parent_name" name="parent_name" placeholder="Parent/Guardian Name" value="${escapeHtml(student.parent_name || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="parent_contact">Parent/Guardian Contact</label>
-									<input type="tel" id="parent_contact" name="parent_contact" placeholder="Parent/Guardian Number" value="${escapeHtml(student.parent_contact || '')}" />
-								</div>
-								<div class="form-group">
-									<label for="picture">Picture</label>
-									<input type="file" id="picture" name="picture" accept="image/*" title="Upload Picture" />
-								</div>
-								<!-- spinner and actions -->
-								<div id="modalSpinner" class="modal-spinner" style="display:none;"><div class="spinner"></div>Saving...</div>
-								<div class="form-actions">
-									<button type="button" id="studentSaveBtn" class="action-btn modal-save" onclick="saveStudentChanges('${student.id}')">Save</button>
-									<button type="button" class="action-btn modal-close" onclick="closeEditModal()">Cancel</button>
-								</div>
-							</form>
-						</div>
+							</div>
+							<div class="form-group">
+								<label for="parent_name">Parent/Guardian Name</label>
+								<input type="text" id="parent_name" name="parent_name" placeholder="Parent/Guardian Name" value="${escapeHtml(student.parent_name || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="parent_contact">Parent/Guardian Contact</label>
+								<input type="tel" id="parent_contact" name="parent_contact" placeholder="Parent/Guardian Number" value="${escapeHtml(student.parent_contact || '')}" />
+							</div>
+							<div class="form-group">
+								<label for="picture">Picture</label>
+								<input type="file" id="picture" name="picture" accept="image/*" title="Upload Picture" />
+							</div>
+							<div class="form-actions">
+								<button type="button" id="studentSaveBtn" onclick="saveStudentChanges('${student.id}')">Save</button>
+								<button type="button" onclick="closeEditModal()">Cancel</button>
+							</div>
+						</form>
 					</div>
 				</div>
 			`;
-			document.body.appendChild(backdrop);
+			document.body.appendChild(modal);
 		}
 
 		function closeEditModal() {

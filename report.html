@@ -55,6 +55,11 @@
         <option value="3rd Term">3rd Term</option>
       </select>
       <input id="yearFilter" placeholder="Academic Year (e.g. 2025/2026)">
+      <label for="examType">Exam Type:</label>
+      <select id="examType">
+        <option value="End of Term">End of Term</option>
+        <option value="Mock">Mock</option>
+      </select>
       <button id="bulkPrintBtn" type="button">Print Selected Class Reports</button>
       <button id="bulkDownloadBtn" type="button">Download Selected Class Reports (CSV)</button>
     </div>
@@ -78,7 +83,7 @@
       </div>
 
       <!-- 👤 Student Info -->
-      <section class="student-info">
+      <section id="regularStudentInfo" class="student-info">
         <table style="width:100%;border-collapse:collapse;margin-bottom:1em;">
           <tr>
             <td><strong>Name:</strong></td>
@@ -107,8 +112,26 @@
         </table>
       </section>
 
-      <!-- 📊 Score Table -->
-      <section class="score-table">
+      <!-- � Mock Student Info (visible only for Mock exams) -->
+      <section id="mockStudentInfo" class="student-info" style="display:none;">
+        <table style="width:100%;border-collapse:collapse;margin-bottom:1em;">
+          <tr>
+            <td><strong>Student Name:</strong></td>
+            <td><span id="mockStudentName">—</span></td>
+          </tr>
+          <tr>
+            <td><strong>Index Number:</strong></td>
+            <td><span id="mockIndexNumber">—</span></td>
+          </tr>
+          <tr>
+            <td><strong>Sex:</strong></td>
+            <td><span id="mockStudentSex">—</span></td>
+          </tr>
+        </table>
+      </section>
+
+      <!-- Score Table - END OF TERM (7 columns) -->
+      <section class="score-table" id="scoreTableEndOfTerm">
         <table>
           <thead>
             <tr>
@@ -119,7 +142,7 @@
               <th>Class Score</th>
               <th>Exam Score</th>
               <th>Total</th>
-              <th>Grade Point</th>
+              <th>Grade</th>
               <th>Remark</th>
               <th>Position</th>
             </tr>
@@ -142,7 +165,39 @@
         </table>
       </section>
 
-      <!-- 📝 Remarks -->
+      <!-- Score Table - MOCK EXAMS (4 columns) -->
+      <section class="score-table" id="scoreTableMock" style="display:none;">
+        <table>
+          <thead>
+            <tr>
+              <th colspan="4" class="results-details-header">RESULTS DETAILS</th>
+            </tr>
+            <tr>
+              <th>Subject</th>
+              <th>Exam Score</th>
+              <th>Grade Point</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody id="scoreBodyMock">
+            <!-- Dynamic rows for Mock -->
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>Total Score</strong></td>
+              <td id="totalScoreMock">0</td>
+              <td></td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Best Six aggregated score</strong></td>
+              <td id="averageScoreMock">0</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </section>
+
+      <!-- Remarks -->
       <section class="remarks">
         <table style="width:100%;border-collapse:collapse;margin-bottom:1em;">
           <tr>
@@ -161,13 +216,16 @@
           </tr>
         </table>
         <p><strong>Teacher's Remark:</strong> <span id="teacherRemark">—</span></p>
+      </section>
+
+      <!-- 👨‍🏫 Approval Sections (shown for both Mock and End of Term) -->
+      <section class="approval-section">
         <div class="approval-columns">
           <div class="approval-col">
             <div class="approval-label">Class Teacher's Approval</div>
             <div class="signature-box">
               <div id="classTeacherName" class="signature-name">—</div>
               <div class="signature-line"></div>
-    
             </div>
           </div>
           <div class="approval-col">
@@ -181,6 +239,10 @@
         <p><span id="encouragementMessage">—</span></p>
         <div id="mottoUnderMessage" class="motto-under-message">KNOWLEDGE IS POWER</div>
       </section>
+
+      <!-- 📝 Remarks (hidden for Mock)
+      <section class="remarks-placeholder" style="display:none;">
+      
 
       <!-- 🖨️ Print Button -->
       <footer class="report-footer">
@@ -199,6 +261,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <script src="toasts.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
-  <script src="report.js"></script>
+  <!-- Append a cache-busting query so browsers load the latest report.js during testing -->
+  <script src="report.js?v=20260208.1000.9"></script>
 </body>
 </html>

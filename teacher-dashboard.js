@@ -641,15 +641,14 @@ async function populateMotivationStudentDropdown() {
 // ✅ Supabase client setup - Main project (students, teachers, results, etc.)
 const { createClient } = supabase;
 const supabaseClient = createClient(
-  'https://omhmahhfeduejykrxflx.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo'
+  'https://vjqgptkmgkvbevkzzvlf.supabase.co', // Main project - Regular students & results
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZqcWdwdGttZ2t2YmV2a3p6dmxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM5OTQ2MjMsImV4cCI6MjA2OTU3MDYyM30.2IMFAXNzCt0CcwZXWKyFLyU3CtjSTWWeq_K94JpSDSY' // Main project ANON key
 );
 
-// ✅ Supabase client setup - Career Tech project (career_tech_results table only)
-// Replace with your Career Tech Supabase URL and ANON key
+// ✅ Supabase client setup - Career Tech project (Mock exams & JHS3 students)
 const supabaseCareerTech = createClient(
-  'https://tivkbqpoqshdgyjgdwbu.supabase.co', // Replace with your Career Tech Supabase URL
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdmticXBvcXNoZGd5amdkd2J1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzMjA3NTksImV4cCI6MjA4MDg5Njc1OX0.CFAE66k6Q75yAIBQr6PByeY-0os8sBrV2r2WERJKGbI' // Replace with your Career Tech Supabase ANON key
+  'https://omhmahhfeduejykrxflx.supabase.co', // Career Tech project - Mock exams & JHS3 students
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taG1haGhmZWR1ZWp5a3J4Zmx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY4MDI5NDAsImV4cCI6MjA3MjM3ODk0MH0.UL7cRM4JUEZRqhXarRf8xQDyobvoOxa8eXfG8h9wNHo' // Career Tech project ANON key
 );
 
 let teacher = {};

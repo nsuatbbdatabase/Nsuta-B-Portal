@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>JHS 3 Mock Exams Entry — Nsuta B Portal</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="admin-dashboard.css" />
+  <style>
+    body { background: linear-gradient(180deg,#f6fbff,#f4f6f8); font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial; }
+    .page { max-width: 1100px; margin: 1.2rem auto; padding: 1rem; }
+    .back-link { margin-bottom: 0.6rem; display:inline-block; }
+    .section-card { background:#fff; border-radius:10px; padding:1rem; box-shadow:0 8px 24px rgba(16,24,40,0.06); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <a class="back-link" href="admin.html">← Back to Admin Dashboard</a>
+    <div class="section-card">
+      <!-- JHS 3 Mock Exams section (moved to its own page) -->
+      <h2>JHS 3 Mock Exams Entry</h2>
+      <p class="muted-small">Enter mock exam marks for JHS 3 students. These marks are separate from regular term marks and are used for mock exam reports.</p>
+      <div class="filters filters--start">
+        <div class="form-group-inline">
+          <label for="mockTermSelect">Term:</label>
+          <select id="mockTermSelect">
+            <option value="">-- Select Term --</option>
+            <option value="1st Term">1st Term</option>
+            <option value="2nd Term">2nd Term</option>
+            <option value="3rd Term">3rd Term</option>
+          </select>
+        </div>
+        <div class="form-group-inline">
+          <label for="mockYearInput">Academic Year:</label>
+          <input id="mockYearInput" placeholder="e.g. 2025/2026" />
+        </div>
+        <div class="form-group-inline">
+          <label for="mockSubjectSelect">Subject:</label>
+          <select id="mockSubjectSelect">
+            <option value="">-- Select Subject --</option>
+            <option value="english">English</option>
+            <option value="maths">Maths</option>
+            <option value="science">Science</option>
+            <option value="social_studies">Social Studies</option>
+            <option value="rme">RME</option>
+            <option value="computing">Computing</option>
+            <option value="creative_arts">Creative Arts</option>
+            <option value="career_tech">Career Tech</option>
+            <option value="twi">Twi</option>
+          </select>
+        </div>
+        <input type="file" id="jhs3CsvInput" accept=".csv" style="display: none;" />
+        <button id="importJHS3StudentsBtn" class="action-btn action-btn--secondary">Import JHS 3 Students</button>
+        <button id="loadMockStudentsBtn" class="action-btn">Load Students</button>
+        <button id="saveMockMarksBtn" class="action-btn action-btn--primary" disabled>Save All Marks</button>
+      </div>
+
+      <div id="mockExamsContainer" class="table-scroll" style="display: none; margin-top:0.8rem;">
+        <table id="mockExamsTable" class="list-table" aria-label="JHS 3 Mock Exam Marks">
+          <thead>
+            <tr>
+              <th>Student Name</th>
+              <th>Index Number</th>
+              <th>Gender</th>
+              <th id="subjectHeader">Subject</th>
+              <th>Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="mockExamsTableBody"></tbody>
+        </table>
+      </div>
+
+      <div id="mockExamsMessage" class="muted-small" style="margin-top:0.6rem;">
+        Select term and academic year, then click "Load Students" to begin entering mock exam marks.
+      </div>
+    </div>
+  </main>
+
+  <!-- Required scripts: reuse existing admin/dash scripts so handlers in admin.js work on this page -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <script src="dashboard.js"></script>
+  <script src="admin.js"></script>
+  <script src="admin-inline.js"></script>
+  <script src="toasts.js"></script>
+</body>
+</html>

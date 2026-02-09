@@ -86,6 +86,49 @@ function getSubjectRemark(point) {
   }
 }
 
+// Mock exam grade-point mapping (percentage -> point) and remark mapping
+function getMockGradePoint(score) {
+  // ensure numeric
+  const s = Number(score) || 0;
+  if (s >= 80 && s <= 100) return 1;
+  if (s >= 70 && s <= 79) return 2;
+  if (s >= 60 && s <= 69) return 3;
+  if (s >= 50 && s <= 59) return 4;
+  if (s >= 45 && s <= 49) return 5;
+  if (s >= 40 && s <= 44) return 6;
+  if (s >= 35 && s <= 39) return 7;
+  if (s >= 25 && s <= 34) return 8;
+  return 9;
+}
+
+function getMockSubjectRemark(point) {
+  switch (point) {
+    case 1: return 'Excellent';
+    case 2: return 'Very Good';
+    case 3: return 'Good';
+    case 4: return 'Credit';
+    case 5: return 'Credit';
+    case 6: return 'Credit';
+    case 7: return 'Pass';
+    case 8: return 'Pass';
+    default: return 'Fail';
+  }
+}
+
+// Map percentile to BECE Stanine (1 is top). Percentile is percentage of classmates scoring <= student's score.
+function computeStanineFromPercentile(percentile) {
+  const p = Number(percentile) || 0;
+  if (p >= 96) return 1;
+  if (p >= 89) return 2;
+  if (p >= 77) return 3;
+  if (p >= 60) return 4;
+  if (p >= 40) return 5;
+  if (p >= 23) return 6;
+  if (p >= 11) return 7;
+  if (p >= 4) return 8;
+  return 9;
+}
+
 // 🧠 Teacher remark logic - bucketed by 100 with enriched encouragement
 function getTeacherRemark(totalScore) {
   // Normalize score into 100..900 range
@@ -965,6 +1008,9 @@ if (!document.getElementById('reportPrompt')) {
 }
 
 async function loadReportForStudent() {
+  console.log('🚀 loadReportForStudent called');
+  try {
+  console.log('✅ ENTERED try block - about to validate inputs');
   let position = '—';
   let totalInClass = '—';
   let subjectPositions = {};
@@ -984,6 +1030,8 @@ async function loadReportForStudent() {
     if (j === 3) return `${n}rd`;
     return `${n}th`;
   }
+  
+  // Get select and basic fields FIRST before using them
   const select = document.getElementById('studentSelect');
   const studentId = select.value;
   const studentClass = select.options[select.selectedIndex]?.dataset.class || '';
@@ -992,36 +1040,64 @@ async function loadReportForStudent() {
   const year = document.getElementById('yearFilter')?.value || '';
   const reportPrompt = document.getElementById('reportPrompt');
   const reportSection = document.getElementById('reportSection');
-
-  // Fix: get student name as string, not as element
   const studentName = select.options[select.selectedIndex]?.textContent || '';
 
-  // Only show report if all required fields are filled
-  if (!studentId || !studentClass || !term || !year) {
-    // Show prompt message
-    reportPrompt.textContent = "Please select class, student, term, and academic year to view the report.";
-    reportPrompt.style.display = 'block';
-    if (reportSection) reportSection.style.display = 'none';
-    // Optionally clear/hide report fields
-    document.getElementById("studentName").textContent = "—";
-    document.getElementById("studentClass").textContent = "—";
-    document.getElementById("term").textContent = "—";
-    document.getElementById("year").textContent = "—";
-    document.getElementById("position").textContent = "—";
-    document.getElementById("totalAttendance").textContent = "—";
-    document.getElementById("actualAttendance").textContent = "—";
-    document.getElementById("studentInterest").textContent = "—";
-    document.getElementById("studentConduct").textContent = "—";
-    document.getElementById("scoreBody").innerHTML = "";
-    document.getElementById("totalScore").textContent = "—";
-    document.getElementById("averageScore").textContent = "—";
-    document.getElementById("teacherRemark").textContent = "—";
-    document.getElementById("vacationDate").textContent = "—";
-    document.getElementById("reopenDate").textContent = "—";
-    document.getElementById("classTeacherName").textContent = "—";
-    return;
+  // Get examType and define isMock EARLY (before any usage)
+  const examType = document.getElementById('examType')?.value || 'End of Term';
+  const isMock = (examType === 'Mock');
+
+  // CRITICAL: Toggle table visibility based on isMock (do this EARLY, before any early returns)
+  const tableEndOfTerm = document.getElementById("scoreTableEndOfTerm");
+  const tableMock = document.getElementById("scoreTableMock");
+  if (tableEndOfTerm) tableEndOfTerm.style.display = isMock ? 'none' : 'block';
+  if (tableMock) tableMock.style.display = isMock ? 'block' : 'none';
+  console.log('✅ EARLY table visibility toggle - isMock:', isMock, 'EndOfTerm:', tableEndOfTerm?.style.display, 'Mock:', tableMock?.style.display);
+
+  // Hide remarks section for Mock exams only (keep approval sections and motto visible)
+  const remarksSection = document.querySelector('.remarks');
+  if (remarksSection) remarksSection.style.display = isMock ? 'none' : 'block';
+
+  // Update header title
+  const headerTitle = document.querySelector('.header-center h2');
+  if (headerTitle) headerTitle.textContent = isMock ? 'Mock Exam Report' : 'End of Term Report';
+
+  // Show/hide the appropriate student info section depending on exam type
+  const regularInfo = document.getElementById('regularStudentInfo');
+  const mockInfo = document.getElementById('mockStudentInfo');
+  if (regularInfo) regularInfo.style.display = isMock ? 'none' : 'block';
+  if (mockInfo) mockInfo.style.display = isMock ? 'block' : 'none';
+
+  // Populate mock student info (fetch from correct Supabase)
+  console.log('✅ About to populate mock student info, isMock =', isMock);
+  if (isMock) {
+    const mockStudentId = studentId;
+    let studentRecord = null;
+    try {
+      if (studentClass === 'JHS 3') {
+        const { data: jdata } = await supabaseCareerTech.from('jhs3_students').select('id, first_name, surname, index_number, gender, picture_url').eq('id', mockStudentId).single();
+        studentRecord = jdata;
+      } else {
+        const { data: sdata } = await supabaseClient.from('students').select('id, first_name, surname, index_number, sex, picture_url').eq('id', mockStudentId).single();
+        studentRecord = sdata;
+      }
+    } catch (e) {
+      console.warn('Failed to fetch student record for mock info:', e);
+    }
+    
+    if (studentRecord) {
+      const name = [studentRecord.first_name, studentRecord.surname].filter(Boolean).join(' ');
+      document.getElementById('mockStudentName').textContent = (name || studentName).toUpperCase();
+      document.getElementById('mockIndexNumber').textContent = studentRecord.index_number || studentId || '—';
+      document.getElementById('mockStudentSex').textContent = studentRecord.gender ? String(studentRecord.gender).toUpperCase() : '—';
+      if (studentRecord.picture_url) document.getElementById('studentPhoto').src = studentRecord.picture_url;
+    } else {
+      document.getElementById('mockStudentName').textContent = studentName.toUpperCase();
+      document.getElementById('mockIndexNumber').textContent = studentId || '—';
+      document.getElementById('mockStudentSex').textContent = '—';
+    }
   }
-  console.debug('DEBUG: Selected studentId:', studentId, 'studentClass:', studentClass, 'studentSubclass:', studentSubclass, 'term:', term, 'year:', year);
+  console.log('✅ Mock student info populated');
+
   // Fetch vacation and reopening dates from school_dates table
   try {
     const { data, error } = await supabaseClient
@@ -1036,6 +1112,7 @@ async function loadReportForStudent() {
     document.getElementById("vacationDate").textContent = "—";
     document.getElementById("reopenDate").textContent = "—";
   }
+  console.log('✅ Vacation/reopen dates loaded');
   // Hide prompt and show report
   reportPrompt.style.display = 'none';
   if (reportSection) reportSection.style.display = 'block';
@@ -1043,37 +1120,101 @@ async function loadReportForStudent() {
   // 🖼️ Load student photo
   const studentPhotoUrl = select.options[select.selectedIndex]?.dataset.picture || "placeholder.png";
   document.getElementById("studentPhoto").src = studentPhotoUrl;
+  console.log('✅ Student photo loaded');
 
   // 📦 Fetch results for selected student, term, and year
-  // Important: Only fetch regular subjects (NOT Career Tech) from main Supabase
-  // Career Tech is now stored only in the Career Tech Supabase
-  let query = supabaseClient
-    .from('results')
-    .select('*')
-    .eq('student_id', studentId)
-    .eq('term', term)
-    .eq('year', year)
-    .neq('subject', 'Career Tech'); // Exclude Career Tech - it's now in separate project
-  const { data: results, error: resultError } = await query;
-  console.debug('DEBUG: Student results (excluding Career Tech):', results, 'Error:', resultError);
+  // For Mock exams: fetch from mock_exam_marks in Career Tech
+  // For End of Term: fetch from results in main Supabase
+  let results = [];
+  let resultError = null;
+  let fetchedMockMarks = false; // flag: did we fetch mock_exam_marks?
+  console.log('✅ About to fetch exam results, isMock =', isMock);
 
-  // Also fetch Career Tech results from Career Tech Supabase
-  let careerTechResults = [];
-  try {
-    const { data: ctData, error: ctError } = await supabaseCareerTech
-      .from('career_tech_results')
-      .select('*')
+  if (isMock && studentClass === 'JHS 3') {
+    // Mock exams for JHS 3: fetch from Career Tech mock_exam_marks
+    console.debug('DEBUG: Fetching Mock exam marks from Career Tech...');
+    // Only fetch minimal fields needed for Mock display: student id, term, year and subject exam columns
+    const query = supabaseCareerTech
+      .from('mock_exam_marks')
+      .select('student_id, term, year, english, maths, science, rme, social_studies, computing, career_tech, creative_arts, twi')
       .eq('student_id', studentId)
       .eq('term', term)
       .eq('year', year);
-    if (!ctError && ctData) {
-      careerTechResults = ctData;
+    const { data: mockData, error: mockError } = await query;
+    if (mockError) {
+      resultError = mockError;
+      console.error('Failed to load mock exam marks:', mockError.message);
+    } else {
+      results = mockData || [];
+      fetchedMockMarks = Array.isArray(results) && results.length > 0;
+      console.debug('DEBUG: Mock exam marks loaded:', results.length, 'records');
     }
-  } catch (e) {
-    console.debug('Career Tech results not available or table does not exist:', e);
+  } else {
+    // End of Term or non-JHS3: fetch from main Supabase results table
+    console.debug('DEBUG: Fetching regular results from main Supabase...');
+    const query = supabaseClient
+      .from('results')
+      .select('*')
+      .eq('student_id', studentId)
+      .eq('term', term)
+      .eq('year', year)
+      .neq('subject', 'Career Tech');
+    const { data: regData, error: regError } = await query;
+    if (regError) {
+      resultError = regError;
+      console.error('Failed to load results:', regError.message);
+    } else {
+      results = regData || [];
+      console.debug('DEBUG: Regular results loaded:', results.length, 'records');
+    }
+  }
+  console.log('✅ Exam results fetched, isMock =', isMock, ', fetchedMockMarks =', fetchedMockMarks);
+
+  // Also fetch Career Tech results from Career Tech Supabase (for End of Term only)
+  let careerTechResults = [];
+  if (!isMock) {
+    try {
+      const { data: ctData, error: ctError } = await supabaseCareerTech
+        .from('career_tech_results')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('term', term)
+        .eq('year', year);
+      if (!ctError && ctData) {
+        careerTechResults = ctData;
+      }
+    } catch (e) {
+      console.debug('Career Tech results not available or table does not exist:', e);
+    }
   }
 
   if (resultError) return console.error('Failed to load results:', resultError.message);
+
+  // Transform Mock exam marks from column format to row format for consistent processing
+  if (isMock && Array.isArray(results) && results.length > 0) {
+    const mockRecord = results[0]; // Should be one record per student for Mock exams
+    const subjects = [
+      "English", "Maths", "Science", "RME",
+      "Social Studies", "Computing", "Career Tech",
+      "Creative Arts", "Twi"
+    ];
+    
+    // Convert column-based format to row-based format (like the results table)
+    const transformedResults = [];
+    subjects.forEach(subject => {
+      const key = subject.toLowerCase().replace(/\s+/g, '_');
+      const examScore = Number(mockRecord[key]) || 0;
+      // Always include the subject row (even if score is 0) so table layout follows Mock format
+      transformedResults.push({
+        subject: subject,
+        exam_score: examScore,
+        class_score: 0  // Mock exams don't have class scores
+      });
+    });
+    results = transformedResults;
+    console.debug('DEBUG: Transformed mock marks to row format (including zeros):', results);
+  }
+  console.log('✅ Mock marks transformation complete (if Mock)');
 
   // Show message if no results found
   if ((!results || results.length === 0) && careerTechResults.length === 0) {
@@ -1113,16 +1254,36 @@ async function loadReportForStudent() {
     console.warn('Failed to fetch global attendance total days:', e);
   }
 
-  // 📦 Fetch interest/conduct/attendance
-  const { data: profile, error: profileError } = await supabaseClient
-    .from('profiles')
-    .select('interest, conduct, attendance_total, attendance_actual')
-    .eq('student_id', studentId)
-    .eq('term', term)
-    .eq('year', year)
-    .single();
+  // 📦 Fetch interest/conduct/attendance - use Career Tech for Mock exams
+  let profile = {};
+  let profileError = null;
+  
+  if (isMock && studentClass === 'JHS 3') {
+    // For Mock exams: fetch from Career Tech jhs3_students
+    console.debug('DEBUG: Fetching Mock student profile from Career Tech');
+    const { data: ctProfile, error: ctError } = await supabaseCareerTech
+      .from('jhs3_students')
+      .select('interest, conduct, attendance_total, attendance_actual')
+      .eq('id', studentId)
+      .single();
+    profile = ctProfile || {};
+    profileError = ctError;
+  } else {
+    // For End of Term: fetch from main Supabase profiles
+    console.debug('DEBUG: Fetching End of Term student profile from main Supabase');
+    const { data: mainProfile, error: mainError } = await supabaseClient
+      .from('profiles')
+      .select('interest, conduct, attendance_total, attendance_actual')
+      .eq('student_id', studentId)
+      .eq('term', term)
+      .eq('year', year)
+      .single();
+    profile = mainProfile || {};
+    profileError = mainError;
+  }
 
   if (profileError || !profile) console.warn('No interest/conduct data found.');
+  console.log('✅ Profile (interest/conduct/attendance) fetched');
 
   // 🧾 Populate student info
   document.getElementById("studentName").textContent = studentName.toUpperCase();
@@ -1216,10 +1377,44 @@ async function loadReportForStudent() {
     promotedToCell.textContent = "";
     promotedToCell.parentElement.style.display = "none";
   }
-  // 📊 Score Table
-  const tbody = document.getElementById("scoreBody");
-  tbody.innerHTML = "";
-  let totalScore = 0;
+  console.log('✅ About to set displayMock flag and update table visibility');
+  // Note: Headers are now separate in HTML (scoreTableEndOfTerm and scoreTableMock)
+  // No need to rebuild headers dynamically - just show/hide the correct table section
+  const displayMock = Boolean(isMock || typeof fetchedMockMarks !== 'undefined' && fetchedMockMarks);
+  console.log('🔍 displayMock =', displayMock, '| isMock =', isMock, '| fetchedMockMarks =', fetchedMockMarks);
+  
+  // Determine which tbody to use based on displayMock flag
+  let tbody;
+  let tbodyId = displayMock ? "scoreBodyMock" : "scoreBody";
+  tbody = document.getElementById(tbodyId);
+  
+  // Clear both tbodies
+  const scoreBodyEoT = document.getElementById("scoreBody");
+  const scoreBodyMock = document.getElementById("scoreBodyMock");
+  if (scoreBodyEoT) scoreBodyEoT.innerHTML = "";
+  if (scoreBodyMock) scoreBodyMock.innerHTML = "";
+  
+  // Update table visibility (use refs created earlier)
+  const tableEndOfTermRef = typeof tableEndOfTerm !== 'undefined' ? tableEndOfTerm : document.getElementById("scoreTableEndOfTerm");
+  const tableMockRef = typeof tableMock !== 'undefined' ? tableMock : document.getElementById("scoreTableMock");
+  console.debug('DEBUG: TABLE ELEMENT CHECK - scoreTableEndOfTerm element:', tableEndOfTermRef, 'scoreTableMock element:', tableMockRef);
+  if (tableEndOfTermRef) {
+    tableEndOfTermRef.style.display = displayMock ? 'none' : 'block';
+    console.debug('DEBUG: ✓ Set scoreTableEndOfTerm.style.display to', tableEndOfTermRef.style.display);
+  } else {
+    console.error('❌ ERROR: scoreTableEndOfTerm element NOT FOUND in DOM!');
+  }
+  if (tableMockRef) {
+    tableMockRef.style.display = displayMock ? 'block' : 'none';
+    console.debug('DEBUG: ✓ Set scoreTableMock.style.display to', tableMockRef.style.display);
+  } else {
+    console.error('❌ ERROR: scoreTableMock element NOT FOUND in DOM!');
+  }
+
+  console.debug('DEBUG: Using tbody:', tbodyId, 'Table visibility - EndOfTerm:', tableEndOfTermRef?.style.display, 'Mock:', tableMockRef?.style.display);
+  console.debug('DEBUG: About to build', results_final.length, 'rows');
+  // Collect per-subject totals then compute final total as sum of best six
+  const subjectTotals = [];
   const subjects = [
     "English", "Maths", "Science", "RME",
     "Social Studies", "Computing", "Career Tech",
@@ -1319,49 +1514,101 @@ async function loadReportForStudent() {
       const sbaAvg = careerTechEntries.length > 0 ? sbaAdjusted : 0;
       const examAvg = careerTechEntries.length > 0 ? examAdjusted : 0;
       const total = sbaAvg + examAvg;
-      const point = getGradePoint(total);
-      const remark = getSubjectRemark(point).toUpperCase();
+      let point;
+      if (displayMock) {
+        try {
+          const arr = (classMockScoresMap && Array.isArray(classMockScoresMap['career_tech'])) ? classMockScoresMap['career_tech'] : [];
+          if (arr && arr.length) {
+            const N = arr.length;
+            const lessEqual = arr.filter(v => (Number(v) || 0) <= total).length;
+            const percentile = (lessEqual / N) * 100;
+            point = computeStanineFromPercentile(percentile);
+          } else {
+            point = getMockGradePoint(total);
+          }
+        } catch (e) {
+          point = getMockGradePoint(total);
+        }
+      } else {
+        point = getGradePoint(total);
+      }
+      const remark = (displayMock ? getMockSubjectRemark(point) : getSubjectRemark(point)).toUpperCase();
       const subjectPosition = subjectPositionsMap[subject] || '—';
       // Show Career Tech row with averaged SBA and Exam
       const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>Career Tech</td>
-        <td>${sbaAvg}</td>
-        <td>${examAvg}</td>
-        <td><strong>${total}</strong></td>
-        <td>${String(point).toUpperCase()}</td>
-        <td>${remark}</td>
-        <td>${String(subjectPosition).toUpperCase()}</td>
-      `;
+      let cells = `<td>Career Tech</td>`;
+      if (!displayMock) {
+        cells += `<td>${sbaAvg}</td>`;
+        cells += `<td>${examAvg}</td>`;
+        cells += `<td><strong>${total}</strong></td>`;
+      } else {
+        cells += `<td>${examAvg}</td>`;
+      }
+      cells += `<td>${String(point).toUpperCase()}</td>`;
+      cells += `<td>${remark}</td>`;
+      if (!displayMock) {
+        cells += `<td>${String(subjectPosition).toUpperCase()}</td>`;
+      }
+      row.innerHTML = cells;
       tbody.appendChild(row);
-      // If the subject cell text is 'Social Studies', prevent wrapping
+      
+      // No need to trim cells - tbody is already the correct type
+      
       try {
         const firstTd = row.querySelector('td:first-child');
         if (firstTd && (firstTd.textContent || '').trim().toLowerCase() === 'social studies') {
           firstTd.classList.add('no-wrap-subject');
         }
       } catch (e) { /* ignore */ }
-      totalScore += total;
+      // record career tech aggregated total for later best-six calculation
+      subjectTotals.push({ subject: 'Career Tech', total });
     } else {
       const entry = results_final.find(r => r.subject === subject);
       const classScore = entry?.class_score || 0;
       const examScore = entry?.exam_score || 0;
       const total = classScore + examScore;
-      const point = getGradePoint(total);
-      const remark = getSubjectRemark(point).toUpperCase();
-      totalScore += total;
+      let point;
+      if (displayMock) {
+        try {
+          const key = subject.toLowerCase().replace(/\s+/g, '_');
+          const arr = (classMockScoresMap && Array.isArray(classMockScoresMap[key])) ? classMockScoresMap[key] : [];
+          if (arr && arr.length) {
+            const N = arr.length;
+            const lessEqual = arr.filter(v => (Number(v) || 0) <= total).length;
+            const percentile = (lessEqual / N) * 100;
+            point = computeStanineFromPercentile(percentile);
+          } else {
+            point = getMockGradePoint(total);
+          }
+        } catch (e) {
+          point = getMockGradePoint(total);
+        }
+      } else {
+        point = getGradePoint(total);
+      }
+      const remark = (displayMock ? getMockSubjectRemark(point) : getSubjectRemark(point)).toUpperCase();
+      // record regular subject total for later best-six calculation
+      subjectTotals.push({ subject, total });
       const subjectPosition = subjectPositionsMap[subject] || '—';
       const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${subject.toUpperCase()}</td>
-        <td>${String(classScore).toUpperCase()}</td>
-        <td>${String(examScore).toUpperCase()}</td>
-        <td>${String(total).toUpperCase()}</td>
-        <td>${String(point).toUpperCase()}</td>
-        <td>${remark}</td>
-        <td>${String(subjectPosition).toUpperCase()}</td>
-      `;
+      let cells = `<td>${subject.toUpperCase()}</td>`;
+      if (!displayMock) {
+        cells += `<td>${String(classScore).toUpperCase()}</td>`;
+        cells += `<td>${String(examScore).toUpperCase()}</td>`;
+        cells += `<td>${String(total).toUpperCase()}</td>`;
+      } else {
+        cells += `<td>${String(examScore).toUpperCase()}</td>`;
+      }
+      cells += `<td>${String(point).toUpperCase()}</td>`;
+      cells += `<td>${remark}</td>`;
+      if (!displayMock) {
+        cells += `<td>${String(subjectPosition).toUpperCase()}</td>`;
+      }
+      row.innerHTML = cells;
       tbody.appendChild(row);
+      
+      // No need to trim cells - tbody is already the correct type
+      
       // Prevent wrapping for Social Studies subject specifically
       try {
         const firstTd = row.querySelector('td:first-child');
@@ -1372,17 +1619,121 @@ async function loadReportForStudent() {
     }
   });
 
-  // Calculate average: if Career Tech has multiple scores, use average, else sum
-  let subjectCount = subjects.length;
-  if (careerTechScores.length > 1) {
-    subjectCount = subjects.length - 1 + 1; // Replace Career Tech with 1 average
+  // CRITICAL: Verify table visibility after all rows are built
+  console.debug('DEBUG: All rows built. Verifying table visibility...');
+  const tableEoTCheck = document.getElementById("scoreTableEndOfTerm");
+  const tableMockCheck = document.getElementById("scoreTableMock");
+  console.debug('DEBUG: scoreTableEndOfTerm found:', !!tableEoTCheck, 'display:', tableEoTCheck?.style.display);
+  console.debug('DEBUG: scoreTableMock found:', !!tableMockCheck, 'display:', tableMockCheck?.style.display);
+  if (tableEoTCheck) tableEoTCheck.style.display = displayMock ? 'none' : 'block';
+  if (tableMockCheck) tableMockCheck.style.display = displayMock ? 'block' : 'none';
+  console.debug('DEBUG: Table visibility RE-VERIFIED - displayMock:', displayMock, 'EndOfTerm should be:', displayMock ? 'none' : 'block', 'Mock should be:', displayMock ? 'block' : 'none');
+
+  // Calculate total as sum of best six aggregated subject totals
+  // If Career Tech contributed multiple entries, it has already been reduced to one aggregated total above
+  const sortedTotalsDesc = subjectTotals.slice().sort((a, b) => (b.total || 0) - (a.total || 0));
+  const topSix = sortedTotalsDesc.slice(0, 6);
+  const totalScore = topSix.reduce((s, it) => s + (Number(it.total) || 0), 0);
+  let averageValue;
+  // Normalize table columns for Mock display by removing unwanted cells
+  // (Already done in row-building loop via deleteCell, but ensure cleanup)
+  try {
+    if (displayMock) {
+      console.debug('DEBUG: Final table normalization for Mock');
+      const rows = Array.from(document.querySelectorAll('.score-table tbody tr'));
+      console.debug(`DEBUG: Found ${rows.length} rows in tbody`);
+      rows.forEach((row, idx) => {
+        const cellsBefore = row.cells.length;
+        while (row.cells.length > 4) {
+          row.deleteCell(row.cells.length - 1);
+        }
+        if (cellsBefore !== row.cells.length) {
+          console.debug(`DEBUG: Row ${idx}: trimmed from ${cellsBefore} to ${row.cells.length} cells`);
+        }
+      });
+      console.debug('DEBUG: ✓ Final normalization complete');
+    } else {
+      console.debug('DEBUG: displayMock is false - no table normalization needed');
+    }
+  } catch (e) {
+    console.debug('DEBUG: Error in final table normalization:', e);
   }
-  const average = (totalScore / subjectCount).toFixed(2);
+  if (isMock) {
+    // Best six aggregated score: sum of grade points of the best 6 subjects
+    const subjectScores = [];
+    results_final.forEach(r => {
+      if (r.subject !== 'Career Tech') {
+        const examScore = r.exam_score || 0;
+        let point;
+        if (displayMock) {
+          try {
+            const key = r.subject.toLowerCase().replace(/\s+/g, '_');
+            const arr = (classMockScoresMap && Array.isArray(classMockScoresMap[key])) ? classMockScoresMap[key] : [];
+            if (arr && arr.length) {
+              const N = arr.length;
+              const lessEqual = arr.filter(v => (Number(v) || 0) <= examScore).length;
+              const percentile = (lessEqual / N) * 100;
+              point = computeStanineFromPercentile(percentile);
+            } else {
+              point = getMockGradePoint(examScore);
+            }
+          } catch (e) {
+            point = getMockGradePoint(examScore);
+          }
+        } else {
+          point = getGradePoint(examScore);
+        }
+        subjectScores.push({ subject: r.subject, point });
+      }
+    });
+    // Add Career Tech if available
+    if (careerTechResults.length > 0) {
+      const examAvg = Math.round((careerTechResults.reduce((sum, ct) => sum + (ct.exam_score || 0), 0)) / careerTechResults.length);
+      let pointCt;
+      if (displayMock) {
+        try {
+          const arr = (classMockScoresMap && Array.isArray(classMockScoresMap['career_tech'])) ? classMockScoresMap['career_tech'] : [];
+          if (arr && arr.length) {
+            const N = arr.length;
+            const lessEqual = arr.filter(v => (Number(v) || 0) <= examAvg).length;
+            const percentile = (lessEqual / N) * 100;
+            pointCt = computeStanineFromPercentile(percentile);
+          } else {
+            pointCt = getMockGradePoint(examAvg);
+          }
+        } catch (e) {
+          pointCt = getMockGradePoint(examAvg);
+        }
+      } else {
+        pointCt = getGradePoint(examAvg);
+      }
+      subjectScores.push({ subject: 'Career Tech', point: pointCt });
+    }
+    // Sort by point (best first) and sum top 6
+    const topSixPoints = subjectScores.sort((a, b) => a.point - b.point).slice(0, 6);
+    averageValue = topSixPoints.reduce((sum, item) => sum + item.point, 0);
+  } else {
+    // For end-of-term, average is computed over the best six subjects
+    averageValue = (totalScore / 6).toFixed(2);
+  }
+
   const teacherRemark = getTeacherRemark(totalScore);
 
-  document.getElementById("totalScore").textContent = totalScore;
-  document.getElementById("averageScore").textContent = average;
-  document.getElementById("teacherRemark").textContent = getTeacherRemark(totalScore);
+  // Update footer values for both tables
+  // End of Term table footer
+  const totalScoreEoT = document.getElementById("totalScore");
+  const averageScoreEoT = document.getElementById("averageScore");
+  if (totalScoreEoT) totalScoreEoT.textContent = totalScore;
+  if (averageScoreEoT) averageScoreEoT.textContent = displayMock ? '' : averageValue;
+  
+  // Mock table footer
+  const totalScoreMock = document.getElementById("totalScoreMock");
+  const averageScoreMock = document.getElementById("averageScoreMock");
+  if (totalScoreMock) totalScoreMock.textContent = displayMock ? totalScore : '';
+  if (averageScoreMock) averageScoreMock.textContent = displayMock ? averageValue : '';
+  
+  document.getElementById("teacherRemark").textContent = teacherRemark;
+  console.debug('DEBUG: Footer values updated - displayMock:', displayMock, 'totalScore:', totalScore, 'averageValue:', averageValue);
 
   // Generate encouragement message based on performance
   const encouragement = getEncouragementMessage(totalScore);
@@ -1432,6 +1783,35 @@ async function loadReportForStudent() {
       .in('student_id', classStudentIds2)
       .eq('term', term)
       .eq('year', year);
+    // For Mock exams (JHS 3), gather class mock marks to compute stanine (norm-referenced)
+    let classMockScoresMap = {};
+    try {
+      if (displayMock && studentClass === 'JHS 3') {
+        // Load JHS3 students from Career Tech and then their mock marks for the term/year
+        const { data: jhsClassStudents } = await supabaseCareerTech.from('jhs3_students').select('id').eq('class', 'JHS 3');
+        const classIds = Array.isArray(jhsClassStudents) ? jhsClassStudents.map(s => s.id) : [];
+        if (classIds.length) {
+          const { data: mockMarksAll, error: mockMarksErr } = await supabaseCareerTech
+            .from('mock_exam_marks')
+            .select('student_id, english, maths, science, rme, social_studies, computing, career_tech, creative_arts, twi')
+            .in('student_id', classIds)
+            .eq('term', term)
+            .eq('year', year);
+          const keys = ['english','maths','science','rme','social_studies','computing','career_tech','creative_arts','twi'];
+          keys.forEach(k => classMockScoresMap[k] = []);
+          if (Array.isArray(mockMarksAll)) {
+            mockMarksAll.forEach(rec => {
+              keys.forEach(k => {
+                classMockScoresMap[k].push(Number(rec[k]) || 0);
+              });
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('Failed to load class mock marks for stanine calculation:', e);
+      classMockScoresMap = {};
+    }
     
     if ((!classError || !careerTechErrorClass) && (Array.isArray(classResults) || Array.isArray(careerTechResultsClass))) {
       // Calculate accumulated total score for each student
@@ -1495,6 +1875,10 @@ async function loadReportForStudent() {
     document.getElementById("totalInClass").textContent = totalInClass;
   }
   console.log('DEBUG: Final values - position:', position, 'totalInClass:', totalInClass);
+  } catch (error) {
+    console.error('❌ ERROR in loadReportForStudent:', error);
+    notify('Error loading report. Check console for details.', 'error');
+  }
 }
 
 // 🚀 Initialize
@@ -1517,16 +1901,78 @@ async function populateClassDropdown() {
 document.getElementById('classSelect').addEventListener('change', async function() {
   const selectedClass = this.value;
   sessionStorage.setItem('selectedClass', selectedClass);
-  await populateStudentDropdown(selectedClass);
+  
+  // Show/hide Mock exam type based on class (only JHS 3 writes Mock exams)
+  const examTypeDropdown = document.getElementById('examType');
+  const mockOption = examTypeDropdown?.querySelector('option[value="Mock"]');
+  if (mockOption) {
+    if (selectedClass === 'JHS 3') {
+      mockOption.style.display = '';
+      console.log('✅ Mock exam option shown (JHS 3 selected)');
+    } else {
+      mockOption.style.display = 'none';
+      // Reset exam type to End of Term if Mock is hidden
+      examTypeDropdown.value = 'End of Term';
+      console.log('✅ Mock exam option hidden (non-JHS 3 class selected)');
+    }
+  }
+  
+  const examType = document.getElementById('examType')?.value || 'End of Term';
+  const isMock = (examType === 'Mock');
+  console.debug('DEBUG: Class changed to', selectedClass, 'isMock:', isMock);
+  await populateStudentDropdown(selectedClass, isMock);
 });
 
-// Modified populateStudentDropdown to filter by class
+// When exam type is selected, repopulate students from correct Supabase
+const examTypeEl = document.getElementById('examType');
+if (examTypeEl) {
+  examTypeEl.addEventListener('change', async function() {
+    const selectedClass = document.getElementById('classSelect')?.value;
+    const isMock = (this.value === 'Mock');
+    console.debug('DEBUG: Exam type changed to', this.value, 'isMock:', isMock, 'selectedClass:', selectedClass);
+    if (selectedClass) {
+      await populateStudentDropdown(selectedClass, isMock);
+    }
+  });
+}
+
+// Modified populateStudentDropdown to filter by class and load from correct Supabase
 let allStudents = [];
-async function populateStudentDropdown(filterClass) {
-  let query = supabaseClient.from('students').select('id, first_name, surname, class, subclass, picture_url');
-  if (filterClass) query = query.eq('class', filterClass);
-  const { data, error } = await query;
+async function populateStudentDropdown(filterClass, isMock = false) {
+  let query, data, error;
+  
+  try {
+    // For Mock exams with JHS 3: load from Career Tech jhs3_students
+    if (isMock && filterClass === 'JHS 3') {
+      console.debug('DEBUG: Loading JHS3 Mock students from Career Tech');
+      query = supabaseCareerTech.from('jhs3_students').select('id, first_name, surname, index_number, gender, picture_url, class');
+      ({ data, error } = await query);
+      if (error) {
+        console.error('ERROR fetching JHS3 students from Career Tech:', error);
+        data = [];
+      } else {
+        console.debug('DEBUG: Loaded', data?.length || 0, 'JHS3 students from Career Tech');
+      }
+    } else {
+      // For End of Term or other classes: load from main students table
+      console.debug('DEBUG: Loading students from main table, filterClass:', filterClass, 'isMock:', isMock);
+      query = supabaseClient.from('students').select('id, first_name, surname, class, subclass, picture_url');
+      if (filterClass) query = query.eq('class', filterClass);
+      ({ data, error } = await query);
+      if (error) {
+        console.error('ERROR fetching students from main table:', error);
+        data = [];
+      } else {
+        console.debug('DEBUG: Loaded', data?.length || 0, 'students from main table');
+      }
+    }
+  } catch (e) {
+    console.error('Exception in populateStudentDropdown:', e);
+    data = [];
+  }
+  
   allStudents = data || [];
+  console.debug('DEBUG: allStudents set to', allStudents.length, 'records');
   filterStudentDropdown();
 }
 
