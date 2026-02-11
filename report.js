@@ -90,14 +90,21 @@ function getSubjectRemark(point) {
 function getMockGradePoint(score) {
   // ensure numeric
   const s = Number(score) || 0;
-  if (s >= 80 && s <= 100) return 1;
-  if (s >= 70 && s <= 79) return 2;
-  if (s >= 60 && s <= 69) return 3;
-  if (s >= 50 && s <= 59) return 4;
-  if (s >= 45 && s <= 49) return 5;
-  if (s >= 40 && s <= 44) return 6;
-  if (s >= 35 && s <= 39) return 7;
-  if (s >= 25 && s <= 34) return 8;
+  // New mock grading ranges (user supplied):
+  // 100 - 85 => 1
+  // 84  - 75 => 2
+  // 74  - 65 => 3
+  // 64  - 55 => 4
+  // 54  - 45 => 5
+  // 44  - 35 => 6
+  // 34  - 0  => 9
+  if (s >= 85 && s <= 100) return 1;
+  if (s >= 75 && s <= 84) return 2;
+  if (s >= 65 && s <= 74) return 3;
+  if (s >= 55 && s <= 64) return 4;
+  if (s >= 45 && s <= 54) return 5;
+  if (s >= 35 && s <= 44) return 6;
+  if (s >= 0 && s <= 34) return 9;
   return 9;
 }
 
@@ -113,20 +120,6 @@ function getMockSubjectRemark(point) {
     case 8: return 'Pass';
     default: return 'Fail';
   }
-}
-
-// Map percentile to BECE Stanine (1 is top). Percentile is percentage of classmates scoring <= student's score.
-function computeStanineFromPercentile(percentile) {
-  const p = Number(percentile) || 0;
-  if (p >= 96) return 1;
-  if (p >= 89) return 2;
-  if (p >= 77) return 3;
-  if (p >= 60) return 4;
-  if (p >= 40) return 5;
-  if (p >= 23) return 6;
-  if (p >= 11) return 7;
-  if (p >= 4) return 8;
-  return 9;
 }
 
 // 🧠 Teacher remark logic - bucketed by 100 with enriched encouragement
