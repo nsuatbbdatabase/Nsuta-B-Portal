@@ -1328,6 +1328,16 @@ async function loadReportForStudent() {
       document.getElementById("classTeacherName").textContent = "—";
       window.currentTeacherGender = 'male'; // default
     }
+    // Force JHS 3 class teacher to Ahiable Bright (override DB if necessary)
+    try {
+      if (String(studentClass).trim() === 'JHS 3') {
+        document.getElementById("classTeacherName").textContent = 'Ahiable Bright';
+        window.currentTeacherGender = 'male';
+        console.log('INFO: Overrode class teacher for JHS 3 to Ahiable Bright');
+      }
+    } catch (e) {
+      console.debug('Failed to override JHS 3 class teacher:', e);
+    }
   } catch (e) {
     console.debug('Could not fetch class teacher:', e);
     document.getElementById("classTeacherName").textContent = "—";
@@ -1652,7 +1662,9 @@ async function loadReportForStudent() {
     console.debug('DEBUG: Error in final table normalization:', e);
   }
   if (isMock) {
-    // Best six aggregated score: sum of grade points of the best 6 subjects
+    // Best six aggregated score for Mock exams:
+    // - Always include core subjects first: English, Maths, Science, Social Studies
+    // - Then pick the best two subjects from the remaining subjects (best = lowest point)
     const subjectScores = [];
     results_final.forEach(r => {
       if (r.subject !== 'Career Tech') {
@@ -1702,9 +1714,25 @@ async function loadReportForStudent() {
       }
       subjectScores.push({ subject: 'Career Tech', point: pointCt });
     }
-    // Sort by point (best first) and sum top 6
-    const topSixPoints = subjectScores.sort((a, b) => a.point - b.point).slice(0, 6);
-    averageValue = topSixPoints.reduce((sum, item) => sum + item.point, 0);
+
+    // Core-subjects-first selection
+    const coreSubjects = ['English', 'Maths', 'Science', 'Social Studies'];
+    const coreSelected = coreSubjects
+      .map(s => subjectScores.find(ss => String(ss.subject).toLowerCase() === String(s).toLowerCase()))
+      .filter(Boolean);
+
+    // Remaining subjects
+    const others = subjectScores.filter(ss => !coreSubjects.map(s => s.toLowerCase()).includes(String(ss.subject).toLowerCase()));
+    // Sort remaining by best point (ascending: 1 is best)
+    others.sort((a, b) => a.point - b.point || String(a.subject).localeCompare(b.subject));
+
+    // Determine how many others to pick: normally 2, but if some core subjects are missing pick enough to make total 6
+    const neededOthers = Math.max(2, 6 - coreSelected.length);
+    const othersToTake = others.slice(0, neededOthers);
+
+    // Combine and trim to 6 if necessary
+    const finalSelection = coreSelected.concat(othersToTake).slice(0, 6);
+    averageValue = finalSelection.reduce((sum, item) => sum + (Number(item.point) || 0), 0);
   } else {
     // For end-of-term, average is computed over the best six subjects
     averageValue = (totalScore / 6).toFixed(2);
@@ -1729,16 +1757,33 @@ async function loadReportForStudent() {
   console.debug('DEBUG: Footer values updated - displayMock:', displayMock, 'totalScore:', totalScore, 'averageValue:', averageValue);
 
   // Generate encouragement message based on performance
-  const encouragement = getEncouragementMessage(totalScore);
-  const teacherNameFull = document.getElementById("classTeacherName").textContent || '';
-  const title = window.currentTeacherGender === 'male' ? 'Sir.' : 'Mad.';
-  // Use only the first name for the student and teacher in the message
-  const studentFirstName = (studentName || '').trim().split(/\s+/)[0] || '';
-  const studentNameForMessage = studentFirstName.toLowerCase().replace(/^[a-z]/, c => c.toUpperCase());
-  const teacherFirstName = (teacherNameFull || '').trim().split(/\s+/)[0] || '';
-  const teacherNameForMessage = teacherFirstName.replace(/^[a-z]/, c => c.toUpperCase());
-  document.getElementById("encouragementMessage").textContent = `${studentNameForMessage}, ${encouragement} - ${title} ${teacherNameForMessage}`;
-  console.log('DEBUG: Encouragement message set:', document.getElementById("encouragementMessage").textContent);
+  const encouragementEl = document.getElementById("encouragementMessage");
+  try {
+    if (isMock) {
+      // Hide motivation/encouragement for Mock exams
+      if (encouragementEl) {
+        encouragementEl.style.display = 'none';
+        encouragementEl.textContent = '';
+      }
+      console.debug('INFO: Encouragement hidden for Mock report');
+    } else {
+      const encouragement = getEncouragementMessage(totalScore);
+      const teacherNameFull = document.getElementById("classTeacherName").textContent || '';
+      const title = window.currentTeacherGender === 'male' ? 'Sir.' : 'Mad.';
+      // Use only the first name for the student and teacher in the message
+      const studentFirstName = (studentName || '').trim().split(/\s+/)[0] || '';
+      const studentNameForMessage = studentFirstName.toLowerCase().replace(/^[a-z]/, c => c.toUpperCase());
+      const teacherFirstName = (teacherNameFull || '').trim().split(/\s+/)[0] || '';
+      const teacherNameForMessage = teacherFirstName.replace(/^[a-z]/, c => c.toUpperCase());
+      if (encouragementEl) {
+        encouragementEl.style.display = '';
+        encouragementEl.textContent = `${studentNameForMessage}, ${encouragement} - ${title} ${teacherNameForMessage}`;
+      }
+      console.debug('DEBUG: Encouragement message set:', encouragementEl?.textContent);
+    }
+  } catch (e) {
+    console.debug('Failed to set/hide encouragement message:', e);
+  }
 
   // Get selected term and year for filtering
   // const term = document.getElementById('termFilter')?.value || '';
