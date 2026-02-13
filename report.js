@@ -1067,22 +1067,194 @@ async function loadReportForStudent() {
     let studentRecord = null;
     try {
       if (studentClass === 'JHS 3') {
+        // Try direct id lookup in Career Tech first
         const { data: jdata } = await supabaseCareerTech.from('jhs3_students').select('id, first_name, surname, index_number, gender, picture_url').eq('id', mockStudentId).single();
         studentRecord = jdata;
+        console.debug('DEBUG: CareerTech id lookup returned:', jdata);
+        // If not found by id, attempt a name-based lookup to handle differing IDs between projects
+        if (!studentRecord) {
+          const selectName = (studentName || '').trim();
+          const parts = selectName.split(/\s+/);
+          const first = parts[0] || '';
+          const surname = parts.slice(1).join(' ') || '';
+          try {
+            if (first && surname) {
+              const { data: nameMatch } = await supabaseCareerTech.from('jhs3_students')
+                .select('id, first_name, surname, index_number, gender, picture_url')
+                .ilike('first_name', `${first}%`)
+                .ilike('surname', `${surname}%`)
+                .limit(1);
+              if (Array.isArray(nameMatch) && nameMatch.length > 0) studentRecord = nameMatch[0];
+              console.debug('DEBUG: CareerTech nameMatch result:', nameMatch);
+            }
+          } catch (e) {
+            // ignore name-match errors and continue to other fallbacks
+            console.debug('Name-based Career Tech lookup failed:', e);
+          }
+        }
       } else {
         const { data: sdata } = await supabaseClient.from('students').select('id, first_name, surname, index_number, sex, picture_url').eq('id', mockStudentId).single();
         studentRecord = sdata;
+        console.debug('DEBUG: Main students id lookup (non-JHS3) returned:', sdata);
       }
     } catch (e) {
       console.warn('Failed to fetch student record for mock info:', e);
     }
-    
-    if (studentRecord) {
-      const name = [studentRecord.first_name, studentRecord.surname].filter(Boolean).join(' ');
+
+    // If still not found in Career Tech by id or strict name, try more permissive lookups
+    if (!studentRecord && studentClass === 'JHS 3') {
+      const selectName = (studentName || '').trim();
+      const parts = selectName.split(/\s+/);
+      const first = parts[0] || '';
+      const surname = parts.slice(1).join(' ') || '';
+      try {
+        // Try matching both first and surname (already attempted earlier), then try first-only, then surname-only
+        if (first) {
+          const { data: byFirst } = await supabaseCareerTech.from('jhs3_students')
+            .select('id, first_name, surname, index_number, gender, picture_url')
+            .ilike('first_name', `${first}%`)
+            .limit(1);
+          if (Array.isArray(byFirst) && byFirst.length > 0) {
+            studentRecord = byFirst[0];
+            console.debug('DEBUG: CareerTech first-name match result:', byFirst);
+          }
+        }
+        if (!studentRecord && surname) {
+          const { data: bySurname } = await supabaseCareerTech.from('jhs3_students')
+            .select('id, first_name, surname, index_number, gender, picture_url')
+            .ilike('surname', `${surname}%`)
+            .limit(1);
+          if (Array.isArray(bySurname) && bySurname.length > 0) {
+            studentRecord = bySurname[0];
+            console.debug('DEBUG: CareerTech surname match result:', bySurname);
+          }
+        }
+      } catch (e) {
+        console.debug('Fallback career-tech lookup failed:', e);
+      }
+    }
+
+    // Final fallback: if still no career-tech match, try to use main students table picture by permissive name matching
+    let mainMatch = null;
+    if (!studentRecord && studentClass === 'JHS 3') {
+      try {
+        const selectName = (studentName || '').trim();
+        const parts = selectName.split(/\s+/);
+        const first = parts[0] || '';
+        const surname = parts.slice(1).join(' ') || '';
+        // Try strict both-names match first
+        if (first && surname) {
+          const { data: mdata } = await supabaseClient.from('students')
+            .select('id, first_name, surname, index_number, sex, picture_url, class')
+            .ilike('first_name', `${first}%`)
+            .ilike('surname', `${surname}%`)
+            .limit(5);
+          // prefer records that indicate JHS 3 in the class field
+          if (Array.isArray(mdata) && mdata.length > 0) {
+            const found = mdata.find(r => r.class && /jhs\s*3/i.test(String(r.class)));
+            mainMatch = found || mdata[0];
+          }
+          console.debug('DEBUG: Main students strict name-match result:', mdata);
+        }
+        // If still not found, try first-only then surname-only
+        if (!mainMatch && first) {
+          const { data: mfirst } = await supabaseClient.from('students')
+            .select('id, first_name, surname, index_number, sex, picture_url, class')
+            .ilike('first_name', `${first}%`)
+            .limit(5);
+          if (Array.isArray(mfirst) && mfirst.length > 0) {
+            const found = mfirst.find(r => r.class && /jhs\s*3/i.test(String(r.class)));
+            mainMatch = found || mfirst[0];
+            console.debug('DEBUG: Main students first-name match result:', mfirst);
+          }
+        }
+        if (!mainMatch && surname) {
+          const { data: msurname } = await supabaseClient.from('students')
+            .select('id, first_name, surname, index_number, sex, picture_url, class')
+            .ilike('surname', `${surname}%`)
+            .limit(5);
+          if (Array.isArray(msurname) && msurname.length > 0) {
+            const found = msurname.find(r => r.class && /jhs\s*3/i.test(String(r.class)));
+            mainMatch = found || msurname[0];
+            console.debug('DEBUG: Main students surname match result:', msurname);
+          }
+        }
+      } catch (e) {
+        console.debug('Fallback main-students lookup failed:', e);
+      }
+    }
+
+    // Populate UI using best available record (career-tech first, then main)
+    const usedRecord = studentRecord || mainMatch;
+    if (usedRecord) {
+      const name = [usedRecord.first_name, usedRecord.surname].filter(Boolean).join(' ');
       document.getElementById('mockStudentName').textContent = (name || studentName).toUpperCase();
-      document.getElementById('mockIndexNumber').textContent = studentRecord.index_number || studentId || '—';
-      document.getElementById('mockStudentSex').textContent = studentRecord.gender ? String(studentRecord.gender).toUpperCase() : '—';
-      if (studentRecord.picture_url) document.getElementById('studentPhoto').src = studentRecord.picture_url;
+      document.getElementById('mockIndexNumber').textContent = usedRecord.index_number || studentId || '—';
+      // gender field differs between tables (gender vs sex)
+      const genderVal = usedRecord.gender || usedRecord.sex || '';
+      document.getElementById('mockStudentSex').textContent = genderVal ? String(genderVal).toUpperCase() : '—';
+
+      // Ensure we show a picture whenever possible. Priority:
+      // 1. Admin-managed mock_exam_pictures table (most reliable)
+      // 2. Picture from matched student record
+      // 3. Name-based fallback from main students table
+      let pictureUrl = usedRecord.picture_url || '';
+
+      // PRIORITY 1: Check admin-managed mock_exam_pictures table (for JHS 3 only)
+      if (!pictureUrl && studentClass === 'JHS 3' && usedRecord && usedRecord.id) {
+        try {
+          const { data: mockPicData } = await supabaseCareerTech.from('mock_exam_pictures')
+            .select('picture_url')
+            .eq('jhs3_student_id', usedRecord.id)
+            .single();
+          if (mockPicData && mockPicData.picture_url) {
+            pictureUrl = mockPicData.picture_url;
+            console.debug('✅ Found picture from admin-managed mock_exam_pictures table:', pictureUrl);
+          }
+        } catch (e) {
+          console.debug('No admin-managed picture found in mock_exam_pictures table:', e.message);
+        }
+      }
+
+      // PRIORITY 2: Try name-based fallback from main students table (only if still no picture)
+      if (!pictureUrl) {
+        try {
+          const selectName = (studentName || '').trim();
+          const parts = selectName.split(/\s+/);
+          const first = parts[0] || '';
+          const surname = parts.slice(1).join(' ') || '';
+          let fallbackPic = null;
+          if (first && surname) {
+            const { data: mdata2 } = await supabaseClient.from('students')
+              .select('picture_url, first_name, surname, class')
+              .ilike('first_name', `${first}%`)
+              .ilike('surname', `${surname}%`)
+              .limit(5);
+            if (Array.isArray(mdata2) && mdata2.length > 0) {
+              // pick a candidate only if class indicates JHS 3 and both names match
+              const found = mdata2.find(r => r.class && /jhs\s*3/i.test(String(r.class)) &&
+                r.first_name && String(r.first_name).toLowerCase().startsWith(first.toLowerCase()) &&
+                r.surname && String(r.surname).toLowerCase().startsWith(surname.toLowerCase())
+              );
+              if (found && found.picture_url) fallbackPic = found.picture_url;
+            }
+          }
+          if (fallbackPic) pictureUrl = fallbackPic;
+        } catch (e) {
+          console.debug('Error while attempting to fetch fallback picture from main students:', e);
+        }
+      }
+
+      if (pictureUrl) {
+        const ph = document.getElementById('studentPhoto');
+        if (ph) {
+          ph.src = pictureUrl;
+          ph.dataset.setByMock = '1';
+          console.debug('DEBUG: studentPhoto element set by mock lookup to', pictureUrl);
+        } else {
+          console.debug('DEBUG: studentPhoto element NOT found when trying to set mock picture');
+        }
+      }
     } else {
       document.getElementById('mockStudentName').textContent = studentName.toUpperCase();
       document.getElementById('mockIndexNumber').textContent = studentId || '—';
@@ -1111,8 +1283,18 @@ async function loadReportForStudent() {
   if (reportSection) reportSection.style.display = 'block';
 
   // 🖼️ Load student photo
-  const studentPhotoUrl = select.options[select.selectedIndex]?.dataset.picture || "placeholder.png";
-  document.getElementById("studentPhoto").src = studentPhotoUrl;
+  const photoEl = document.getElementById("studentPhoto");
+  const studentPhotoUrl = select.options[select.selectedIndex]?.dataset.picture || "";
+  // If a mock/CT lookup already set the photo, don't overwrite it when Mock is selected
+  console.debug('DEBUG: photoEl dataset before generic set:', photoEl && photoEl.dataset, 'studentPhotoUrl from select option:', studentPhotoUrl, 'isMock:', isMock);
+  if (!(isMock && photoEl && photoEl.dataset && photoEl.dataset.setByMock === '1')) {
+    if (photoEl) {
+      const defaultAvatar = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><rect fill='%23f0f0f0' width='100%25' height='100%25'/><circle cx='100' cy='70' r='40' fill='%23d9d9d9'/><rect x='40' y='120' width='120' height='40' rx='20' fill='%23d9d9d9'/></svg>";
+      photoEl.src = studentPhotoUrl || defaultAvatar;
+      // clear any previous mock-set marker when we deliberately set a new generic photo
+      if (photoEl.dataset) delete photoEl.dataset.setByMock;
+    }
+  }
   console.log('✅ Student photo loaded');
 
   // 📦 Fetch results for selected student, term, and year
@@ -2067,22 +2249,213 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('yearFilter').addEventListener('input', loadReportForStudent);
 });
 
-// Bulk print logic
-// Usage: click the element with id="bulkPrintBtn" (button provided in the UI).
-// This routine expects the page to contain:
-// - a class selector with id="classSelect"
-// - a student selector with id="studentSelect"
-// - the report template container with id="reportSection" which is populated by loadReportForStudent()
-// It will populate the template for each student in the selected class, clone the populated template
-// into a hidden print container (one clone per student), then trigger window.print() once so the
-// browser can save a single multi-page PDF containing all student reports. After printing the
-// temporary print elements are cleaned up automatically.
+// Bulk print logic - supports both End-of-Term and Mock exams
+// Updated to handle Mock exam bulk printing for JHS 3 students
 document.getElementById('bulkPrintBtn').onclick = async function() {
   const selectedClass = document.getElementById('classSelect').value;
+  const examType = (document.getElementById('examType').value || 'End of Term').trim();
+  
   if (!selectedClass) {
     notify('Please select a class first.', 'warning');
     return;
   }
+  
+  // Route to appropriate bulk print function
+  if (examType === 'Mock') {
+    return bulkPrintMockExams(selectedClass);
+  } else {
+    return bulkPrintEndOfTermExams(selectedClass);
+  }
+};
+
+// Separate function for Mock exam bulk printing (JHS 3 only)
+async function bulkPrintMockExams(selectedClass) {
+  // Only JHS 3 can have Mock exams
+  if (selectedClass !== 'JHS 3') {
+    notify('Mock exams are only available for JHS 3.', 'warning');
+    return;
+  }
+  
+  // Fetch all JHS 3 students from Career Tech
+  const { data: students, error } = await supabaseCareerTech.from('jhs3_students').select('id, first_name, surname');
+  if (error || !students || students.length === 0) {
+    notify('No students found for JHS 3 mock exams.', 'warning');
+    return;
+  }
+  
+  const reportContainer = document.querySelector('.report-container');
+  if (!reportContainer) {
+    notify('Report template not found on the page.', 'error');
+    return;
+  }
+
+  // Create progress overlay
+  let progressOverlay = document.getElementById('bulkPrintProgress');
+  if (progressOverlay) progressOverlay.remove();
+  progressOverlay = document.createElement('div');
+  progressOverlay.id = 'bulkPrintProgress';
+  progressOverlay.style.position = 'fixed';
+  progressOverlay.style.left = '0';
+  progressOverlay.style.top = '0';
+  progressOverlay.style.right = '0';
+  progressOverlay.style.bottom = '0';
+  progressOverlay.style.background = 'rgba(0,0,0,0.55)';
+  progressOverlay.style.display = 'flex';
+  progressOverlay.style.alignItems = 'center';
+  progressOverlay.style.justifyContent = 'center';
+  progressOverlay.style.zIndex = '99999';
+  progressOverlay.innerHTML = `
+    <div style="background:#fff;padding:20px 18px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:12px;min-width:300px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="bulk-spinner" style="width:28px;height:28px;border:4px solid #ddd;border-top-color:#2b7cff;border-radius:50%;animation:spin 1s linear infinite"></div>
+        <div style="font-family:Arial,Helvetica,sans-serif;color:#222;font-size:14px;">
+          <div id="bulkPrintProgressText">Preparing 0/${students.length}</div>
+          <div style="font-size:12px;color:#666;margin-top:6px;">Generating Mock exam reports...</div>
+        </div>
+      </div>
+      <div style="width:100%;display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button id="bulkPrintCancelBtn" style="background:#f44336;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;">Cancel</button>
+      </div>
+    </div>
+  `;
+  if (!document.getElementById('bulkPrintProgressStyle')) {
+    const pf = document.createElement('style');
+    pf.id = 'bulkPrintProgressStyle';
+    pf.textContent = `@keyframes spin {from{transform:rotate(0)}to{transform:rotate(360deg)}}`;
+    document.head.appendChild(pf);
+  }
+  document.body.appendChild(progressOverlay);
+
+  window.__bulkPrintController = { cancelled: false };
+  const cancelBtn = document.getElementById('bulkPrintCancelBtn');
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      window.__bulkPrintController.cancelled = true;
+      const pt = document.getElementById('bulkPrintProgressText');
+      if (pt) pt.textContent = `Cancelling...`;
+      cancelBtn.disabled = true;
+      cancelBtn.style.opacity = '0.6';
+    };
+  }
+
+  let bulkContainer = document.getElementById('bulkPrintContainer');
+  if (bulkContainer) bulkContainer.remove();
+  bulkContainer = document.createElement('div');
+  bulkContainer.id = 'bulkPrintContainer';
+  bulkContainer.style.display = 'none';
+  document.body.appendChild(bulkContainer);
+
+  const styleId = 'bulk-print-style';
+  let printStyle = document.getElementById(styleId);
+  if (printStyle) printStyle.remove();
+  printStyle = document.createElement('style');
+  printStyle.id = styleId;
+  printStyle.textContent = `
+    @media print {
+      body * { visibility: hidden !important; }
+      #bulkPrintContainer, #bulkPrintContainer * { visibility: visible !important; }
+      #bulkPrintContainer { position: absolute; left: 0; top: 0; width: 100%; }
+      .print-page { page-break-after: always; }
+      @page { size: A4 portrait; margin: 9mm; }
+      .report-container {
+        border-top: 2px solid #222 !important;
+        border-right: 2px solid #222 !important;
+        border-bottom: 2px solid #222 !important;
+        border-left: 2px solid #222 !important;
+        box-shadow: none !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+      }
+    }
+    .print-page { -webkit-print-color-adjust: exact; }
+  `;
+  document.head.appendChild(printStyle);
+
+  const originalStudentSelectValue = document.getElementById('studentSelect')?.value || '';
+
+  async function waitForImagesLoaded(container, timeout = 8000) {
+    const imgs = Array.from(container.querySelectorAll('img'));
+    if (imgs.length === 0) return;
+    const promises = imgs.map(img => new Promise(res => {
+      if (img.complete && img.naturalWidth !== 0) return res();
+      const onDone = () => { cleanup(); res(); };
+      const onError = () => { cleanup(); res(); };
+      function cleanup() { img.removeEventListener('load', onDone); img.removeEventListener('error', onError); }
+      img.addEventListener('load', onDone);
+      img.addEventListener('error', onError);
+    }));
+    await Promise.race([Promise.all(promises), new Promise(res => setTimeout(res, timeout))]);
+    await new Promise(r => setTimeout(r, 50));
+  }
+
+  // Build mock ID lookup for bulk printing: use mock student ID for loading each report
+  for (let i = 0; i < students.length; i++) {
+    const student = students[i];
+    try {
+      if (window.__bulkPrintController?.cancelled) {
+        const pt = document.getElementById('bulkPrintProgressText');
+        if (pt) pt.textContent = `Canceled at ${i}/${students.length}`;
+        break;
+      }
+      // Set up form to load this Mock exam report
+      if (document.getElementById('studentSelect')) {
+        document.getElementById('studentSelect').value = student.id;
+      }
+      // Set exam type to Mock
+      if (document.getElementById('examType')) {
+        document.getElementById('examType').value = 'Mock';
+      }
+      // Load the report
+      await loadReportForStudent();
+      await waitForImagesLoaded(document.querySelector('.report-container'));
+      
+      if (window.__bulkPrintController?.cancelled) {
+        const pt = document.getElementById('bulkPrintProgressText');
+        if (pt) pt.textContent = `Canceled at ${i + 1}/${students.length}`;
+        break;
+      }
+      
+      const clone = reportContainer.cloneNode(true);
+      bulkContainer.appendChild(clone);
+      const progressTextUpdate = document.getElementById('bulkPrintProgressText');
+      if (progressTextUpdate) progressTextUpdate.textContent = `Preparing ${i + 1}/${students.length}`;
+    } catch (e) {
+      console.error('Failed to build mock report for student', student, e);
+      const progressText = document.getElementById('bulkPrintProgressText');
+      if (progressText) progressText.textContent = `Error at ${i + 1}/${students.length}`;
+    }
+  }
+
+  if (document.getElementById('studentSelect')) {
+    document.getElementById('studentSelect').value = originalStudentSelectValue;
+    await waitForImagesLoaded(document.querySelector('.report-container'));
+  }
+
+  bulkContainer.style.display = 'block';
+  if (window.__bulkPrintController?.cancelled) {
+    try { bulkContainer.remove(); } catch (e) { /* ignore */ }
+    try { printStyle.remove(); } catch (e) { /* ignore */ }
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) { /* ignore */ }
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) { /* ignore */ }
+    try { delete window.__bulkPrintController; } catch (e) {}
+    return;
+  }
+
+  const progressTextFinal = document.getElementById('bulkPrintProgressText');
+  if (progressTextFinal) progressTextFinal.textContent = `Ready — opening print dialog (${students.length} pages)`;
+  window.print();
+
+  setTimeout(() => {
+    try { bulkContainer.remove(); } catch (e) { /* ignore */ }
+    try { printStyle.remove(); } catch (e) { /* ignore */ }
+    try { const ps = document.getElementById('bulkPrintProgress'); if (ps) ps.remove(); } catch (e) { /* ignore */ }
+    try { const pf = document.getElementById('bulkPrintProgressStyle'); if (pf) pf.remove(); } catch (e) { /* ignore */ }
+    try { delete window.__bulkPrintController; } catch (e) {}
+  }, 1000);
+}
+
+// Original End-of-Term bulk print function (renamed for clarity)
+async function bulkPrintEndOfTermExams(selectedClass) {
   // Fetch all students in the selected class
   const { data: students, error } = await supabaseClient.from('students').select('id').eq('class', selectedClass);
   if (error || !students || students.length === 0) {

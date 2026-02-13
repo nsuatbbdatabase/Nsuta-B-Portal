@@ -2215,3 +2215,202 @@ function printJhs3Rankings() {
 
 // Small helper used above (already present in other files) to avoid XSS when rendering
 function escapeHtml(s){ if (!s && s !== 0) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ================================================================================
+// Mock Exam Pictures Management
+// ================================================================================
+
+let currentMockStudent = null;
+
+async function loadMockStudentsForPictures() {
+  try {
+    const { data: students } = await supabaseCareerTech.from('jhs3_students')
+      .select('id, first_name, surname');
+    const select = document.getElementById('mockPictureStudentSelect');
+    if (!select) return;
+    select.innerHTML = '<option value="">-- Select Student --</option>';
+    if (Array.isArray(students)) {
+      students.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = ((s.first_name || '') + ' ' + (s.surname || '')).trim() || '[No Name]';
+        select.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    console.error('Failed to load students for mock pictures:', e);
+    notify('Failed to load students', 'error');
+  }
+}
+
+async function loadCurrentMockPicture(studentId) {
+  if (!studentId) {
+    currentMockStudent = null;
+    document.getElementById('mockPictureUrl').value = '';
+    document.getElementById('mockPictureUpload').value = '';
+    document.getElementById('mockPicturePreview').style.display = 'none';
+    return;
+  }
+  
+  try {
+    const { data: mockPic } = await supabaseCareerTech.from('mock_exam_pictures')
+      .select('picture_url')
+      .eq('jhs3_student_id', studentId)
+      .single();
+    
+    if (mockPic && mockPic.picture_url) {
+      document.getElementById('mockPictureUrl').value = mockPic.picture_url;
+      const previewImg = document.getElementById('mockPicturePreviewImg');
+      if (previewImg) {
+        previewImg.src = mockPic.picture_url;
+        document.getElementById('mockPicturePreview').style.display = 'block';
+      }
+    } else {
+      document.getElementById('mockPictureUrl').value = '';
+      document.getElementById('mockPicturePreview').style.display = 'none';
+    }
+    currentMockStudent = studentId;
+  } catch (e) {
+    console.debug('No existing picture for student', studentId);
+    document.getElementById('mockPictureUrl').value = '';
+    document.getElementById('mockPicturePreview').style.display = 'none';
+    currentMockStudent = studentId;
+  }
+}
+
+async function saveMockPicture() {
+  if (!currentMockStudent) {
+    return notify('Please select a student', 'warning');
+  }
+  
+  const urlInput = document.getElementById('mockPictureUrl');
+  const fileInput = document.getElementById('mockPictureUpload');
+  
+  let pictureUrl = (urlInput.value || '').trim();
+  
+  // If file was selected, upload it (or use data URL for now)
+  if (fileInput.files && fileInput.files[0]) {
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      pictureUrl = e.target.result;
+      await persistMockPicture(currentMockStudent, pictureUrl);
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  
+  // Otherwise use URL
+  if (!pictureUrl) {
+    return notify('Please enter a URL or select a file', 'warning');
+  }
+  
+  await persistMockPicture(currentMockStudent, pictureUrl);
+}
+
+async function persistMockPicture(studentId, pictureUrl) {
+  try {
+    const { error } = await supabaseCareerTech.from('mock_exam_pictures')
+      .upsert({
+        jhs3_student_id: studentId,
+        picture_url: pictureUrl,
+        uploaded_by: 'admin',
+        uploaded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) throw error;
+    notify('Picture saved successfully', 'success');
+    document.getElementById('mockPictureUrl').value = pictureUrl;
+    const previewImg = document.getElementById('mockPicturePreviewImg');
+    if (previewImg) {
+      previewImg.src = pictureUrl;
+      document.getElementById('mockPicturePreview').style.display = 'block';
+    }
+  } catch (e) {
+    console.error('Failed to save picture:', e);
+    notify('Failed to save picture: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
+
+async function deleteMockPicture() {
+  if (!currentMockStudent) {
+    return notify('Please select a student', 'warning');
+  }
+  
+  if (!confirm('Delete this picture?')) return;
+  
+  try {
+    const { error } = await supabaseCareerTech.from('mock_exam_pictures')
+      .delete()
+      .eq('jhs3_student_id', currentMockStudent);
+    
+    if (error) throw error;
+    notify('Picture deleted', 'success');
+    document.getElementById('mockPictureUrl').value = '';
+    document.getElementById('mockPictureUpload').value = '';
+    document.getElementById('mockPicturePreview').style.display = 'none';
+  } catch (e) {
+    console.error('Failed to delete picture:', e);
+    notify('Failed to delete picture: ' + (e.message || 'Unknown error'), 'error');
+  }
+}
+
+// Wire up mock pictures modal events
+(function() {
+  const button = document.getElementById('btnManageMockPictures');
+  if (button) {
+    button.addEventListener('click', () => {
+      const modal = document.getElementById('mockPicturesModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        loadMockStudentsForPictures();
+      }
+    });
+  }
+  
+  const studentSelect = document.getElementById('mockPictureStudentSelect');
+  if (studentSelect) {
+    studentSelect.addEventListener('change', (e) => {
+      loadCurrentMockPicture(e.target.value);
+    });
+  }
+  
+  const fileInput = document.getElementById('mockPictureUpload');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const previewImg = document.getElementById('mockPicturePreviewImg');
+          if (previewImg) {
+            previewImg.src = evt.target.result;
+            document.getElementById('mockPicturePreview').style.display = 'block';
+          }
+          // Auto-populate URL field with data URL
+          document.getElementById('mockPictureUrl').value = evt.target.result;
+        };
+        reader.readAsDataURL(e.target.files[0]);
+      }
+    });
+  }
+  
+  const saveBtn = document.getElementById('saveMockPictureBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', saveMockPicture);
+  }
+  
+  const deleteBtn = document.getElementById('deleteMockPictureBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', deleteMockPicture);
+  }
+  
+  // Wire up modal close buttons
+  const closeButtons = document.querySelectorAll('#mockPicturesModal .modal-close');
+  closeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const modal = document.getElementById('mockPicturesModal');
+      if (modal) modal.classList.add('hidden');
+    });
+  });
+})();

@@ -344,6 +344,8 @@
 									<button id="btnCheckRegisters" class="action-btn ml-sm">Check Registers</button>
 							<!-- Rank JHS3 Mock exams -->
 							<button id="btnRankJHS3Mock" class="action-btn ml-sm" title="Rank JHS 3 Mock Exams">Rank JHS 3 (Mock)</button>
+							<!-- Manage Mock Pictures -->
+							<button id="btnManageMockPictures" class="action-btn ml-sm" title="Manage Mock Exam Pictures">Mock Pictures</button>
 					<!-- Logout control for admin users -->
 					<button id="btnLogout" class="action-btn ml-sm btn-logout">Logout</button>
 				</div>
@@ -1324,6 +1326,66 @@
 				</div>
 				<div id="classRankingPreview" class="muted-small">Select class, term and year then click Generate.</div>
 				<div class="form-actions"><button id="generateClassRankingBtn" class="action-btn">Generate PDF</button> <button type="button" class="modal-close action-btn">Close</button></div>
+			</div>
+		  </div>
+		</div>
+
+		<!-- Mock Exam Pictures Manager Modal -->
+		<div id="mockPicturesModal" class="modal hidden">
+		  <div class="modal-content">
+			<div class="modal-header"><h3>Manage Mock Exam Pictures</h3></div>
+			<div class="modal-body">
+				<p class="muted-small">Upload or link student pictures for mock exams. Pictures are stored per JHS 3 student and override automatic name-based lookups.</p>
+				<div class="form-group">
+					<label for="mockPictureStudentSelect">Select Student</label>
+					<select id="mockPictureStudentSelect"><option value="">-- Loading students --</option></select>
+				</div>
+				<div class="form-group">
+					<label for="mockPictureUrl">Picture URL</label>
+					<input type="text" id="mockPictureUrl" placeholder="Enter full URL or paste image URL" />
+				</div>
+				<div class="form-group">
+					<label for="mockPictureUpload">Or Upload Picture</label>
+					<input type="file" id="mockPictureUpload" accept="image/*" />
+				</div>
+				<div id="mockPicturePreview" style="margin: 1rem 0; text-align: center; display: none;">
+					<img id="mockPicturePreviewImg" src="" alt="Picture preview" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />
+				</div>
+				<div class="form-actions">
+					<button id="saveMockPictureBtn" class="action-btn">Save Picture</button>
+					<button id="deleteMockPictureBtn" class="action-btn action-btn--secondary">Delete Picture</button>
+					<button type="button" class="modal-close action-btn">Close</button>
+				</div>
+			</div>
+		  </div>
+		</div>
+
+		<!-- Mock Exam Pictures Manager Modal -->
+		<div id="mockPicturesModal" class="modal hidden">
+		  <div class="modal-content">
+			<div class="modal-header"><h3>Manage Mock Exam Pictures</h3></div>
+			<div class="modal-body">
+				<p class="muted-small">Upload or link student pictures for mock exams. Pictures are stored per JHS 3 student and override automatic name-based lookups.</p>
+				<div class="form-group">
+					<label for="mockPictureStudentSelect">Select Student</label>
+					<select id="mockPictureStudentSelect"><option value="">-- Loading students --</option></select>
+				</div>
+				<div class="form-group">
+					<label for="mockPictureUrl">Picture URL</label>
+					<input type="text" id="mockPictureUrl" placeholder="Enter full URL or paste image URL" />
+				</div>
+				<div class="form-group">
+					<label for="mockPictureUpload">Or Upload Picture</label>
+					<input type="file" id="mockPictureUpload" accept="image/*" />
+				</div>
+				<div id="mockPicturePreview" style="margin: 1rem 0; text-align: center; display: none;">
+					<img id="mockPicturePreviewImg" src="" alt="Picture preview" style="max-width: 200px; max-height: 200px; border-radius: 8px;" />
+				</div>
+				<div class="form-actions">
+					<button id="saveMockPictureBtn" class="action-btn">Save Picture</button>
+					<button id="deleteMockPictureBtn" class="action-btn action-btn--secondary">Delete Picture</button>
+					<button type="button" class="modal-close action-btn">Close</button>
+				</div>
 			</div>
 		  </div>
 		</div>
