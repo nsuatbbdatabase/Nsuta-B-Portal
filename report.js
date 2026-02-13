@@ -1194,10 +1194,11 @@ async function loadReportForStudent() {
       const genderVal = usedRecord.gender || usedRecord.sex || '';
       document.getElementById('mockStudentSex').textContent = genderVal ? String(genderVal).toUpperCase() : '—';
 
-      // Ensure we show a picture whenever possible. Priority:
+      // For Mock exams: use ONLY Career Tech pictures, do NOT fall back to main Supabase
+      // Priority:
       // 1. Admin-managed mock_exam_pictures table (most reliable)
-      // 2. Picture from matched student record
-      // 3. Name-based fallback from main students table
+      // 2. Picture from Career Tech jhs3_students record
+      // 3. NO fallback to main Supabase for Mock exams
       let pictureUrl = usedRecord.picture_url || '';
 
       // PRIORITY 1: Check admin-managed mock_exam_pictures table (for JHS 3 only)
@@ -1216,8 +1217,9 @@ async function loadReportForStudent() {
         }
       }
 
-      // PRIORITY 2: Try name-based fallback from main students table (only if still no picture)
-      if (!pictureUrl) {
+      // For Mock exams (isMock === true): STOP here, do not query main Supabase
+      // For End-of-Term: allow name-based fallback from main students table
+      if (!pictureUrl && !isMock) {
         try {
           const selectName = (studentName || '').trim();
           const parts = selectName.split(/\s+/);
